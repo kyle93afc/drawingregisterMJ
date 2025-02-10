@@ -1,0 +1,136 @@
+﻿<Window x:Class="DrawingRegisterMJ.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:local="clr-namespace:DrawingRegisterMJ"
+        mc:Ignorable="d"
+        Title="SER Document and Drawing Register" Height="800" Width="1200"
+        WindowStartupLocation="CenterScreen">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Section -->
+        <Grid Grid.Row="0" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Discipline:" Grid.Column="0" Grid.Row="0" Margin="5"/>
+                    <TextBox Text="{Binding Discipline}" Grid.Column="1" Grid.Row="0" Margin="5"/>
+                    <TextBlock Text="Reg No:" Grid.Column="2" Grid.Row="0" Margin="5"/>
+                    <TextBox Text="{Binding RegNo}" Grid.Column="3" Grid.Row="0" Margin="5"/>
+
+                    <TextBlock Text="Project No:" Grid.Column="0" Grid.Row="1" Margin="5"/>
+                    <TextBox Text="{Binding ProjectNo}" Grid.Column="1" Grid.Row="1" Margin="5"/>
+
+                    <TextBlock Text="Project Name:" Grid.Column="0" Grid.Row="2" Margin="5"/>
+                    <TextBox Text="{Binding ProjectName}" Grid.Column="1" Grid.Row="2" Grid.ColumnSpan="3" Margin="5"/>
+                </Grid>
+            </StackPanel>
+        </Grid>
+
+        <!-- Distribution Section -->
+        <GroupBox Header="DISTRIBUTION" Grid.Row="1" Margin="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="Client:" Grid.Row="0" Grid.Column="0" Margin="5"/>
+                <TextBox Text="{Binding Client}" Grid.Row="0" Grid.Column="1" Margin="5"/>
+
+                <TextBlock Text="Architect:" Grid.Row="1" Grid.Column="0" Margin="5"/>
+                <TextBox Text="{Binding Architect}" Grid.Row="1" Grid.Column="1" Margin="5"/>
+
+                <TextBlock Text="Local Authority:" Grid.Row="2" Grid.Column="0" Margin="5"/>
+                <TextBox Text="{Binding LocalAuthority}" Grid.Row="2" Grid.Column="1" Margin="5"/>
+
+                <TextBlock Text="SFS:" Grid.Row="3" Grid.Column="0" Margin="5"/>
+                <TextBox Text="{Binding SFS}" Grid.Row="3" Grid.Column="1" Margin="5"/>
+            </Grid>
+        </GroupBox>
+
+        <!-- Issue Information -->
+        <Grid Grid.Row="2" Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <TextBlock Text="Purpose of Issue:" VerticalAlignment="Center" Margin="5"/>
+                <ComboBox Width="100" Margin="5" SelectedValue="{Binding SelectedPurposeOfIssue}">
+                    <ComboBoxItem Content="Approval"/>
+                    <ComboBoxItem Content="Construction"/>
+                    <ComboBoxItem Content="Draft"/>
+                    <ComboBoxItem Content="Feasibility"/>
+                    <ComboBoxItem Content="Information"/>
+                    <ComboBoxItem Content="Planning"/>
+                    <ComboBoxItem Content="Tender"/>
+                    <ComboBoxItem Content="Warrant"/>
+                </ComboBox>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal">
+                <TextBlock Text="Method of Issue:" VerticalAlignment="Center" Margin="5"/>
+                <ComboBox Width="100" Margin="5" SelectedValue="{Binding SelectedMethodOfIssue}">
+                    <ComboBoxItem Content="Email"/>
+                    <ComboBoxItem Content="Sharepoint"/>
+                    <ComboBoxItem Content="Internet"/>
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="10">
+            <Button Content="Select Project Folder" Command="{Binding SelectFolderCommand}" Margin="5"/>
+            <Button Content="Refresh" Command="{Binding RefreshCommand}" Margin="5"/>
+        </StackPanel>
+
+        <!-- Drawing Register Grid -->
+        <DataGrid Grid.Row="4" Margin="10" 
+                  ItemsSource="{Binding Drawings}"
+                  AutoGenerateColumns="False" 
+                  IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Document Number" Binding="{Binding DocumentNumber}" Width="150"/>
+                <DataGridTextColumn Header="Document Type" Binding="{Binding DocumentType}" Width="100"/>
+                <DataGridTextColumn Header="Package" Binding="{Binding Package}" Width="80"/>
+                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+                <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="60"/>
+                <DataGridTextColumn Header="Issue/Revision" Binding="{Binding Revision}" Width="100"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
