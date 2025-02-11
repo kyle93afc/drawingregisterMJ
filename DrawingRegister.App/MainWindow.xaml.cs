@@ -24,6 +24,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private readonly ProjectManager _project = new();
     private bool _disposed;
     private string _searchText = string.Empty;
+    private DocumentMetadata _selectedDocument = null!;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -35,6 +36,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             _searchText = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SearchText)));
             FilterDocuments();
+        }
+    }
+
+    public DocumentMetadata SelectedDocument
+    {
+        get => _selectedDocument;
+        set
+        {
+            _selectedDocument = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedDocument)));
         }
     }
 
@@ -52,12 +63,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Bind grid to ProjectManager collections
         DocumentGrid.ItemsSource = _project.Documents;
-        
-        // Add headers to revision rows
-        RevisionDatesRow.Items.Add("Issue Date");
-        RevisionPurposeRow.Items.Add("Purpose");
-        RevisionMethodRow.Items.Add("Method");
-        RevisionIssuedByRow.Items.Add("Issued By");
     }
 
     private void FilterDocuments()
@@ -78,38 +83,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         };
     }
 
-    private void UpdateRevisionHistory()
-    {
-        // Clear existing items except headers
-        RevisionDatesRow.Items.Clear();
-        RevisionPurposeRow.Items.Clear();
-        RevisionMethodRow.Items.Clear();
-        RevisionIssuedByRow.Items.Clear();
-
-        // Add headers
-        RevisionDatesRow.Items.Add("Issue Date");
-        RevisionPurposeRow.Items.Add("Purpose");
-        RevisionMethodRow.Items.Add("Method");
-        RevisionIssuedByRow.Items.Add("Issued By");
-
-        if (DocumentGrid.SelectedItem is not DocumentMetadata selectedDoc)
-        {
-            return;
-        }
-
-        var revisions = selectedDoc.RevisionHistory
-            .OrderBy(x => x.Key)
-            .ToList();
-
-        foreach (var revision in revisions)
-        {
-            RevisionDatesRow.Items.Add(revision.Key.ToString("dd/MM/yyyy"));
-            RevisionPurposeRow.Items.Add(revision.Value.Purpose);
-            RevisionMethodRow.Items.Add(revision.Value.Method);
-            RevisionIssuedByRow.Items.Add(revision.Value.IssuedBy);
-        }
-    }
-
     private void ImportDocuments_Click(object sender, RoutedEventArgs e)
     {
         var folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog
@@ -123,7 +96,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             try
             {
                 _project.ImportDocuments(folderBrowserDialog.SelectedPath);
-                UpdateRevisionHistory();
                 MessageBox.Show($"Successfully imported {_project.Documents.Count} documents.", 
                     "Import Complete", 
                     MessageBoxButton.OK, 
@@ -148,20 +120,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Reapply any active filters
         FilterDocuments();
 
-        // Update revision history for selected document
-        UpdateRevisionHistory();
-
         // Force grid to update
         DocumentGrid.Items.Refresh();
     }
 
     private void DocumentGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        SelectedDocument = DocumentGrid.SelectedItem as DocumentMetadata;
+    }
+
+    private void DocumentGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
         if (DocumentGrid.SelectedItem is DocumentMetadata selectedDoc)
         {
-            UpdateRevisionHistory();
-
-            try
+            try 
             {
                 if (File.Exists(selectedDoc.FilePath))
                 {
@@ -171,16 +143,51 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         UseShellExecute = true
                     });
                 }
-                else
-                {
-                    MessageBox.Show("File not found: " + selectedDoc.FilePath, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error opening file: {ex.Message}");
             }
         }
+    }
+
+    private void DateFilter_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (StartDatePicker.SelectedDate == null || EndDatePicker.SelectedDate == null)
+            {
+                MessageBox.Show("Please select both start and end dates");
+                return;
+            }
+
+            var startDate = StartDatePicker.SelectedDate.Value.Date;
+            var endDate = EndDatePicker.SelectedDate.Value.Date;
+            
+            if (startDate > endDate)
+            {
+                MessageBox.Show("Start date cannot be after end date");
+                return;
+            }
+
+            DocumentGrid.ItemsSource = _project.Documents
+                .Where(d => d.RevisionHistory.Any(r => 
+                    r.Key.Date >= startDate && 
+                    r.Key.Date <= endDate))
+                .OrderBy(d => d.DocumentNumber)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Filter error: {ex.Message}");
+        }
+    }
+
+    private void ClearDateFilter_Click(object sender, RoutedEventArgs e)
+    {
+        StartDatePicker.SelectedDate = null;
+        EndDatePicker.SelectedDate = null;
+        DocumentGrid.ItemsSource = _project.Documents;
     }
 
     protected virtual void Dispose(bool disposing)

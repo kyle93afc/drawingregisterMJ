@@ -11,6 +11,8 @@
     <Window.Resources>
         <converters:DateToColumnConverter x:Key="DateToColumnConverter"/>
         <converters:LatestRevisionConverter x:Key="LatestRevisionConverter"/>
+        <converters:RevisionColorConverter x:Key="RevisionColorConverter"/>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <!-- Styles -->
         <Style TargetType="DataGridColumnHeader">
@@ -39,10 +41,16 @@
                 <TextBlock Text="{Binding}" Padding="8" TextWrapping="Wrap"/>
             </Border>
         </DataTemplate>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -90,9 +98,19 @@
             <Button Content="Refresh View" Click="RefreshView_Click" Padding="15,5"/>
         </StackPanel>
 
+        <!-- Move Date Filters to New Row -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Filter by Date:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
+            <DatePicker x:Name="EndDatePicker" Width="120" Margin="0,0,10,0"/>
+            <Button Content="Apply Filter" Click="DateFilter_Click" Padding="10,3"/>
+            <Button Content="Clear Filter" Click="ClearDateFilter_Click" Padding="10,3" 
+                    Background="#FFE0E0E0"/>
+        </StackPanel>
+
         <!-- Documents Grid -->
         <DataGrid x:Name="DocumentGrid" 
-                  Grid.Row="3" 
+                  Grid.Row="4" 
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   SelectionMode="Single"
@@ -114,75 +132,46 @@
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Revision History -->
-        <ScrollViewer Grid.Row="4" 
+        <!-- Revision Timeline -->
+        <ScrollViewer Grid.Row="5" 
                       HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
                       Margin="0,10,0,0">
-            <Grid x:Name="RevisionHistoryGrid">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <ItemsControl Grid.Row="0" x:Name="RevisionDatesRow">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="#ddd" BorderThickness="1" Width="120">
-                                <TextBlock Text="{Binding}" Padding="8" Background="#f2f2f2"/>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <ItemsControl Grid.Row="1" x:Name="RevisionPurposeRow">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="#ddd" BorderThickness="1" Width="120">
-                                <TextBlock Text="{Binding}" Padding="8" TextWrapping="Wrap"/>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <ItemsControl Grid.Row="2" x:Name="RevisionMethodRow">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="#ddd" BorderThickness="1" Width="120">
-                                <TextBlock Text="{Binding}" Padding="8" TextWrapping="Wrap"/>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <ItemsControl Grid.Row="3" x:Name="RevisionIssuedByRow">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Border BorderBrush="#ddd" BorderThickness="1" Width="120">
-                                <TextBlock Text="{Binding}" Padding="8" TextWrapping="Wrap"/>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Grid>
+            <ItemsControl x:Name="RevisionTimeline" 
+                          ItemsSource="{Binding SelectedDocument.RevisionHistory}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderBrush="#4CAF50" BorderThickness="1" 
+                                Margin="4" Padding="0" 
+                                Background="{Binding Value.Purpose, Converter={StaticResource RevisionColorConverter}}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Key, StringFormat=yyyy-MM-dd}" 
+                                           Background="#4CAF50" Foreground="White"
+                                           Padding="4" FontWeight="Bold" TextAlignment="Center"/>
+                                
+                                <StackPanel Margin="8">
+                                    <TextBlock Text="{Binding Value.Revision}" FontSize="16" 
+                                               FontWeight="Bold" HorizontalAlignment="Center"/>
+                                    
+                                    <TextBlock Text="{Binding Value.Purpose}" Margin="0,5" 
+                                               TextWrapping="Wrap" TextAlignment="Center"/>
+                                    
+                                    <TextBlock Text="{Binding Value.Method}" FontStyle="Italic"
+                                               HorizontalAlignment="Center"/>
+                                    
+                                    <TextBlock Text="{Binding Value.IssuedBy}" Margin="0,5"
+                                               Foreground="#444" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </ScrollViewer>
     </Grid>
 </Window>

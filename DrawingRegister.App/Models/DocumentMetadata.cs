@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace DrawingRegister.App.Models
 {
@@ -69,6 +70,10 @@ namespace DrawingRegister.App.Models
 
         // Revision History - Dictionary of date to revision info
         public Dictionary<DateTime, RevisionInfo> RevisionHistory { get; set; } = new();
+
+        public bool IsLatestRevision => 
+            RevisionHistory.Any() && 
+            Revision == RevisionHistory.Max(r => r.Value.Revision);
     }
 
     public class RevisionInfo
