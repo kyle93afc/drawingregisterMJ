@@ -177,7 +177,7 @@ public class ProjectManager : INotifyPropertyChanged
             }
             
             // Get revision - if not in filename, try to detect from folder name
-            string revision = "A";
+            string revision = "-";
             if (match.Groups["revision"].Success)
             {
                 revision = match.Groups["revision"].Value;
@@ -227,7 +227,8 @@ public class ProjectManager : INotifyPropertyChanged
                 Purpose = DeterminePurpose(filePath),
                 Method = "E",
                 IssuedBy = DetermineIssuedBy(filePath),
-                IsDistributed = true
+                IsDistributed = true,
+                FilePath = filePath
             };
 
             doc.RevisionHistory[issueDate] = revInfo;
@@ -237,7 +238,7 @@ public class ProjectManager : INotifyPropertyChanged
             {
                 // Update existing document metadata with new revision
                 existingDoc.RevisionHistory[issueDate] = revInfo;
-                existingDoc.FilePath = filePath;  // Update file location
+                existingDoc.FilePath = filePath;  // Keep latest file path in document for grid double-click
             }
             else
             {

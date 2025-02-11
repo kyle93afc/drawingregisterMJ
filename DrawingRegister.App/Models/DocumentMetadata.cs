@@ -83,6 +83,7 @@ namespace DrawingRegister.App.Models
         public string Method { get; set; } = string.Empty;
         public string IssuedBy { get; set; } = string.Empty;
         public bool IsDistributed { get; set; }
+        public string FilePath { get; set; } = string.Empty;
     }
 
     public class StakeholderInfo

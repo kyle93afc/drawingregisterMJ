@@ -14,9 +14,9 @@ namespace DrawingRegister.App.Converters
             if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && revisionHistory.Any())
             {
                 var latestRevision = revisionHistory.OrderByDescending(x => x.Key).First();
-                return latestRevision.Value.Revision;
+                return string.IsNullOrWhiteSpace(latestRevision.Value.Revision) ? "-" : latestRevision.Value.Revision;
             }
-            return string.Empty;
+            return "-";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

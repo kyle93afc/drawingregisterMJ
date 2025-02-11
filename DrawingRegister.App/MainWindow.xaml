@@ -148,7 +148,8 @@
                     <DataTemplate>
                         <Border BorderBrush="#4CAF50" BorderThickness="1" 
                                 Margin="4" Padding="0" 
-                                Background="{Binding Value.Purpose, Converter={StaticResource RevisionColorConverter}}">
+                                Background="{Binding Value.Purpose, Converter={StaticResource RevisionColorConverter}}"
+                                MouseLeftButtonDown="RevisionTimeline_MouseDoubleClick">
                             <StackPanel>
                                 <TextBlock Text="{Binding Key, StringFormat=yyyy-MM-dd}" 
                                            Background="#4CAF50" Foreground="White"

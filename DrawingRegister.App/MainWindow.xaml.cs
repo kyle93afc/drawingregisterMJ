@@ -133,21 +133,38 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         if (DocumentGrid.SelectedItem is DocumentMetadata selectedDoc)
         {
-            try 
+            OpenDocument(selectedDoc.FilePath);
+        }
+    }
+
+    private void RevisionTimeline_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement element && element.DataContext is KeyValuePair<DateTime, RevisionInfo> revision)
+        {
+            OpenDocument(revision.Value.FilePath);
+        }
+    }
+
+    private void OpenDocument(string filePath)
+    {
+        try 
+        {
+            if (File.Exists(filePath))
             {
-                if (File.Exists(selectedDoc.FilePath))
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = selectedDoc.FilePath,
-                        UseShellExecute = true
-                    });
-                }
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Error opening file: {ex.Message}");
+                MessageBox.Show($"File not found: {filePath}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
