@@ -24,7 +24,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private readonly ProjectManager _project = new();
     private bool _disposed;
     private string _searchText = string.Empty;
-    private ObservableCollection<List<string>> _revisionRows = new();
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -36,16 +35,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             _searchText = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SearchText)));
             FilterDocuments();
-        }
-    }
-
-    public ObservableCollection<List<string>> RevisionRows
-    {
-        get => _revisionRows;
-        set
-        {
-            _revisionRows = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RevisionRows)));
         }
     }
 
@@ -61,9 +50,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         RegNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.RegisterNumber)) { Source = _project });
         ClientNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ClientNumber)) { Source = _project });
 
-        // Bind grids to ProjectManager collections
+        // Bind grid to ProjectManager collections
         DocumentGrid.ItemsSource = _project.Documents;
-        RevisionHistoryControl.ItemsSource = RevisionRows;
+        
+        // Add headers to revision rows
+        RevisionDatesRow.Items.Add("Issue Date");
+        RevisionPurposeRow.Items.Add("Purpose");
+        RevisionMethodRow.Items.Add("Method");
+        RevisionIssuedByRow.Items.Add("Issued By");
     }
 
     private void FilterDocuments()
@@ -86,9 +80,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void UpdateRevisionHistory()
     {
+        // Clear existing items except headers
+        RevisionDatesRow.Items.Clear();
+        RevisionPurposeRow.Items.Clear();
+        RevisionMethodRow.Items.Clear();
+        RevisionIssuedByRow.Items.Clear();
+
+        // Add headers
+        RevisionDatesRow.Items.Add("Issue Date");
+        RevisionPurposeRow.Items.Add("Purpose");
+        RevisionMethodRow.Items.Add("Method");
+        RevisionIssuedByRow.Items.Add("Issued By");
+
         if (DocumentGrid.SelectedItem is not DocumentMetadata selectedDoc)
         {
-            RevisionRows.Clear();
             return;
         }
 
@@ -96,15 +101,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             .OrderBy(x => x.Key)
             .ToList();
 
-        var rows = new List<List<string>>
+        foreach (var revision in revisions)
         {
-            new List<string> { "Issue Date" }.Concat(revisions.Select(r => r.Key.ToString("dd/MM/yyyy"))).ToList(),
-            new List<string> { "Purpose" }.Concat(revisions.Select(r => r.Value.Purpose)).ToList(),
-            new List<string> { "Method" }.Concat(revisions.Select(r => r.Value.Method)).ToList(),
-            new List<string> { "Issued By" }.Concat(revisions.Select(r => r.Value.IssuedBy)).ToList()
-        };
-
-        RevisionRows = new ObservableCollection<List<string>>(rows);
+            RevisionDatesRow.Items.Add(revision.Key.ToString("dd/MM/yyyy"));
+            RevisionPurposeRow.Items.Add(revision.Value.Purpose);
+            RevisionMethodRow.Items.Add(revision.Value.Method);
+            RevisionIssuedByRow.Items.Add(revision.Value.IssuedBy);
+        }
     }
 
     private void ImportDocuments_Click(object sender, RoutedEventArgs e)
