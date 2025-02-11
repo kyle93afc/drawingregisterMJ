@@ -10,15 +10,9 @@ namespace DrawingRegister.App.Converters
         {
             if (value is DateTime date)
             {
-                // Get all dates from the MainWindow
-                var mainWindow = App.Current.MainWindow as MainWindow;
-                if (mainWindow != null)
-                {
-                    var allDates = mainWindow.GetAllIssueDates();
-                    return allDates.IndexOf(date);
-                }
+                return date.ToString("dd/MM/yyyy");
             }
-            return 0;
+            return string.Empty;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
