@@ -10,6 +10,7 @@ using DrawingRegister.App.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Win32;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace DrawingRegister.App;
 
@@ -126,52 +127,57 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 {
                     var fileInfo = new FileInfo(filePath);
                     var fileName = Path.GetFileNameWithoutExtension(filePath);
-                    
-                    // Parse document number format: NNNNNN-XXX-VN-XX-DR-X-NN-NN
-                    var docParts = fileName.Split('-');
-                    if (docParts.Length < 7)
+
+                    // New regex-based parsing to handle 5-6 digit project numbers and optional revision/description
+                    var regex = new Regex(@"^(?<projectNo>\d{5,6})-(?<code1>[^-]+)-(?<volume>[^-]+)-(?<code2>[^-]+)-(?<docType>[^-]+)-(?<docDiscipline>[^-]+)-(?<package>[^-]+)(-(?<extra>.+))?$");
+                    var match = regex.Match(fileName);
+                    if (!match.Success)
                     {
-                        errors.Add($"Invalid filename format: {fileName}");
+                        errors.Add($"Filename does not match expected format: {fileName}");
                         continue;
                     }
 
-                    var projectNo = docParts[0];
-                    var volume = docParts[2];
-                    var docType = docParts[4];
-                    var docDiscipline = docParts[5];
-                    var package = docParts[6];
-                    
-                    // Get revision from folder name (YYYYMMDD format)
+                    var projectNo = match.Groups["projectNo"].Value;
+                    var documentNumber = $"{match.Groups["projectNo"].Value}-{match.Groups["code1"].Value}-{match.Groups["volume"].Value}-{match.Groups["code2"].Value}-{match.Groups["docType"].Value}-{match.Groups["docDiscipline"].Value}-{match.Groups["package"].Value}";
+
+                    string revision = "A";
+                    string description = "";
+                    if (match.Groups["extra"].Success)
+                    {
+                        var extraParts = match.Groups["extra"].Value.Split('-');
+                        if (extraParts.Length > 0 && extraParts.Last().Length == 1 && char.IsLetter(extraParts.Last()[0]))
+                        {
+                            revision = extraParts.Last();
+                            if (extraParts.Length > 1)
+                                description = string.Join(" ", extraParts.Take(extraParts.Length - 1)).Replace("_", " ").Trim();
+                        }
+                        else
+                        {
+                            description = string.Join(" ", extraParts).Replace("_", " ").Trim();
+                        }
+                    }
+
+                    // Existing issue date extraction based on folder name remains below
                     var folderName = Path.GetFileName(Path.GetDirectoryName(filePath));
                     DateTime issueDate;
-                    if (DateTime.TryParseExact(folderName, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out issueDate))
-                    {
-                        // Valid date folder
-                    }
-                    else
+                    if (!DateTime.TryParseExact(folderName, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out issueDate))
                     {
                         issueDate = fileInfo.CreationTime;
                     }
 
-                    // Try to get revision from filename suffix
-                    string revision = "A";
-                    if (docParts.Length > 8)
-                    {
-                        revision = docParts[docParts.Length - 1];
-                    }
-
+                    // Create document metadata using parsed values
                     var doc = new DocumentMetadata
                     {
-                        DocumentNumber = string.Join("-", docParts.Take(8)),
+                        DocumentNumber = documentNumber,
                         FilePath = filePath,
                         ProjectNumber = projectNo,
                         ProjectName = projectName,
-                        Discipline = docDiscipline,
-                        Package = package,
-                        DocumentType = docType,
+                        Discipline = match.Groups["docDiscipline"].Value,
+                        Package = match.Groups["package"].Value,
+                        DocumentType = match.Groups["docType"].Value,
                         RegisterNumber = regNo,
                         ClientNumber = clientNo,
-                        Description = ParseDescription(fileName),
+                        Description = string.IsNullOrWhiteSpace(description) ? ParseDescription(fileName) : description,
                         Size = DetermineDrawingSize(filePath)
                     };
 
@@ -180,7 +186,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     {
                         Revision = revision,
                         Purpose = DeterminePurpose(filePath),
-                        Method = "E", // Default to Email
+                        Method = "E",
                         IssuedBy = DetermineIssuedBy(filePath),
                         IsDistributed = true
                     };
@@ -330,20 +336,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             // Split by hyphen and get the description part
             var parts = fileName.Split('-');
-            if (parts.Length >= 8)
+            if (parts.Length > 8)
             {
-                // Join all parts after the standard naming parts with spaces
                 var descParts = parts.Skip(8).ToList();
-                if (descParts.Any())
+                if (descParts.Count > 0 && descParts.Last().Length == 1 && char.IsLetter(descParts.Last()[0]))
                 {
-                    // Remove any revision suffix if present
-                    var lastPart = descParts[descParts.Count - 1];
-                    if (lastPart.Length == 1 && char.IsLetter(lastPart[0]))
-                    {
-                        descParts.RemoveAt(descParts.Count - 1);
-                    }
-                    return string.Join(" ", descParts).Replace("_", " ").Trim();
+                    descParts.RemoveAt(descParts.Count - 1);
                 }
+                return string.Join(" ", descParts).Replace("_", " ").Trim();
             }
 
             // If no description found in filename, try to parse from standard naming
