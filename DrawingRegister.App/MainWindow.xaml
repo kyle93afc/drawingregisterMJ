@@ -94,7 +94,7 @@
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="Import Documents" Click="ImportDocuments_Click" Padding="15,5" Margin="0,0,10,0"/>
+            <Button Content="Scan Outgoing PDF Folder" Click="ImportDocuments_Click" Padding="15,5" Margin="0,0,10,0"/>
             <Button Content="Refresh View" Click="RefreshView_Click" Padding="15,5"/>
         </StackPanel>
 
