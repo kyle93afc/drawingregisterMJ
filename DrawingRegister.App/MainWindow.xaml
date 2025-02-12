@@ -50,12 +50,13 @@
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>  <!-- Header Info -->
+            <RowDefinition Height="Auto"/>  <!-- Distribution Header -->
+            <RowDefinition Height="Auto"/>  <!-- Action Buttons -->
+            <RowDefinition Height="Auto"/>  <!-- Search Panel -->
+            <RowDefinition Height="Auto"/>  <!-- Date Filter -->
+            <RowDefinition Height="*"/>     <!-- Documents Grid -->
+            <RowDefinition Height="Auto"/>  <!-- Revision Timeline -->
         </Grid.RowDefinitions>
 
         <!-- Header Info -->
@@ -95,11 +96,24 @@
         <!-- Action Buttons -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="Scan Outgoing PDF Folder" Click="ImportDocuments_Click" Padding="15,5" Margin="0,0,10,0"/>
+            <Button Content="Save Project" Click="SaveProject_Click" Padding="15,5" Margin="0,0,10,0"/>
             <Button Content="Refresh View" Click="RefreshView_Click" Padding="15,5"/>
         </StackPanel>
 
-        <!-- Move Date Filters to New Row -->
+        <!-- Search Panel -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBox x:Name="SearchBox" Width="200" Margin="0,0,10,0" TextChanged="SearchBox_TextChanged"/>
+            <ComboBox x:Name="SearchTypeCombo" Width="120" Margin="0,0,10,0" SelectedIndex="0">
+                <ComboBoxItem Content="Document No"/>
+                <ComboBoxItem Content="Description"/>
+                <ComboBoxItem Content="Package"/>
+                <ComboBoxItem Content="Type"/>
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Move Date Filters to New Row -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Filter by Date:" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
             <DatePicker x:Name="EndDatePicker" Width="120" Margin="0,0,10,0"/>
@@ -110,7 +124,7 @@
 
         <!-- Documents Grid -->
         <DataGrid x:Name="DocumentGrid" 
-                  Grid.Row="4" 
+                  Grid.Row="5" 
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   SelectionMode="Single"
@@ -133,7 +147,7 @@
         </DataGrid>
 
         <!-- Revision Timeline -->
-        <ScrollViewer Grid.Row="5" 
+        <ScrollViewer Grid.Row="6" 
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
                       Margin="0,10,0,0">

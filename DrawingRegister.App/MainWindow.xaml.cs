@@ -63,23 +63,53 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Bind grid to ProjectManager collections
         DocumentGrid.ItemsSource = _project.Documents;
+
+        // Initialize search type combo
+        SearchTypeCombo.SelectedIndex = 0;
+    }
+
+    private void SaveProject_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _project.SaveProjectData();
+            MessageBox.Show("Project saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error saving project: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        FilterDocuments();
     }
 
     private void FilterDocuments()
     {
-        ICollectionView view = CollectionViewSource.GetDefaultView(_project.Documents);
-        if (string.IsNullOrWhiteSpace(SearchText))
+        ICollectionView view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
+        if (string.IsNullOrWhiteSpace(SearchBox.Text))
         {
             view.Filter = null;
             return;
         }
 
+        string searchText = SearchBox.Text.ToLower();
+        var searchType = ((ComboBoxItem)SearchTypeCombo.SelectedItem).Content.ToString();
+
         view.Filter = obj =>
         {
             if (obj is not DocumentMetadata doc) return false;
-            return doc.DocumentNumber.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                   doc.Description.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                   doc.Package.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
+
+            return searchType switch
+            {
+                "Document No" => doc.DocumentNumber.ToLower().Contains(searchText),
+                "Description" => doc.Description.ToLower().Contains(searchText),
+                "Package" => doc.Package.ToLower().Contains(searchText),
+                "Type" => doc.DocumentType.ToLower().Contains(searchText),
+                _ => false
+            };
         };
     }
 

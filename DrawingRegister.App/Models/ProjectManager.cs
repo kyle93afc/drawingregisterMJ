@@ -4,11 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.ComponentModel;
+using System.Text.Json;
 
 namespace DrawingRegister.App.Models;
 
 public class ProjectManager : INotifyPropertyChanged
 {
+    private const string STORAGE_FILENAME = "project_data.json";
+    private string _currentBasePath = string.Empty;
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private string _projectNumber = string.Empty;
@@ -72,7 +76,69 @@ public class ProjectManager : INotifyPropertyChanged
 
     public void ImportDocuments(string folderPath)
     {
-        // Get all subdirectories first
+        _currentBasePath = folderPath;
+        var storageFile = Path.Combine(folderPath, STORAGE_FILENAME);
+        ProjectStorage? existingData = null;
+
+        // Try to load existing data
+        if (File.Exists(storageFile))
+        {
+            try
+            {
+                var json = File.ReadAllText(storageFile);
+                existingData = JsonSerializer.Deserialize<ProjectStorage>(json);
+                
+                // Load existing project info
+                if (existingData != null)
+                {
+                    ProjectNumber = existingData.ProjectNumber;
+                    ProjectName = existingData.ProjectName;
+                    Discipline = existingData.Discipline;
+                    RegisterNumber = existingData.RegisterNumber;
+                    ClientNumber = existingData.ClientNumber;
+
+                    // Load existing documents
+                    foreach (var doc in existingData.Documents)
+                    {
+                        var metadata = new DocumentMetadata
+                        {
+                            DocumentNumber = doc.DocumentNumber,
+                            Description = doc.Description,
+                            Package = doc.Package,
+                            DocumentType = doc.DocumentType,
+                            Size = doc.Size,
+                            ProjectNumber = ProjectNumber,
+                            ProjectName = ProjectName,
+                            Discipline = Discipline,
+                            RegisterNumber = RegisterNumber,
+                            ClientNumber = ClientNumber
+                        };
+
+                        foreach (var rev in doc.RevisionHistory)
+                        {
+                            metadata.RevisionHistory[rev.Key] = new RevisionInfo
+                            {
+                                Revision = rev.Value.Revision,
+                                Purpose = rev.Value.Purpose,
+                                Method = rev.Value.Method,
+                                IssuedBy = rev.Value.IssuedBy,
+                                IsDistributed = rev.Value.IsDistributed,
+                                FilePath = rev.Value.FilePath
+                            };
+                        }
+
+                        Documents.Add(metadata);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but continue with fresh scan
+                System.Diagnostics.Debug.WriteLine($"Error loading storage: {ex.Message}");
+            }
+        }
+
+        // Scan for new files
         var subDirectories = Directory.GetDirectories(folderPath);
         if (!subDirectories.Any())
         {
@@ -245,6 +311,48 @@ public class ProjectManager : INotifyPropertyChanged
                 Documents.Add(doc);
             }
         }
+
+        // After processing, save updated data
+        SaveProjectData();
+    }
+
+    public void SaveProjectData()
+    {
+        if (string.IsNullOrEmpty(_currentBasePath)) return;
+
+        var storage = new ProjectStorage
+        {
+            ProjectNumber = ProjectNumber,
+            ProjectName = ProjectName,
+            Discipline = Discipline,
+            RegisterNumber = RegisterNumber,
+            ClientNumber = ClientNumber,
+            BaseFolderPath = _currentBasePath,
+            LastScanDate = DateTime.Now,
+            Documents = Documents.Select(d => new DocumentStorageInfo
+            {
+                DocumentNumber = d.DocumentNumber,
+                Description = d.Description,
+                Package = d.Package,
+                DocumentType = d.DocumentType,
+                Size = d.Size,
+                RevisionHistory = d.RevisionHistory.ToDictionary(
+                    kv => kv.Key,
+                    kv => new RevisionStorageInfo
+                    {
+                        Revision = kv.Value.Revision,
+                        Purpose = kv.Value.Purpose,
+                        Method = kv.Value.Method,
+                        IssuedBy = kv.Value.IssuedBy,
+                        IsDistributed = kv.Value.IsDistributed,
+                        FilePath = kv.Value.FilePath
+                    })
+            }).ToList()
+        };
+
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(storage, options);
+        File.WriteAllText(Path.Combine(_currentBasePath, STORAGE_FILENAME), json);
     }
 
     private string DeterminePurpose(string filePath)
