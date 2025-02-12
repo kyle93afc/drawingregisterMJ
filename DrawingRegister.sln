@@ -5,18 +5,22 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DrawingRegister.App", "DrawingRegister.App\DrawingRegister.App.csproj", "{5F3B7AFE-118F-4C67-B423-0BBE757F876A}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "DrawingRegister.Installer", "DrawingRegister\DrawingRegister.vdproj", "{20B383B0-4507-E159-566A-65976A74248D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{5F3B7AFE-118F-4C67-B423-0BBE757F876A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5F3B7AFE-118F-4C67-B423-0BBE757F876A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5F3B7AFE-118F-4C67-B423-0BBE757F876A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5F3B7AFE-118F-4C67-B423-0BBE757F876A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20B383B0-4507-E159-566A-65976A74248D}.Debug|Any CPU.ActiveCfg = Debug
+		{20B383B0-4507-E159-566A-65976A74248D}.Release|Any CPU.ActiveCfg = Release
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

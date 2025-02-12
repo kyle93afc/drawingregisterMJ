@@ -14,9 +14,69 @@
         <converters:RevisionColorConverter x:Key="RevisionColorConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
+        <!-- Button Style -->
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#5a6268"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#4a5258"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#3d444a"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="#6c757d"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#5a6268"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#545b62"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        
         <!-- Styles -->
         <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#4CAF50"/>
+            <Setter Property="Background" Value="#eb1845"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Padding" Value="8"/>
             <Setter Property="BorderBrush" Value="#ddd"/>
@@ -74,19 +134,19 @@
             </Grid.RowDefinitions>
 
             <!-- Row 1 -->
-            <TextBlock Text="Discipline:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBlock Text="DISCIPLINE:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
             <TextBox x:Name="DisciplineBox" Grid.Row="0" Grid.Column="1" Margin="0,0,20,5"/>
-            <TextBlock Text="Reg No:" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBlock Text="REG NO:" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
             <TextBox x:Name="RegNoBox" Grid.Row="0" Grid.Column="3" Width="300" Margin="0,0,0,5"/>
 
             <!-- Row 2 -->
-            <TextBlock Text="Project No:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBlock Text="PROJECT NO:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
             <TextBox x:Name="ProjectNoBox" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5"/>
-            <TextBlock Text="Client No:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBlock Text="CLIENT NO:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
             <TextBox x:Name="ClientNoBox" Grid.Row="1" Grid.Column="3" Margin="0,0,0,5"/>
 
             <!-- Row 3 -->
-            <TextBlock Text="Project Name:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBlock Text="PROJECT NAME:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
             <TextBox x:Name="ProjectNameBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5"/>
         </Grid>
 
@@ -95,14 +155,14 @@
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="Scan Outgoing PDF Folder" Click="ImportDocuments_Click" Padding="15,5" Margin="0,0,10,0"/>
-            <Button Content="Save Project" Click="SaveProject_Click" Padding="15,5" Margin="0,0,10,0"/>
-            <Button Content="Refresh View" Click="RefreshView_Click" Padding="15,5"/>
+            <Button Content="Scan Outgoing PDF Folder" Click="ImportDocuments_Click"/>
+            <Button Content="Save Project" Click="SaveProject_Click"/>
+            <Button Content="Refresh View" Click="RefreshView_Click"/>
         </StackPanel>
 
         <!-- Search Panel -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="Search:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBox x:Name="SearchBox" Width="200" Margin="0,0,10,0" TextChanged="SearchBox_TextChanged"/>
             <ComboBox x:Name="SearchTypeCombo" Width="120" Margin="0,0,10,0" SelectedIndex="0">
                 <ComboBoxItem Content="Document No"/>
@@ -114,12 +174,11 @@
 
         <!-- Move Date Filters to New Row -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="Filter by Date:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
             <DatePicker x:Name="EndDatePicker" Width="120" Margin="0,0,10,0"/>
-            <Button Content="Apply Filter" Click="DateFilter_Click" Padding="10,3"/>
-            <Button Content="Clear Filter" Click="ClearDateFilter_Click" Padding="10,3" 
-                    Background="#FFE0E0E0"/>
+            <Button Content="Apply Filter" Click="DateFilter_Click"/>
+            <Button Content="Clear Filter" Click="ClearDateFilter_Click" Style="{StaticResource SecondaryButton}"/>
         </StackPanel>
 
         <!-- Documents Grid -->
@@ -135,12 +194,12 @@
                   BorderThickness="1"
                   BorderBrush="#ddd">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Document No" Binding="{Binding DocumentNumber}" Width="200"/>
-                <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
-                <DataGridTextColumn Header="Package" Binding="{Binding Package}" Width="100"/>
-                <DataGridTextColumn Header="Type" Binding="{Binding DocumentType}" Width="100"/>
-                <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="80"/>
-                <DataGridTextColumn Header="Latest Rev" 
+                <DataGridTextColumn Header="DOCUMENT NO" Binding="{Binding DocumentNumber}" Width="200"/>
+                <DataGridTextColumn Header="DESCRIPTION" Binding="{Binding Description}" Width="*"/>
+                <DataGridTextColumn Header="PACKAGE" Binding="{Binding Package}" Width="100"/>
+                <DataGridTextColumn Header="TYPE" Binding="{Binding DocumentType}" Width="100"/>
+                <DataGridTextColumn Header="SIZE" Binding="{Binding Size}" Width="80"/>
+                <DataGridTextColumn Header="LATEST REV" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
                                   Width="100"/>
             </DataGrid.Columns>
@@ -160,13 +219,13 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border BorderBrush="#4CAF50" BorderThickness="1" 
+                        <Border BorderBrush="#eb1845" BorderThickness="1" 
                                 Margin="4" Padding="0" 
                                 Background="{Binding Value.Purpose, Converter={StaticResource RevisionColorConverter}}"
                                 MouseLeftButtonDown="RevisionTimeline_MouseDoubleClick">
                             <StackPanel>
                                 <TextBlock Text="{Binding Key, StringFormat=yyyy-MM-dd}" 
-                                           Background="#4CAF50" Foreground="White"
+                                           Background="#eb1845" Foreground="White"
                                            Padding="4" FontWeight="Bold" TextAlignment="Center"/>
                                 
                                 <StackPanel Margin="8">
