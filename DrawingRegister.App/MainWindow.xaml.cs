@@ -75,6 +75,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         // Update issue date filter options when documents change
         UpdateIssueDateFilterOptions();
+        UpdateRevisionColumns();
     }
 
     private void UpdateIssueDateFilterOptions()
@@ -104,6 +105,41 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         else
         {
             IssueDateFilter.SelectedIndex = 0;
+        }
+    }
+
+    private void UpdateRevisionColumns()
+    {
+        // Get all unique issue dates from documents
+        var issueDates = _project.Documents
+            .SelectMany(d => d.RevisionHistory.Keys)
+            .OrderBy(d => d)
+            .Distinct()
+            .ToList();
+
+        // Remove any existing revision date columns
+        var existingRevisionColumns = DocumentGrid.Columns
+            .Where(c => c.Header.ToString()?.StartsWith("REV") == true)
+            .ToList();
+        foreach (var column in existingRevisionColumns)
+        {
+            DocumentGrid.Columns.Remove(column);
+        }
+
+        // Add a column for each issue date
+        foreach (var date in issueDates)
+        {
+            var column = new System.Windows.Controls.DataGridTextColumn
+            {
+                Header = $"REV {date:yyyy-MM-dd}",
+                Width = 100,
+                Binding = new System.Windows.Data.Binding("RevisionHistory")
+                {
+                    Converter = (System.Windows.Data.IValueConverter)FindResource("RevisionAtDateConverter"),
+                    ConverterParameter = date
+                }
+            };
+            DocumentGrid.Columns.Add(column);
         }
     }
 

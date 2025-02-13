@@ -14,6 +14,7 @@
         <converters:RevisionColorConverter x:Key="RevisionColorConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:LatestRevisionDateConverter x:Key="LatestRevisionDateConverter"/>
+        <converters:RevisionAtDateConverter x:Key="RevisionAtDateConverter"/>
         
         <!-- Button Style -->
         <Style TargetType="Button">
