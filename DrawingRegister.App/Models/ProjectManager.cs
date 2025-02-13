@@ -11,7 +11,7 @@ namespace DrawingRegister.App.Models;
 public class ProjectManager : INotifyPropertyChanged
 {
     private const string STORAGE_FILENAME = "project_data.json";
-    private string _currentBasePath = string.Empty;
+    public string _currentBasePath = string.Empty;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -255,6 +255,10 @@ public class ProjectManager : INotifyPropertyChanged
                 if (folderRevMatch.Success)
                 {
                     revision = folderRevMatch.Groups[1].Value;
+                }
+                else
+                {
+                    revision = "-";  // Explicitly set to "-" if no revision found
                 }
             }
 

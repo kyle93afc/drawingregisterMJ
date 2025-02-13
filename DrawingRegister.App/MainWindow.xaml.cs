@@ -143,15 +143,42 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void RefreshView_Click(object sender, RoutedEventArgs e)
     {
-        // Refresh the document grid view
-        var view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
-        view.Refresh();
+        try
+        {
+            if (string.IsNullOrEmpty(_project._currentBasePath))
+            {
+                MessageBox.Show("No folder selected. Please import documents first.", 
+                    "Refresh Error", 
+                    MessageBoxButton.OK, 
+                    MessageBoxImage.Warning);
+                return;
+            }
 
-        // Reapply any active filters
-        FilterDocuments();
+            // Rescan the current folder
+            _project.ImportDocuments(_project._currentBasePath);
 
-        // Force grid to update
-        DocumentGrid.Items.Refresh();
+            // Refresh the document grid view
+            var view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
+            view.Refresh();
+
+            // Reapply any active filters
+            FilterDocuments();
+
+            // Force grid to update
+            DocumentGrid.Items.Refresh();
+
+            MessageBox.Show($"Successfully refreshed {_project.Documents.Count} documents.", 
+                "Refresh Complete", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error refreshing documents: {ex.Message}", 
+                "Refresh Error", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Error);
+        }
     }
 
     private void DocumentGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)

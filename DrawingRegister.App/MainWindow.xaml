@@ -13,6 +13,7 @@
         <converters:LatestRevisionConverter x:Key="LatestRevisionConverter"/>
         <converters:RevisionColorConverter x:Key="RevisionColorConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <converters:LatestRevisionDateConverter x:Key="LatestRevisionDateConverter"/>
         
         <!-- Button Style -->
         <Style TargetType="Button">
@@ -202,6 +203,9 @@
                 <DataGridTextColumn Header="LATEST REV" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
                                   Width="100"/>
+                <DataGridTextColumn Header="DATE OF ISSUE" 
+                                  Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionDateConverter}}"
+                                  Width="120"/>
             </DataGrid.Columns>
         </DataGrid>
 
