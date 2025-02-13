@@ -131,8 +131,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             var column = new System.Windows.Controls.DataGridTextColumn
             {
-                Header = date.ToString("yyyy-MM-dd"),  // Removed "REV" prefix
-                Width = DataGridLength.Auto,  // Auto-size columns
+                Header = date.ToString("yyyy-MM-dd"),
+                Width = DataGridLength.Auto,
+                MinWidth = 40,
                 HeaderStyle = (Style)FindResource("RotatedColumnHeader"),
                 Binding = new System.Windows.Data.Binding("RevisionHistory")
                 {

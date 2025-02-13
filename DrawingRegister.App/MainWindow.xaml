@@ -230,17 +230,17 @@
                   BorderThickness="1"
                   BorderBrush="#ddd">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="DOCUMENT NO" Binding="{Binding DocumentNumber}" Width="200"/>
-                <DataGridTextColumn Header="DESCRIPTION" Binding="{Binding Description}" Width="*"/>
-                <DataGridTextColumn Header="PACKAGE" Binding="{Binding Package}" Width="100"/>
-                <DataGridTextColumn Header="TYPE" Binding="{Binding DocumentType}" Width="100"/>
-                <DataGridTextColumn Header="SIZE" Binding="{Binding Size}" Width="80"/>
+                <DataGridTextColumn Header="DOCUMENT NO" Binding="{Binding DocumentNumber}" Width="Auto" MinWidth="120"/>
+                <DataGridTextColumn Header="DESCRIPTION" Binding="{Binding Description}" Width="*" MinWidth="200"/>
+                <DataGridTextColumn Header="PACKAGE" Binding="{Binding Package}" Width="Auto" MinWidth="80"/>
+                <DataGridTextColumn Header="TYPE" Binding="{Binding DocumentType}" Width="Auto" MinWidth="80"/>
+                <DataGridTextColumn Header="SIZE" Binding="{Binding Size}" Width="Auto" MinWidth="50"/>
                 <DataGridTextColumn Header="LATEST REV" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
-                                  Width="100"/>
+                                  Width="Auto" MinWidth="80"/>
                 <DataGridTextColumn Header="LAST DATE OF ISSUE" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionDateConverter}}"
-                                  Width="120"/>
+                                  Width="Auto" MinWidth="100"/>
             </DataGrid.Columns>
         </DataGrid>
 
