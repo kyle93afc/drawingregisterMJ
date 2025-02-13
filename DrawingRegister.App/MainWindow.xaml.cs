@@ -13,15 +13,13 @@ using TextBox = System.Windows.Controls.TextBox;
 using Binding = System.Windows.Data.Binding;
 using System.Windows.Media;
 using System.Collections.ObjectModel;
-using iText.Kernel.Pdf;
-using iText.Layout;
-using iText.Layout.Element;
-using iText.Layout.Properties;
-using iText.Kernel.Geom;
-using iText.Kernel.Colors;
 using Microsoft.Win32;
+using PdfSharp.Pdf;
+using PdfSharp.Drawing;
+using MigraDoc.DocumentObjectModel;
+using MigraDoc.DocumentObjectModel.Tables;
+using MigraDoc.Rendering;
 using Style = System.Windows.Style;
-using TextAlignment = iText.Layout.Properties.TextAlignment;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 
 namespace DrawingRegister.App;
@@ -386,41 +384,48 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         try
         {
-            using var writer = new PdfWriter(saveDialog.FileName);
-            using var pdf = new PdfDocument(writer);
-            using var document = new Document(pdf, PageSize.A4.Rotate());
-            
-            document.SetMargins(20, 20, 20, 20);
-            
+            // Create a new MigraDoc document
+            var document = new Document();
+            var section = document.AddSection();
+            section.PageSetup.Orientation = MigraDoc.DocumentObjectModel.Orientation.Landscape;
+            section.PageSetup.PageFormat = PageFormat.A4;
+            section.PageSetup.LeftMargin = Unit.FromCentimeter(1);
+            section.PageSetup.RightMargin = Unit.FromCentimeter(1);
+
             // Add project info
-            var projectInfo = new Table(UnitValue.CreatePercentArray(2))
-                .UseAllAvailableWidth()
-                .SetMarginBottom(20);
+            var projectInfoTable = section.AddTable();
+            projectInfoTable.Borders.Width = 0.25;
+            projectInfoTable.AddColumn(Unit.FromCentimeter(4));
+            projectInfoTable.AddColumn(Unit.FromCentimeter(20));
 
-            AddProjectInfoRow(projectInfo, "DISCIPLINE:", DisciplineBox.Text);
-            AddProjectInfoRow(projectInfo, "REG NO:", RegNoBox.Text);
-            AddProjectInfoRow(projectInfo, "PROJECT NO:", ProjectNoBox.Text);
-            AddProjectInfoRow(projectInfo, "CLIENT NO:", ClientNoBox.Text);
-            AddProjectInfoRow(projectInfo, "PROJECT NAME:", ProjectNameBox.Text);
+            AddProjectInfoRow(projectInfoTable, "DISCIPLINE:", DisciplineBox.Text);
+            AddProjectInfoRow(projectInfoTable, "REG NO:", RegNoBox.Text);
+            AddProjectInfoRow(projectInfoTable, "PROJECT NO:", ProjectNoBox.Text);
+            AddProjectInfoRow(projectInfoTable, "CLIENT NO:", ClientNoBox.Text);
+            AddProjectInfoRow(projectInfoTable, "PROJECT NAME:", ProjectNameBox.Text);
 
-            document.Add(projectInfo);
+            section.AddParagraph().AddLineBreak();
 
-            // Create table
-            var columnCount = DocumentGrid.Columns.Count;
-            var table = new Table(UnitValue.CreatePercentArray(columnCount))
-                .UseAllAvailableWidth()
-                .SetMarginBottom(20)
-                .SetFontSize(9);
+            // Create main table
+            var table = section.AddTable();
+            table.Borders.Width = 0.25;
 
-            // Add headers
+            // Add columns
             foreach (var column in DocumentGrid.Columns)
             {
-                table.AddHeaderCell(new Cell()
-                    .Add(new Paragraph(column.Header.ToString() ?? ""))
-                    .SetBackgroundColor(new DeviceRgb(235, 24, 69))
-                    .SetFontColor(ColorConstants.WHITE)
-                    .SetTextAlignment(TextAlignment.CENTER)
-                    .SetPadding(5));
+                table.AddColumn(Unit.FromCentimeter(4));
+            }
+
+            // Add header row
+            var headerRow = table.AddRow();
+            headerRow.Shading.Color = MigraDoc.DocumentObjectModel.Colors.Firebrick;
+            int colIndex = 0;
+            foreach (var column in DocumentGrid.Columns)
+            {
+                var cell = headerRow.Cells[colIndex++];
+                cell.AddParagraph(column.Header?.ToString() ?? "");
+                cell.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.White;
+                cell.Format.Font.Bold = true;
             }
 
             // Add data rows
@@ -428,17 +433,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 if (item is DocumentMetadata doc)
                 {
+                    var row = table.AddRow();
+                    colIndex = 0;
+
                     // Standard columns
-                    table.AddCell(new Cell().Add(new Paragraph(doc.DocumentNumber)));
-                    table.AddCell(new Cell().Add(new Paragraph(doc.Description)));
-                    table.AddCell(new Cell().Add(new Paragraph(doc.Package)));
-                    table.AddCell(new Cell().Add(new Paragraph(doc.DocumentType)));
-                    table.AddCell(new Cell().Add(new Paragraph(doc.Size)));
+                    row.Cells[colIndex++].AddParagraph(doc.DocumentNumber);
+                    row.Cells[colIndex++].AddParagraph(doc.Description);
+                    row.Cells[colIndex++].AddParagraph(doc.Package);
+                    row.Cells[colIndex++].AddParagraph(doc.DocumentType);
+                    row.Cells[colIndex++].AddParagraph(doc.Size);
 
                     // Latest revision
                     var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                    table.AddCell(new Cell().Add(new Paragraph(latestRev.Value?.Revision ?? "")));
-                    table.AddCell(new Cell().Add(new Paragraph(latestRev.Key.ToString("yyyy-MM-dd"))));
+                    row.Cells[colIndex++].AddParagraph(latestRev.Value?.Revision ?? "");
+                    row.Cells[colIndex++].AddParagraph(latestRev.Key.ToString("yyyy-MM-dd"));
 
                     // Dynamic date columns
                     foreach (var column in DocumentGrid.Columns.Skip(7))
@@ -446,16 +454,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         if (column.Header?.ToString() is string dateStr &&
                             DateTime.TryParse(dateStr, out var date))
                         {
-                            var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo) 
-                                ? revInfo.Revision 
+                            var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
+                                ? revInfo.Revision
                                 : "";
-                            table.AddCell(new Cell().Add(new Paragraph(revision)));
+                            row.Cells[colIndex++].AddParagraph(revision);
                         }
                     }
                 }
             }
 
-            document.Add(table);
+            // Render the document
+            var renderer = new PdfDocumentRenderer(true)
+            {
+                Document = document
+            };
+            renderer.RenderDocument();
+            renderer.PdfDocument.Save(saveDialog.FileName);
+
             MessageBox.Show("PDF report generated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -466,8 +481,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void AddProjectInfoRow(Table table, string label, string value)
     {
-        table.AddCell(new Cell().Add(new Paragraph(label)).SetBold().SetPadding(5));
-        table.AddCell(new Cell().Add(new Paragraph(value)).SetPadding(5));
+        var row = table.AddRow();
+        row.Cells[0].AddParagraph(label).Format.Font.Bold = true;
+        row.Cells[1].AddParagraph(value);
     }
 
     protected virtual void Dispose(bool disposing)
