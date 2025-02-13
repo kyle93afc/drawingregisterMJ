@@ -238,7 +238,7 @@
                 <DataGridTextColumn Header="LATEST REV" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
                                   Width="100"/>
-                <DataGridTextColumn Header="DATE OF ISSUE" 
+                <DataGridTextColumn Header="LAST DATE OF ISSUE" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionDateConverter}}"
                                   Width="120"/>
             </DataGrid.Columns>

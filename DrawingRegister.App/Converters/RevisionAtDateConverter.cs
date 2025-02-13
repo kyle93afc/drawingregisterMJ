@@ -16,7 +16,7 @@ namespace DrawingRegister.App.Converters
             {
                 return revInfo.Revision;
             }
-            return "-";
+            return string.Empty;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
