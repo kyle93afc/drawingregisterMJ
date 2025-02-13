@@ -13,6 +13,7 @@ namespace DrawingRegister.App
         public App()
         {
             this.DispatcherUnhandledException += App_DispatcherUnhandledException;
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
         }
 
         private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
