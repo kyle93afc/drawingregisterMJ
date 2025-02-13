@@ -174,12 +174,21 @@
         </StackPanel>
 
         <!-- Move Date Filters to New Row -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
-            <DatePicker x:Name="EndDatePicker" Width="120" Margin="0,0,10,0"/>
-            <Button Content="Apply Filter" Click="DateFilter_Click"/>
-            <Button Content="Clear Filter" Click="ClearDateFilter_Click" Style="{StaticResource SecondaryButton}"/>
+        <StackPanel Grid.Row="4" Orientation="Vertical" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
+                <DatePicker x:Name="EndDatePicker" Width="120" Margin="0,0,10,0"/>
+                <Button Content="Apply Filter" Click="DateFilter_Click"/>
+                <Button Content="Clear Filter" Click="ClearDateFilter_Click" Style="{StaticResource SecondaryButton}"/>
+            </StackPanel>
+            
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="FILTER BY DATE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <ComboBox x:Name="IssueDateFilter" Width="200" Margin="0,0,10,0" SelectionChanged="IssueDateFilter_SelectionChanged">
+                    <ComboBoxItem Content="All Dates"/>
+                </ComboBox>
+            </StackPanel>
         </StackPanel>
 
         <!-- Documents Grid -->

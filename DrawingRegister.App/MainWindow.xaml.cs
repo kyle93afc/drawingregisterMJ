@@ -66,6 +66,67 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Initialize search type combo
         SearchTypeCombo.SelectedIndex = 0;
+
+        // Subscribe to project's documents collection changes
+        _project.Documents.CollectionChanged += Documents_CollectionChanged;
+    }
+
+    private void Documents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        // Update issue date filter options when documents change
+        UpdateIssueDateFilterOptions();
+    }
+
+    private void UpdateIssueDateFilterOptions()
+    {
+        var currentSelection = IssueDateFilter.SelectedItem;
+        IssueDateFilter.Items.Clear();
+        IssueDateFilter.Items.Add(new ComboBoxItem { Content = "All Dates" });
+
+        // Get all unique issue dates from documents
+        var issueDates = _project.Documents
+            .SelectMany(d => d.RevisionHistory.Keys)
+            .OrderByDescending(d => d)
+            .Select(d => d.ToString("yyyy-MM-dd"))
+            .Distinct()
+            .Select(d => new ComboBoxItem { Content = d });
+
+        foreach (var date in issueDates)
+        {
+            IssueDateFilter.Items.Add(date);
+        }
+
+        // Restore previous selection or default to "All Dates"
+        if (currentSelection != null && IssueDateFilter.Items.Cast<ComboBoxItem>().Any(i => i.Content.Equals(((ComboBoxItem)currentSelection).Content)))
+        {
+            IssueDateFilter.SelectedItem = IssueDateFilter.Items.Cast<ComboBoxItem>().First(i => i.Content.Equals(((ComboBoxItem)currentSelection).Content));
+        }
+        else
+        {
+            IssueDateFilter.SelectedIndex = 0;
+        }
+    }
+
+    private void IssueDateFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (IssueDateFilter.SelectedItem is not ComboBoxItem selectedItem)
+            return;
+
+        var selectedContent = selectedItem.Content.ToString();
+        
+        if (selectedContent == "All Dates")
+        {
+            DocumentGrid.ItemsSource = _project.Documents;
+            return;
+        }
+
+        if (DateTime.TryParse(selectedContent, out var selectedDate))
+        {
+            DocumentGrid.ItemsSource = _project.Documents
+                .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Date))
+                .OrderBy(d => d.DocumentNumber)
+                .ToList();
+        }
     }
 
     private void SaveProject_Click(object sender, RoutedEventArgs e)
