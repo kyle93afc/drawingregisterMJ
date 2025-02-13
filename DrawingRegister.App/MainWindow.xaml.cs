@@ -13,6 +13,16 @@ using TextBox = System.Windows.Controls.TextBox;
 using Binding = System.Windows.Data.Binding;
 using System.Windows.Media;
 using System.Collections.ObjectModel;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Element;
+using iText.Layout.Properties;
+using iText.Kernel.Geom;
+using iText.Kernel.Colors;
+using Microsoft.Win32;
+using Style = System.Windows.Style;
+using TextAlignment = iText.Layout.Properties.TextAlignment;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 
 namespace DrawingRegister.App;
 
@@ -361,6 +371,103 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         StartDatePicker.SelectedDate = null;
         EndDatePicker.SelectedDate = null;
         DocumentGrid.ItemsSource = _project.Documents;
+    }
+
+    private void GeneratePdfReport_Click(object sender, RoutedEventArgs e)
+    {
+        var saveDialog = new SaveFileDialog
+        {
+            Filter = "PDF files (*.pdf)|*.pdf",
+            DefaultExt = "pdf",
+            FileName = $"DrawingRegister_{DateTime.Now:yyyyMMdd}"
+        };
+
+        if (saveDialog.ShowDialog() != true) return;
+
+        try
+        {
+            using var writer = new PdfWriter(saveDialog.FileName);
+            using var pdf = new PdfDocument(writer);
+            using var document = new Document(pdf, PageSize.A4.Rotate());
+            
+            document.SetMargins(20, 20, 20, 20);
+            
+            // Add project info
+            var projectInfo = new Table(UnitValue.CreatePercentArray(2))
+                .UseAllAvailableWidth()
+                .SetMarginBottom(20);
+
+            AddProjectInfoRow(projectInfo, "DISCIPLINE:", DisciplineBox.Text);
+            AddProjectInfoRow(projectInfo, "REG NO:", RegNoBox.Text);
+            AddProjectInfoRow(projectInfo, "PROJECT NO:", ProjectNoBox.Text);
+            AddProjectInfoRow(projectInfo, "CLIENT NO:", ClientNoBox.Text);
+            AddProjectInfoRow(projectInfo, "PROJECT NAME:", ProjectNameBox.Text);
+
+            document.Add(projectInfo);
+
+            // Create table
+            var columnCount = DocumentGrid.Columns.Count;
+            var table = new Table(UnitValue.CreatePercentArray(columnCount))
+                .UseAllAvailableWidth()
+                .SetMarginBottom(20)
+                .SetFontSize(9);
+
+            // Add headers
+            foreach (var column in DocumentGrid.Columns)
+            {
+                table.AddHeaderCell(new Cell()
+                    .Add(new Paragraph(column.Header.ToString() ?? ""))
+                    .SetBackgroundColor(new DeviceRgb(235, 24, 69))
+                    .SetFontColor(ColorConstants.WHITE)
+                    .SetTextAlignment(TextAlignment.CENTER)
+                    .SetPadding(5));
+            }
+
+            // Add data rows
+            foreach (var item in DocumentGrid.Items)
+            {
+                if (item is DocumentMetadata doc)
+                {
+                    // Standard columns
+                    table.AddCell(new Cell().Add(new Paragraph(doc.DocumentNumber)));
+                    table.AddCell(new Cell().Add(new Paragraph(doc.Description)));
+                    table.AddCell(new Cell().Add(new Paragraph(doc.Package)));
+                    table.AddCell(new Cell().Add(new Paragraph(doc.DocumentType)));
+                    table.AddCell(new Cell().Add(new Paragraph(doc.Size)));
+
+                    // Latest revision
+                    var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+                    table.AddCell(new Cell().Add(new Paragraph(latestRev.Value?.Revision ?? "")));
+                    table.AddCell(new Cell().Add(new Paragraph(latestRev.Key.ToString("yyyy-MM-dd"))));
+
+                    // Dynamic date columns
+                    foreach (var column in DocumentGrid.Columns.Skip(7))
+                    {
+                        if (column.Header?.ToString() is string dateStr &&
+                            DateTime.TryParse(dateStr, out var date))
+                        {
+                            var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo) 
+                                ? revInfo.Revision 
+                                : "";
+                            table.AddCell(new Cell().Add(new Paragraph(revision)));
+                        }
+                    }
+                }
+            }
+
+            document.Add(table);
+            MessageBox.Show("PDF report generated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error generating PDF: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void AddProjectInfoRow(Table table, string label, string value)
+    {
+        table.AddCell(new Cell().Add(new Paragraph(label)).SetBold().SetPadding(5));
+        table.AddCell(new Cell().Add(new Paragraph(value)).SetPadding(5));
     }
 
     protected virtual void Dispose(bool disposing)

@@ -185,6 +185,7 @@
             <Button Content="Scan Outgoing PDF Folder" Click="ImportDocuments_Click"/>
             <Button Content="Save Project" Click="SaveProject_Click"/>
             <Button Content="Refresh View" Click="RefreshView_Click"/>
+            <Button Content="Generate PDF Report" Click="GeneratePdfReport_Click"/>
         </StackPanel>
 
         <!-- Search Panel -->

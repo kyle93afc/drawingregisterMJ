@@ -49,6 +49,28 @@
       "frameworks": {
         "net8.0-windows7.0": {
           "targetAlias": "net8.0-windows",
+          "dependencies": {
+            "itext7.bouncy-castle-adapter": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            },
+            "itext7.commons": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            },
+            "itext7.kernel": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            },
+            "itext7.layout": {
+              "target": "Package",
+              "version": "[8.0.3, )"
+            },
+            "itext7.pdfhtml": {
+              "target": "Package",
+              "version": "[5.0.3, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
