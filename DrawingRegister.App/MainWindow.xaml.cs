@@ -113,13 +113,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Get all unique issue dates from documents
         var issueDates = _project.Documents
             .SelectMany(d => d.RevisionHistory.Keys)
-            .OrderBy(d => d)
+            .OrderByDescending(d => d)  // Sort newest to oldest
             .Distinct()
             .ToList();
 
         // Remove any existing revision date columns
         var existingRevisionColumns = DocumentGrid.Columns
-            .Where(c => c.Header.ToString()?.StartsWith("REV") == true)
+            .Where(c => c.Header.ToString()?.Contains("-") == true)  // Changed to match date format
             .ToList();
         foreach (var column in existingRevisionColumns)
         {
@@ -131,8 +131,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             var column = new System.Windows.Controls.DataGridTextColumn
             {
-                Header = $"REV {date:yyyy-MM-dd}",
-                Width = 100,
+                Header = date.ToString("yyyy-MM-dd"),  // Removed "REV" prefix
+                Width = DataGridLength.Auto,  // Auto-size columns
+                HeaderStyle = (Style)FindResource("RotatedColumnHeader"),
                 Binding = new System.Windows.Data.Binding("RevisionHistory")
                 {
                     Converter = (System.Windows.Data.IValueConverter)FindResource("RevisionAtDateConverter"),
