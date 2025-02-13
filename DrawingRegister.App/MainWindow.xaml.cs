@@ -74,9 +74,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Initialize search type combo
         SearchTypeCombo.SelectedIndex = 0;
+        PurposeOfIssueFilter.SelectedIndex = 0;
+        MethodOfIssueFilter.SelectedIndex = 0;
 
         // Subscribe to project's documents collection changes
         _project.Documents.CollectionChanged += Documents_CollectionChanged;
+
+        // Add event handlers for new filters
+        PurposeOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
+        MethodOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
+        IssuedByFilter.TextChanged += (s, e) => FilterDocuments();
     }
 
     private void Documents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -95,10 +102,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Get all unique issue dates from documents
         var issueDates = _project.Documents
             .SelectMany(d => d.RevisionHistory.Keys)
-            .OrderByDescending(d => d)
-            .Select(d => d.ToString("yyyy-MM-dd"))
-            .Distinct()
-            .Select(d => new ComboBoxItem { Content = d });
+            .Distinct()  // Remove duplicates before sorting
+            .OrderByDescending(d => d)  // Sort newest to oldest
+            .Select(d => new ComboBoxItem { Content = d.ToString("dd/MM/yyyy") });
 
         foreach (var date in issueDates)
         {
@@ -121,13 +127,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Get all unique issue dates from documents
         var issueDates = _project.Documents
             .SelectMany(d => d.RevisionHistory.Keys)
+            .Distinct()  // Remove duplicates before sorting
             .OrderByDescending(d => d)  // Sort newest to oldest
-            .Distinct()
             .ToList();
 
         // Remove any existing revision date columns
         var existingRevisionColumns = DocumentGrid.Columns
-            .Where(c => c.Header.ToString()?.Contains("-") == true)  // Changed to match date format
+            .Where(c => c.Header.ToString()?.Contains("/") == true)  // Changed to match new date format
             .ToList();
         foreach (var column in existingRevisionColumns)
         {
@@ -139,7 +145,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             var column = new System.Windows.Controls.DataGridTextColumn
             {
-                Header = date.ToString("yyyy-MM-dd"),
+                Header = date.ToString("dd/MM/yyyy"),
                 Width = DataGridLength.Auto,
                 MinWidth = 40,
                 HeaderStyle = (Style)FindResource("RotatedColumnHeader"),
@@ -166,12 +172,72 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             return;
         }
 
-        if (DateTime.TryParse(selectedContent, out var selectedDate))
+        // Parse date using the new format
+        if (DateTime.TryParseExact(selectedContent, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
         {
-            DocumentGrid.ItemsSource = _project.Documents
+            // Get all documents for this date
+            var docsForDate = _project.Documents
                 .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Date))
                 .OrderBy(d => d.DocumentNumber)
                 .ToList();
+
+            DocumentGrid.ItemsSource = docsForDate;
+
+            // Try to detect purpose, method, and issuer from the documents
+            var revisions = docsForDate
+                .SelectMany(d => d.RevisionHistory)
+                .Where(r => r.Key.Date == selectedDate.Date)
+                .Select(r => r.Value)
+                .ToList();
+
+            if (revisions.Any())
+            {
+                // Get the most common purpose
+                var commonPurpose = revisions
+                    .GroupBy(r => r.Purpose)
+                    .OrderByDescending(g => g.Count())
+                    .First().Key;
+
+                // Get the most common method
+                var commonMethod = revisions
+                    .GroupBy(r => r.Method)
+                    .OrderByDescending(g => g.Count())
+                    .First().Key;
+
+                // Get the most common issuer
+                var commonIssuer = revisions
+                    .GroupBy(r => r.IssuedBy)
+                    .OrderByDescending(g => g.Count())
+                    .First().Key;
+
+                // Set the values in the UI
+                foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
+                {
+                    if (item.Content.ToString() == commonPurpose)
+                    {
+                        PurposeOfIssueFilter.SelectedItem = item;
+                        break;
+                    }
+                }
+
+                foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
+                {
+                    if (item.Content.ToString() == commonMethod)
+                    {
+                        MethodOfIssueFilter.SelectedItem = item;
+                        break;
+                    }
+                }
+
+                IssuedByFilter.Text = commonIssuer;
+            }
+            else
+            {
+                // Reset the filters if no data found
+                PurposeOfIssueFilter.SelectedIndex = 0;
+                MethodOfIssueFilter.SelectedIndex = 0;
+                IssuedByFilter.Text = string.Empty;
+            }
         }
     }
 
@@ -196,7 +262,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private void FilterDocuments()
     {
         ICollectionView view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
-        if (string.IsNullOrWhiteSpace(SearchBox.Text))
+        if (string.IsNullOrWhiteSpace(SearchBox.Text) && 
+            PurposeOfIssueFilter.SelectedIndex <= 0 && 
+            MethodOfIssueFilter.SelectedIndex <= 0 && 
+            string.IsNullOrWhiteSpace(IssuedByFilter.Text))
         {
             view.Filter = null;
             return;
@@ -204,12 +273,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         string searchText = SearchBox.Text.ToLower();
         var searchType = ((ComboBoxItem)SearchTypeCombo.SelectedItem).Content.ToString();
+        var purposeOfIssue = PurposeOfIssueFilter.SelectedIndex > 0 ? ((ComboBoxItem)PurposeOfIssueFilter.SelectedItem).Content.ToString() : null;
+        var methodOfIssue = MethodOfIssueFilter.SelectedIndex > 0 ? ((ComboBoxItem)MethodOfIssueFilter.SelectedItem).Content.ToString() : null;
+        var issuedBy = IssuedByFilter.Text.Trim().ToUpper();
 
         view.Filter = obj =>
         {
             if (obj is not DocumentMetadata doc) return false;
 
-            return searchType switch
+            bool matchesSearch = string.IsNullOrWhiteSpace(searchText) || searchType switch
             {
                 "Document No" => doc.DocumentNumber.ToLower().Contains(searchText),
                 "Description" => doc.Description.ToLower().Contains(searchText),
@@ -217,6 +289,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 "Type" => doc.DocumentType.ToLower().Contains(searchText),
                 _ => false
             };
+
+            bool matchesPurpose = purposeOfIssue == null || doc.PurposeOfIssue == purposeOfIssue;
+            bool matchesMethod = methodOfIssue == null || doc.MethodOfIssue == methodOfIssue;
+            bool matchesIssuedBy = string.IsNullOrWhiteSpace(issuedBy) || doc.IssuedBy == issuedBy;
+
+            return matchesSearch && matchesPurpose && matchesMethod && matchesIssuedBy;
         };
     }
 
@@ -309,6 +387,37 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void EditRevision_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && 
+            button.DataContext is KeyValuePair<DateTime, RevisionInfo> revision &&
+            SelectedDocument != null)
+        {
+            var dialog = new RevisionEditDialog(SelectedDocument.DocumentNumber, revision.Key, revision.Value);
+            dialog.Owner = this;
+
+            if (dialog.ShowDialog() == true)
+            {
+                // Update the revision info
+                revision.Value.Purpose = dialog.Purpose;
+                revision.Value.Method = dialog.Method;
+                revision.Value.IssuedBy = dialog.IssuedBy;
+
+                // Update the document's current values
+                SelectedDocument.PurposeOfIssue = dialog.Purpose;
+                SelectedDocument.MethodOfIssue = dialog.Method;
+                SelectedDocument.IssuedBy = dialog.IssuedBy;
+
+                // Save changes
+                _project.SaveProjectData();
+
+                // Refresh views
+                DocumentGrid.Items.Refresh();
+                RevisionTimeline.Items.Refresh();
+            }
+        }
+    }
+
     private void OpenDocument(string filePath)
     {
         try 
@@ -369,6 +478,105 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         StartDatePicker.SelectedDate = null;
         EndDatePicker.SelectedDate = null;
         DocumentGrid.ItemsSource = _project.Documents;
+    }
+
+    private void SaveIssueDetails_Click(object sender, RoutedEventArgs e)
+    {
+        // Get the selected date
+        if (IssueDateFilter.SelectedItem is not ComboBoxItem selectedItem)
+        {
+            MessageBox.Show("Please select a date of issue first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var selectedContent = selectedItem.Content.ToString();
+        if (selectedContent == "All Dates")
+        {
+            MessageBox.Show("Please select a specific date of issue.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Get the selected values
+        var purpose = PurposeOfIssueFilter.SelectedIndex > 0 
+            ? ((ComboBoxItem)PurposeOfIssueFilter.SelectedItem).Content.ToString()
+            : null;
+        var method = MethodOfIssueFilter.SelectedIndex > 0 
+            ? ((ComboBoxItem)MethodOfIssueFilter.SelectedItem).Content.ToString()
+            : null;
+        var issuedBy = IssuedByFilter.Text.Trim().ToUpper();
+
+        if (string.IsNullOrEmpty(purpose))
+        {
+            MessageBox.Show("Please select a purpose of issue.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(method))
+        {
+            MessageBox.Show("Please select a method of issue.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(issuedBy))
+        {
+            MessageBox.Show("Please enter initials for issued by.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (DateTime.TryParseExact(selectedContent, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
+        {
+            // Check if there are multiple purposes for this date
+            var existingPurposes = _project.Documents
+                .SelectMany(d => d.RevisionHistory)
+                .Where(r => r.Key.Date == selectedDate.Date)
+                .Select(r => r.Value.Purpose)
+                .Distinct()
+                .ToList();
+
+            if (existingPurposes.Count > 1)
+            {
+                var result = MessageBox.Show(
+                    $"This date ({selectedContent}) has multiple purposes:\n{string.Join(", ", existingPurposes)}\n\nDo you want to update all documents to use '{purpose}'?",
+                    "Multiple Purposes Found",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+            }
+
+            // Update all documents that have a revision on this date
+            var updatedCount = 0;
+            foreach (var doc in _project.Documents)
+            {
+                if (doc.RevisionHistory.TryGetValue(selectedDate, out var revInfo))
+                {
+                    revInfo.Purpose = purpose;
+                    revInfo.Method = method;
+                    revInfo.IssuedBy = issuedBy;
+
+                    // Update document's current values if this is the latest revision
+                    if (doc.RevisionHistory.Max(r => r.Key) == selectedDate)
+                    {
+                        doc.PurposeOfIssue = purpose;
+                        doc.MethodOfIssue = method;
+                        doc.IssuedBy = issuedBy;
+                    }
+                    updatedCount++;
+                }
+            }
+
+            // Save changes
+            _project.SaveProjectData();
+
+            // Refresh views
+            DocumentGrid.Items.Refresh();
+            RevisionTimeline.Items.Refresh();
+
+            MessageBox.Show($"Successfully updated {updatedCount} documents.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     private void GeneratePdfReport_Click(object sender, RoutedEventArgs e)

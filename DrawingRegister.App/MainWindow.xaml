@@ -133,6 +133,14 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         </Style>
+
+        <!-- Add Revision Edit Dialog -->
+        <Style x:Key="RevisionEditDialog" TargetType="Window">
+            <Setter Property="Height" Value="300"/>
+            <Setter Property="Width" Value="400"/>
+            <Setter Property="WindowStyle" Value="ToolWindow"/>
+            <Setter Property="ResizeMode" Value="NoResize"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -215,6 +223,32 @@
                 <ComboBox x:Name="IssueDateFilter" Width="200" Margin="0,0,10,0" SelectionChanged="IssueDateFilter_SelectionChanged">
                     <ComboBoxItem Content="All Dates"/>
                 </ComboBox>
+
+                <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0"/>
+                <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Margin="0,0,10,0">
+                    <ComboBoxItem Content="All"/>
+                    <ComboBoxItem Content="Approval"/>
+                    <ComboBoxItem Content="Construction"/>
+                    <ComboBoxItem Content="Draft"/>
+                    <ComboBoxItem Content="Feasibility"/>
+                    <ComboBoxItem Content="Information"/>
+                    <ComboBoxItem Content="Planning"/>
+                    <ComboBoxItem Content="Tender"/>
+                    <ComboBoxItem Content="Warrant"/>
+                </ComboBox>
+
+                <TextBlock Text="METHOD OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0"/>
+                <ComboBox x:Name="MethodOfIssueFilter" Width="120" Margin="0,0,10,0">
+                    <ComboBoxItem Content="All"/>
+                    <ComboBoxItem Content="Email"/>
+                    <ComboBoxItem Content="Sharepoint"/>
+                </ComboBox>
+
+                <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="20,0,10,0"/>
+                <TextBox x:Name="IssuedByFilter" Width="60" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper"/>
+
+                <Button Content="Save Issue Details" Click="SaveIssueDetails_Click" 
+                        Background="#eb1845" Foreground="White" Padding="15,5"/>
             </StackPanel>
         </StackPanel>
 
@@ -264,7 +298,7 @@
                                 Background="{Binding Value.Purpose, Converter={StaticResource RevisionColorConverter}}"
                                 MouseLeftButtonDown="RevisionTimeline_MouseDoubleClick">
                             <StackPanel>
-                                <TextBlock Text="{Binding Key, StringFormat=yyyy-MM-dd}" 
+                                <TextBlock Text="{Binding Key, StringFormat=dd/MM/yyyy}" 
                                            Background="#eb1845" Foreground="White"
                                            Padding="4" FontWeight="Bold" TextAlignment="Center"/>
                                 
@@ -280,6 +314,9 @@
                                     
                                     <TextBlock Text="{Binding Value.IssuedBy}" Margin="0,5"
                                                Foreground="#444" HorizontalAlignment="Center"/>
+
+                                    <Button Content="Edit" Margin="0,5,0,0" Padding="10,2"
+                                            Click="EditRevision_Click"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

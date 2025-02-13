@@ -32,3 +32,5 @@ C:\temp\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\de\MigraD
 C:\temp\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\de\MigraDoc.RtfRendering-gdi.resources.dll
 C:\temp\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\de\PdfSharp-gdi.resources.dll
 C:\temp\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\de\PdfSharp.Charting-gdi.resources.dll
+C:\temp\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\RevisionEditDialog.baml
+C:\temp\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\RevisionEditDialog.g.cs

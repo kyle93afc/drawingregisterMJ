@@ -149,14 +149,20 @@ public class ProjectManager : INotifyPropertyChanged
         var dateDirectories = subDirectories
             .Where(dir => 
             {
-                var dirName = Path.GetFileName(dir)?.Split('_')[0];
-                return dirName != null && DateTime.TryParseExact(dirName, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out _);
+                var dirName = Path.GetFileName(dir)?.Split(new[] { '_', ' ', '-' })[0];
+                return dirName != null && 
+                       dirName.Length >= 8 &&
+                       DateTime.TryParseExact(dirName.Substring(0, 8), 
+                                            "yyyyMMdd", 
+                                            null, 
+                                            System.Globalization.DateTimeStyles.None, 
+                                            out _);
             })
             .ToList();
 
         if (!dateDirectories.Any())
         {
-            throw new Exception("No valid date folders found. Folders should be named in format YYYYMMDD.");
+            throw new Exception("No valid date folders found. Folders should start with a date in format YYYYMMDD.");
         }
 
         // Only get PDF files from date directories
@@ -198,8 +204,12 @@ public class ProjectManager : INotifyPropertyChanged
         var allIssueDates = dateDirectories
             .Select(dir => 
             {
-                var dirName = Path.GetFileName(dir)?.Split('_')[0];
-                DateTime.TryParseExact(dirName, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var date);
+                var dirName = Path.GetFileName(dir)?.Split(new[] { '_', ' ', '-' })[0];
+                DateTime.TryParseExact(dirName?.Substring(0, 8), 
+                                     "yyyyMMdd", 
+                                     null, 
+                                     System.Globalization.DateTimeStyles.None, 
+                                     out var date);
                 return date;
             })
             .OrderBy(d => d)
@@ -214,7 +224,12 @@ public class ProjectManager : INotifyPropertyChanged
 
             // Get issue date from parent folder name
             var parentFolder = Path.GetFileName(Path.GetDirectoryName(filePath));
-            if (!DateTime.TryParseExact(parentFolder?.Split('_')[0], "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var issueDate))
+            var folderDatePart = parentFolder?.Split(new[] { '_', ' ', '-' })[0];
+            if (!DateTime.TryParseExact(folderDatePart?.Substring(0, 8), 
+                                      "yyyyMMdd", 
+                                      null, 
+                                      System.Globalization.DateTimeStyles.None, 
+                                      out var issueDate))
             {
                 // Skip files not in properly named date folders
                 continue;
@@ -276,34 +291,36 @@ public class ProjectManager : INotifyPropertyChanged
                 description = ParseDescription(fileName);
             }
 
-            var doc = new DocumentMetadata
+            var metadata = new DocumentMetadata
             {
                 DocumentNumber = documentNumber,
-                FilePath = filePath,
-                ProjectNumber = ProjectNumber,
-                ProjectName = ProjectName,
-                Discipline = match.Groups["docDiscipline"].Value,
+                Description = description,
                 Package = match.Groups["package"].Value,
                 DocumentType = match.Groups["docType"].Value,
+                Size = DetermineDrawingSize(filePath),
+                ProjectNumber = ProjectNumber,
+                ProjectName = ProjectName,
+                Discipline = Discipline,
                 RegisterNumber = RegisterNumber,
                 ClientNumber = ClientNumber,
-                Description = string.IsNullOrWhiteSpace(description) ? ParseDescription(fileName) : description,
-                Size = DetermineDrawingSize(filePath)
+                PurposeOfIssue = DeterminePurpose(filePath),
+                MethodOfIssue = DetermineMethodOfIssue(filePath),
+                IssuedBy = DetermineIssuedBy(filePath)
             };
 
             var revInfo = new RevisionInfo
             {
                 Revision = revision,
                 Purpose = DeterminePurpose(filePath),
-                Method = "E",
+                Method = DetermineMethodOfIssue(filePath),
                 IssuedBy = DetermineIssuedBy(filePath),
                 IsDistributed = true,
                 FilePath = filePath
             };
 
-            doc.RevisionHistory[issueDate] = revInfo;
+            metadata.RevisionHistory[issueDate] = revInfo;
 
-            var existingDoc = Documents.FirstOrDefault(d => d.DocumentNumber == doc.DocumentNumber);
+            var existingDoc = Documents.FirstOrDefault(d => d.DocumentNumber == metadata.DocumentNumber);
             if (existingDoc != null)
             {
                 // Update existing document metadata with new revision
@@ -312,7 +329,7 @@ public class ProjectManager : INotifyPropertyChanged
             }
             else
             {
-                Documents.Add(doc);
+                Documents.Add(metadata);
             }
         }
 
@@ -362,21 +379,43 @@ public class ProjectManager : INotifyPropertyChanged
     private string DeterminePurpose(string filePath)
     {
         var folder = Path.GetFileName(Path.GetDirectoryName(filePath))?.ToLower();
-        if (folder?.Contains("construction") == true) return "C";
-        if (folder?.Contains("tender") == true) return "T";
-        if (folder?.Contains("warrant") == true) return "W";
-        if (folder?.Contains("planning") == true) return "P";
-        if (folder?.Contains("information") == true) return "I";
-        if (folder?.Contains("approval") == true) return "A";
-        if (folder?.Contains("draft") == true) return "D";
-        return "I"; // Default to Information
+        
+        // Check for specific keywords in the folder name
+        if (folder?.Contains("warrant") == true) return "Warrant";
+        if (folder?.Contains("draft") == true) return "Draft";
+        if (folder?.Contains("rfi") == true) return "Information"; // RFI comments
+        if (folder?.Contains("information") == true) return "Information";
+        if (folder?.Contains("construction") == true) return "Construction";
+        if (folder?.Contains("tender") == true) return "Tender";
+        if (folder?.Contains("planning") == true) return "Planning";
+        if (folder?.Contains("approval") == true) return "Approval";
+        if (folder?.Contains("feasibility") == true) return "Feasibility";
+        
+        // If no specific purpose found in folder name, try to determine from context
+        if (folder?.Contains("connection") == true) return "Information";
+        if (folder?.Contains("comments") == true) return "Information";
+        if (folder?.Contains("loads") == true) return "Information";
+        if (folder?.Contains("replacement") == true) return "Construction";
+        
+        return "Information"; // Default to Information
+    }
+
+    private string DetermineMethodOfIssue(string filePath)
+    {
+        var folder = Path.GetFileName(Path.GetDirectoryName(filePath))?.ToLower();
+        if (folder?.Contains("sharepoint") == true) return "Sharepoint";
+        return "Email"; // Default to Email
     }
 
     private string DetermineIssuedBy(string filePath)
     {
-        // Extract initials from path or metadata if available
-        // For now, return default
-        return "MJ";
+        var folder = Path.GetFileName(Path.GetDirectoryName(filePath))?.ToLower();
+        
+        // Try to extract initials from folder name
+        if (folder?.Contains("chris_davidson") == true) return "CD";
+        if (folder?.Contains("chivas") == true) return "CH";
+        
+        return "MJ"; // Default to MJ
     }
 
     private string ParseDescription(string fileName)
