@@ -82,7 +82,7 @@ namespace DrawingRegister.App.Models
                 return GetNextAlphabeticalRevision(revisionHistory);
 
             // Get prefix based on purpose
-            string prefix = purpose.ToUpper() switch
+            string? prefix = purpose.ToUpper() switch
             {
                 "CONSTRUCTION" => "C",
                 "TENDER" => "T",

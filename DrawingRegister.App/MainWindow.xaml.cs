@@ -22,6 +22,7 @@ using Style = System.Windows.Style;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using IContainer = QuestPDF.Infrastructure.IContainer;
 using Colors = QuestPDF.Helpers.Colors;
+using QuestPDF.Elements.Table;
 
 namespace DrawingRegister.App;
 
@@ -634,58 +635,87 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void ComposeHeader(IContainer container)
     {
-        container.Column(column =>
+        var headerSpacing = 2;
+        container.Padding(10).Column(column =>
         {
-            // Title row with background
-            column.Item().Background("#eb1845").Padding(10).Row(row =>
+            // Title Row with logo
+            column.Item().Row(row =>
             {
-                // Add logo if it exists
+                row.RelativeItem(3).Text("SER DOCUMENT AND DRAWING REGISTER")
+                    .FontSize(18)
+                    .Bold()
+                    .FontColor("#000000");
+
+                // Logo with proper image handling and error checking
                 try
                 {
-                    var logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "company-logo.png");
+                    var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "WHITE LOGO RED BACKGROUND.jpg");
                     if (File.Exists(logoPath))
                     {
-                        row.RelativeItem().Width(350).Height(100).Image(logoPath);
-                        row.RelativeItem().Width(30); // Increased spacing between logo and title
+                        row.RelativeItem().AlignRight().Container().Height(35).Image(logoPath).FitHeight();
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Logo not found at: {logoPath}");
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // If logo loading fails, continue without it
+                    System.Diagnostics.Debug.WriteLine($"Error loading logo: {ex.Message}");
                 }
-
-                row.RelativeItem().AlignCenter().Text("DRAWING REGISTER")
-                    .FontSize(20)
-                    .FontColor(Colors.White)
-                    .Bold();
             });
 
-            // Project Info Table with styling
-            column.Item().Padding(10).Table(table =>
+            // Separator line closer to title
+            column.Item().PaddingTop(2).LineHorizontal(1).LineColor("#eb1845");
+
+            // Project Info section with tighter spacing
+            column.Item().PaddingTop(headerSpacing).Row(row =>
             {
-                table.ColumnsDefinition(columns =>
+                // Left side - Project info
+                row.RelativeItem(3).Column(leftCol =>
                 {
-                    columns.RelativeColumn(1);
-                    columns.RelativeColumn(2);
-                    columns.RelativeColumn(1);
-                    columns.RelativeColumn(2);
+                    leftCol.Spacing(headerSpacing);
+                    
+                    leftCol.Item().Row(r =>
+                    {
+                        r.RelativeItem().AlignLeft().Text("DISCIPLINE:").Bold();
+                        r.RelativeItem(2).AlignLeft().Text((DisciplineBox?.Text ?? "").ToUpper());
+                    });
+
+                    leftCol.Item().Row(r =>
+                    {
+                        r.RelativeItem().AlignLeft().Text("PROJECT NO:").Bold();
+                        r.RelativeItem(2).AlignLeft().Text((ProjectNoBox?.Text ?? "").ToUpper());
+                    });
+
+                    leftCol.Item().Row(r =>
+                    {
+                        r.RelativeItem().AlignLeft().Text("PROJECT NAME:").Bold();
+                        r.RelativeItem(2).AlignLeft().Text((ProjectNameBox?.Text ?? "").ToUpper());
+                    });
                 });
 
-                // Row 1
-                AddProjectInfoCell(table, "DISCIPLINE:", DisciplineBox?.Text ?? "");
-                AddProjectInfoCell(table, "CLIENT NO:", ClientNoBox?.Text ?? "");
+                // Right side - Registration info with tighter spacing
+                row.RelativeItem().Column(rightCol =>
+                {
+                    rightCol.Spacing(headerSpacing);
+                    
+                    rightCol.Item().Row(r =>
+                    {
+                        r.RelativeItem().AlignLeft().Text("REG NO:").Bold();
+                        r.RelativeItem().AlignLeft().Text((RegNoBox?.Text ?? "").ToUpper());
+                    });
 
-                // Row 2
-                AddProjectInfoCell(table, "REG NO:", RegNoBox?.Text ?? "");
-                AddProjectInfoCell(table, "PROJECT NAME:", ProjectNameBox?.Text ?? "");
-
-                // Row 3
-                AddProjectInfoCell(table, "PROJECT NO:", ProjectNoBox?.Text ?? "");
-                table.Cell().ColumnSpan(2); // Empty cells for alignment
+                    rightCol.Item().Row(r =>
+                    {
+                        r.RelativeItem().AlignLeft().Text("CLIENT NO:").Bold();
+                        r.RelativeItem().AlignLeft().Text((ClientNoBox?.Text ?? "").ToUpper());
+                    });
+                });
             });
 
-            // Add some spacing
-            column.Item().Height(10);
+            // Bottom separator line closer to content
+            column.Item().PaddingTop(2).LineHorizontal(1).LineColor("#eb1845");
         });
     }
 
@@ -719,98 +749,98 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 }
             });
 
-            // Add header row with styling
-            table.Header(header =>
+        // Add header row with styling
+        table.Header(header =>
+        {
+            header.Cell().Element(HeaderCell).Text("DOCUMENT NO");
+            header.Cell().Element(HeaderCell).Text("DESCRIPTION");
+            header.Cell().Element(HeaderCell).Text("PACKAGE");
+            header.Cell().Element(HeaderCell).Text("TYPE");
+            header.Cell().Element(HeaderCell).Text("SIZE");
+            header.Cell().Element(HeaderCell).Text("LATEST REV");
+            header.Cell().Element(HeaderCell).Text("LATEST DATE");
+
+            // Add date headers in descending order
+            foreach (var date in lastThreeDates)
             {
-                header.Cell().Element(HeaderCell).Text("DOCUMENT NO");
-                header.Cell().Element(HeaderCell).Text("DESCRIPTION");
-                header.Cell().Element(HeaderCell).Text("PACKAGE");
-                header.Cell().Element(HeaderCell).Text("TYPE");
-                header.Cell().Element(HeaderCell).Text("SIZE");
-                header.Cell().Element(HeaderCell).Text("LATEST REV");
-                header.Cell().Element(HeaderCell).Text("LATEST DATE");
-
-                // Add date headers in descending order
-                foreach (var date in lastThreeDates)
-                {
-                    header.Cell().Element(HeaderCell).Text(date.ToString("yyyy-MM-dd"));
-                }
-            });
-
-            // Add data rows with alternating background
-            bool isAlternate = false;
-            foreach (var item in DocumentGrid.Items)
-            {
-                if (item is not Models.DocumentMetadata doc) continue;
-
-                var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
-
-                table.Cell().Element(cell => DataCell(cell, doc.DocumentNumber, rowColor));
-                table.Cell().Element(cell => DataCell(cell, doc.Description, rowColor));
-                table.Cell().Element(cell => DataCell(cell, doc.Package, rowColor));
-                table.Cell().Element(cell => DataCell(cell, doc.DocumentType, rowColor));
-                table.Cell().Element(cell => DataCell(cell, doc.Size, rowColor));
-                table.Cell().Element(cell => DataCell(cell, latestRev.Value?.Revision ?? "", rowColor));
-                table.Cell().Element(cell => DataCell(cell, latestRev.Key.ToString("yyyy-MM-dd"), rowColor));
-
-                // Add historical revisions in descending order
-                foreach (var date in lastThreeDates)
-                {
-                    var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
-                        ? revInfo.Revision
-                        : "";
-                    table.Cell().Element(cell => DataCell(cell, revision, rowColor));
-                }
-
-                isAlternate = !isAlternate;
+                header.Cell().Element(HeaderCell).Text(date.ToString("yyyy-MM-dd"));
             }
         });
-    }
 
-    private IContainer HeaderCell(IContainer container)
-    {
-        return container.Background("#eb1845")
-            .Padding(5)
-            .Border(1)
-            .BorderColor("#d10835")
-            .AlignCenter()
-            .DefaultTextStyle(x => x.Bold().FontColor(Colors.White));
-    }
-
-    private void DataCell(IContainer container, string text, string backgroundColor)
-    {
-        // Replace "-" with empty string
-        var displayText = text == "-" ? "" : text;
-        container.Background(backgroundColor)
-            .Padding(5)
-            .AlignCenter()
-            .Text(displayText);
-    }
-
-    private void AddProjectInfoCell(TableDescriptor table, string label, string value)
-    {
-        table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(label).Bold();
-        table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(value);
-    }
-
-    protected virtual void Dispose(bool disposing)
-    {
-        if (!_disposed)
+        // Add data rows with alternating background
+        bool isAlternate = false;
+        foreach (var item in DocumentGrid.Items)
         {
-            _disposed = true;
+            if (item is not Models.DocumentMetadata doc) continue;
+
+            var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+            var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
+
+            table.Cell().Element(cell => DataCell(cell, doc.DocumentNumber, rowColor));
+            table.Cell().Element(cell => DataCell(cell, doc.Description, rowColor));
+            table.Cell().Element(cell => DataCell(cell, doc.Package, rowColor));
+            table.Cell().Element(cell => DataCell(cell, doc.DocumentType, rowColor));
+            table.Cell().Element(cell => DataCell(cell, doc.Size, rowColor));
+            table.Cell().Element(cell => DataCell(cell, latestRev.Value?.Revision ?? "", rowColor));
+            table.Cell().Element(cell => DataCell(cell, latestRev.Key.ToString("yyyy-MM-dd"), rowColor));
+
+            // Add historical revisions in descending order
+            foreach (var date in lastThreeDates)
+            {
+                var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
+                    ? revInfo.Revision
+                    : "";
+                table.Cell().Element(cell => DataCell(cell, revision, rowColor));
+            }
+
+            isAlternate = !isAlternate;
         }
-    }
+    });
+}
 
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
+private IContainer HeaderCell(IContainer container)
+{
+    return container.Background("#eb1845")
+        .Padding(5)
+        .Border(1)
+        .BorderColor("#d10835")
+        .AlignCenter()
+        .DefaultTextStyle(x => x.Bold().FontColor(Colors.White));
+}
 
-    protected override void OnClosed(EventArgs e)
+private void DataCell(IContainer container, string text, string backgroundColor)
+{
+    // Replace "-" with empty string
+    var displayText = text == "-" ? "" : text;
+    container.Background(backgroundColor)
+        .Padding(5)
+        .AlignCenter()
+        .Text(displayText);
+}
+
+private void AddProjectInfoCell(TableDescriptor table, string label, string value)
+{
+    table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(label).Bold();
+    table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(value);
+}
+
+protected virtual void Dispose(bool disposing)
+{
+    if (!_disposed)
     {
-        base.OnClosed(e);
-        Dispose();
+        _disposed = true;
     }
+}
+
+public void Dispose()
+{
+    Dispose(true);
+    GC.SuppressFinalize(this);
+}
+
+protected override void OnClosed(EventArgs e)
+{
+    base.OnClosed(e);
+    Dispose();
+}
 }
