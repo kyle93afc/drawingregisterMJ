@@ -15,6 +15,11 @@
 
   <ItemGroup>
     <None Remove="**/*.pdf" />
+    <None Remove="Resources/company-logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources/company-logo.png" />
   </ItemGroup>
 
 </Project>

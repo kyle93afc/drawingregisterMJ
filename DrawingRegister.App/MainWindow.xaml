@@ -202,23 +202,31 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
+            <!-- Logo -->
+            <Image Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" 
+                   Source="/Resources/company-logo.png" 
+                   Height="100" 
+                   HorizontalAlignment="Left" 
+                   Margin="0,0,0,20"/>
+
             <!-- Row 1 -->
-            <TextBlock Text="DISCIPLINE:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="DisciplineBox" Grid.Row="0" Grid.Column="1" Margin="0,0,20,5"/>
-            <TextBlock Text="REG NO:" Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="RegNoBox" Grid.Row="0" Grid.Column="3" Width="300" Margin="0,0,0,5"/>
+            <TextBlock Text="DISCIPLINE:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBox x:Name="DisciplineBox" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5"/>
+            <TextBlock Text="REG NO:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBox x:Name="RegNoBox" Grid.Row="1" Grid.Column="3" Width="300" Margin="0,0,0,5"/>
 
             <!-- Row 2 -->
-            <TextBlock Text="PROJECT NO:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="ProjectNoBox" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5"/>
-            <TextBlock Text="CLIENT NO:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="ClientNoBox" Grid.Row="1" Grid.Column="3" Margin="0,0,0,5"/>
+            <TextBlock Text="PROJECT NO:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBox x:Name="ProjectNoBox" Grid.Row="2" Grid.Column="1" Margin="0,0,20,5"/>
+            <TextBlock Text="CLIENT NO:" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBox x:Name="ClientNoBox" Grid.Row="2" Grid.Column="3" Margin="0,0,0,5"/>
 
             <!-- Row 3 -->
-            <TextBlock Text="PROJECT NAME:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="ProjectNameBox" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5"/>
+            <TextBlock Text="PROJECT NAME:" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
+            <TextBox x:Name="ProjectNameBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5"/>
         </Grid>
 
         <!-- Distribution Header -->

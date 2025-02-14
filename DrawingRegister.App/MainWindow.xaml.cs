@@ -17,6 +17,7 @@ using Microsoft.Win32;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using QuestPDF.Previewer;
 using Style = System.Windows.Style;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using IContainer = QuestPDF.Infrastructure.IContainer;
@@ -589,41 +590,41 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         try
         {
+            // Initialize QuestPDF
+            QuestPDF.Settings.License = LicenseType.Community;
+
             var saveDialog = new SaveFileDialog
             {
                 Filter = "PDF files (*.pdf)|*.pdf",
                 DefaultExt = "pdf",
-                FileName = $"DrawingRegister_{DateTime.Now:yyyyMMdd}"
+                FileName = $"Drawing_Register_{DateTime.Now:yyyyMMdd}"
             };
 
-            if (saveDialog.ShowDialog() != true) return;
-
-            // Initialize QuestPDF
-            QuestPDF.Settings.License = LicenseType.Community;
-
-            // Create and generate the document
-            Document.Create(container =>
+            if (saveDialog.ShowDialog() == true)
             {
-                container.Page(page =>
+                // Create and save the document
+                Document.Create(container =>
                 {
-                    page.Size(PageSizes.A4.Landscape());
-                    page.Margin(1, Unit.Centimetre);
-                    page.DefaultTextStyle(x => x.FontSize(9));
+                    container.Page(page =>
+                    {
+                        page.Size(PageSizes.A4.Landscape());
+                        page.Margin(1, Unit.Centimetre);
+                        page.DefaultTextStyle(x => x.FontSize(9));
 
-                    page.Header().Element(ComposeHeader);
-                    page.Content().Element(ComposeContent);
-                });
-            })
-            .GeneratePdf(saveDialog.FileName);
+                        page.Header().Element(ComposeHeader);
+                        page.Content().Element(ComposeContent);
+                        page.Footer().AlignCenter().Text(text =>
+                        {
+                            text.CurrentPageNumber();
+                            text.Span(" of ");
+                            text.TotalPages();
+                        });
+                    });
+                })
+                .GeneratePdf(saveDialog.FileName);
 
-            // Open the generated PDF
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = saveDialog.FileName,
-                UseShellExecute = true
-            });
-
-            MessageBox.Show("PDF report generated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"PDF saved successfully to:\n{saveDialog.FileName}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
         catch (Exception ex)
         {
@@ -638,6 +639,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Title row with background
             column.Item().Background("#eb1845").Padding(10).Row(row =>
             {
+                // Add logo if it exists
+                try
+                {
+                    var logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "company-logo.png");
+                    if (File.Exists(logoPath))
+                    {
+                        row.RelativeItem().Width(350).Height(100).Image(logoPath);
+                        row.RelativeItem().Width(30); // Increased spacing between logo and title
+                    }
+                }
+                catch
+                {
+                    // If logo loading fails, continue without it
+                }
+
                 row.RelativeItem().AlignCenter().Text("DRAWING REGISTER")
                     .FontSize(20)
                     .FontColor(Colors.White)
