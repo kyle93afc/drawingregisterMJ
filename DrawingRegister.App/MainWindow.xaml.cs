@@ -616,6 +616,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             })
             .GeneratePdf(saveDialog.FileName);
 
+            // Open the generated PDF
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = saveDialog.FileName,
+                UseShellExecute = true
+            });
+
             MessageBox.Show("PDF report generated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -628,28 +635,41 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         container.Column(column =>
         {
-            // Title
-            column.Item().Row(row =>
+            // Title row with background
+            column.Item().Background("#eb1845").Padding(10).Row(row =>
             {
                 row.RelativeItem().AlignCenter().Text("DRAWING REGISTER")
-                    .FontSize(16).Bold();
+                    .FontSize(20)
+                    .FontColor(Colors.White)
+                    .Bold();
             });
 
-            // Project Info Table
-            column.Item().Table(table =>
+            // Project Info Table with styling
+            column.Item().Border(1).BorderColor("#cccccc").Padding(10).Table(table =>
             {
                 table.ColumnsDefinition(columns =>
                 {
                     columns.RelativeColumn(1);
-                    columns.RelativeColumn(3);
+                    columns.RelativeColumn(2);
+                    columns.RelativeColumn(1);
+                    columns.RelativeColumn(2);
                 });
 
-                AddProjectInfoRow(table, "DISCIPLINE:", DisciplineBox?.Text ?? "");
-                AddProjectInfoRow(table, "REG NO:", RegNoBox?.Text ?? "");
-                AddProjectInfoRow(table, "PROJECT NO:", ProjectNoBox?.Text ?? "");
-                AddProjectInfoRow(table, "CLIENT NO:", ClientNoBox?.Text ?? "");
-                AddProjectInfoRow(table, "PROJECT NAME:", ProjectNameBox?.Text ?? "");
+                // Row 1
+                AddProjectInfoCell(table, "DISCIPLINE:", DisciplineBox?.Text ?? "");
+                AddProjectInfoCell(table, "CLIENT NO:", ClientNoBox?.Text ?? "");
+
+                // Row 2
+                AddProjectInfoCell(table, "REG NO:", RegNoBox?.Text ?? "");
+                AddProjectInfoCell(table, "PROJECT NAME:", ProjectNameBox?.Text ?? "");
+
+                // Row 3
+                AddProjectInfoCell(table, "PROJECT NO:", ProjectNoBox?.Text ?? "");
+                table.Cell().ColumnSpan(2); // Empty cells for alignment
             });
+
+            // Add some spacing
+            column.Item().Height(10);
         });
     }
 
@@ -657,82 +677,105 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         if (DocumentGrid?.Items == null) return;
 
-        // Get last 3 issue dates
+        // Get last 3 issue dates in descending order (newest first)
         var lastThreeDates = _project.IssueDates
             .OrderByDescending(d => d)
             .Take(3)
-            .OrderBy(d => d)
-            .ToList();
+            .ToList(); // Removed the OrderBy to keep descending order
 
         container.Table(table =>
         {
-            // Define columns
+            // Define columns with better proportions
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(2);     // Document No
-                columns.RelativeColumn(3);     // Description
-                columns.RelativeColumn(1);     // Package
-                columns.RelativeColumn(1);     // Type
-                columns.RelativeColumn(0.75f); // Size
-                columns.RelativeColumn(1);     // Latest Rev
-                columns.RelativeColumn(1.25f); // Latest Date
+                columns.RelativeColumn(2.5f);    // Document No
+                columns.RelativeColumn(3);       // Description
+                columns.RelativeColumn(1);       // Package
+                columns.RelativeColumn(0.8f);    // Type
+                columns.RelativeColumn(0.6f);    // Size
+                columns.RelativeColumn(0.8f);    // Latest Rev
+                columns.RelativeColumn(1.2f);    // Latest Date
                 
-                // Add columns for last 3 dates
+                // Add columns for last 3 dates (newest first)
                 foreach (var _ in lastThreeDates)
                 {
                     columns.RelativeColumn(1);
                 }
             });
 
-            // Add header row
+            // Add header row with styling
             table.Header(header =>
             {
-                header.Cell().Background("#eb1845").AlignCenter().Text("DOCUMENT NO").Bold().FontColor(Colors.White);
-                header.Cell().Background("#eb1845").AlignCenter().Text("DESCRIPTION").Bold().FontColor(Colors.White);
-                header.Cell().Background("#eb1845").AlignCenter().Text("PACKAGE").Bold().FontColor(Colors.White);
-                header.Cell().Background("#eb1845").AlignCenter().Text("TYPE").Bold().FontColor(Colors.White);
-                header.Cell().Background("#eb1845").AlignCenter().Text("SIZE").Bold().FontColor(Colors.White);
-                header.Cell().Background("#eb1845").AlignCenter().Text("LATEST REV").Bold().FontColor(Colors.White);
-                header.Cell().Background("#eb1845").AlignCenter().Text("LATEST DATE").Bold().FontColor(Colors.White);
+                header.Cell().Element(HeaderCell).Text("DOCUMENT NO");
+                header.Cell().Element(HeaderCell).Text("DESCRIPTION");
+                header.Cell().Element(HeaderCell).Text("PACKAGE");
+                header.Cell().Element(HeaderCell).Text("TYPE");
+                header.Cell().Element(HeaderCell).Text("SIZE");
+                header.Cell().Element(HeaderCell).Text("LATEST REV");
+                header.Cell().Element(HeaderCell).Text("LATEST DATE");
 
+                // Add date headers in descending order
                 foreach (var date in lastThreeDates)
                 {
-                    header.Cell().Background("#eb1845").AlignCenter()
-                        .Text(date.ToString("yyyy-MM-dd")).Bold().FontColor(Colors.White);
+                    header.Cell().Element(HeaderCell).Text(date.ToString("yyyy-MM-dd"));
                 }
             });
 
-            // Add data rows
+            // Add data rows with alternating background
+            bool isAlternate = false;
             foreach (var item in DocumentGrid.Items)
             {
                 if (item is not Models.DocumentMetadata doc) continue;
 
                 var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+                var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
 
-                table.Cell().AlignCenter().Text(doc.DocumentNumber);
-                table.Cell().AlignCenter().Text(doc.Description);
-                table.Cell().AlignCenter().Text(doc.Package);
-                table.Cell().AlignCenter().Text(doc.DocumentType);
-                table.Cell().AlignCenter().Text(doc.Size);
-                table.Cell().AlignCenter().Text(latestRev.Value?.Revision ?? "-");
-                table.Cell().AlignCenter().Text(latestRev.Key.ToString("yyyy-MM-dd"));
+                table.Cell().Element(cell => DataCell(cell, doc.DocumentNumber, rowColor));
+                table.Cell().Element(cell => DataCell(cell, doc.Description, rowColor));
+                table.Cell().Element(cell => DataCell(cell, doc.Package, rowColor));
+                table.Cell().Element(cell => DataCell(cell, doc.DocumentType, rowColor));
+                table.Cell().Element(cell => DataCell(cell, doc.Size, rowColor));
+                table.Cell().Element(cell => DataCell(cell, latestRev.Value?.Revision ?? "-", rowColor));
+                table.Cell().Element(cell => DataCell(cell, latestRev.Key.ToString("yyyy-MM-dd"), rowColor));
 
-                // Add historical revisions for last 3 dates
+                // Add historical revisions in descending order
                 foreach (var date in lastThreeDates)
                 {
                     var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
                         ? revInfo.Revision
                         : "-";
-                    table.Cell().AlignCenter().Text(revision);
+                    table.Cell().Element(cell => DataCell(cell, revision, rowColor));
                 }
+
+                isAlternate = !isAlternate;
             }
         });
     }
 
-    private void AddProjectInfoRow(TableDescriptor table, string label, string value)
+    private IContainer HeaderCell(IContainer container)
     {
-        table.Cell().AlignLeft().Text(label).Bold();
-        table.Cell().AlignLeft().Text(value);
+        return container.Background("#eb1845")
+            .Padding(5)
+            .Border(1)
+            .BorderColor("#d10835")
+            .AlignCenter()
+            .DefaultTextStyle(x => x.Bold().FontColor(Colors.White));
+    }
+
+    private void DataCell(IContainer container, string text, string backgroundColor)
+    {
+        container.Border(1)
+            .BorderColor("#cccccc")
+            .Background(backgroundColor)
+            .Padding(5)
+            .AlignCenter()
+            .Text(text);
+    }
+
+    private void AddProjectInfoCell(TableDescriptor table, string label, string value)
+    {
+        table.Cell().Padding(5).AlignLeft().Text(label).Bold();
+        table.Cell().Padding(5).AlignLeft().Text(value);
     }
 
     protected virtual void Dispose(bool disposing)
