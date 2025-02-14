@@ -14,13 +14,13 @@ using Binding = System.Windows.Data.Binding;
 using System.Windows.Media;
 using System.Collections.ObjectModel;
 using Microsoft.Win32;
-using PdfSharp.Pdf;
-using PdfSharp.Drawing;
-using MigraDoc.DocumentObjectModel;
-using MigraDoc.DocumentObjectModel.Tables;
-using MigraDoc.Rendering;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using Style = System.Windows.Style;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
+using IContainer = QuestPDF.Infrastructure.IContainer;
+using Colors = QuestPDF.Helpers.Colors;
 
 namespace DrawingRegister.App;
 
@@ -32,7 +32,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private readonly ProjectManager _project = new();
     private bool _disposed;
     private string _searchText = string.Empty;
-    private DocumentMetadata _selectedDocument = null!;
+    private Models.DocumentMetadata? _selectedDocument;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -47,7 +47,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    public DocumentMetadata SelectedDocument
+    public Models.DocumentMetadata? SelectedDocument
     {
         get => _selectedDocument;
         set
@@ -279,7 +279,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         view.Filter = obj =>
         {
-            if (obj is not DocumentMetadata doc) return false;
+            if (obj is not Models.DocumentMetadata doc) return false;
 
             bool matchesSearch = string.IsNullOrWhiteSpace(searchText) || searchType switch
             {
@@ -300,17 +300,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void ImportDocuments_Click(object sender, RoutedEventArgs e)
     {
-        var folderBrowserDialog = new System.Windows.Forms.FolderBrowserDialog
+        var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Description = "Select the project folder containing PDFs to scan",
-            UseDescriptionForTitle = true
+            Title = "Select the project folder containing PDFs to scan"
         };
 
-        if (folderBrowserDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        if (dialog.ShowDialog() == true)
         {
             try
             {
-                _project.ImportDocuments(folderBrowserDialog.SelectedPath);
+                _project.ImportDocuments(dialog.FolderName);
                 MessageBox.Show($"Successfully imported {_project.Documents.Count} documents.", 
                     "Import Complete", 
                     MessageBoxButton.OK, 
@@ -368,12 +367,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void DocumentGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        SelectedDocument = DocumentGrid.SelectedItem as DocumentMetadata;
+        if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
+        {
+            SelectedDocument = selectedDoc;
+        }
     }
 
     private void DocumentGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (DocumentGrid.SelectedItem is DocumentMetadata selectedDoc)
+        if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
         {
             OpenDocument(selectedDoc.FilePath);
         }
@@ -393,7 +395,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             button.DataContext is KeyValuePair<DateTime, RevisionInfo> revision &&
             SelectedDocument != null)
         {
-            var dialog = new RevisionEditDialog(SelectedDocument.DocumentNumber, revision.Key, revision.Value);
+            var dialog = new RevisionEditDialog(SelectedDocument, revision.Key, revision.Value);
             dialog.Owner = this;
 
             if (dialog.ShowDialog() == true)
@@ -402,11 +404,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 revision.Value.Purpose = dialog.Purpose;
                 revision.Value.Method = dialog.Method;
                 revision.Value.IssuedBy = dialog.IssuedBy;
+                revision.Value.Revision = dialog.Revision;
 
                 // Update the document's current values
                 SelectedDocument.PurposeOfIssue = dialog.Purpose;
                 SelectedDocument.MethodOfIssue = dialog.Method;
                 SelectedDocument.IssuedBy = dialog.IssuedBy;
+                SelectedDocument.Revision = dialog.Revision;
 
                 // Save changes
                 _project.SaveProjectData();
@@ -556,6 +560,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     revInfo.Purpose = purpose;
                     revInfo.Method = method;
                     revInfo.IssuedBy = issuedBy;
+                    revInfo.Revision = DrawingRegister.App.Models.DocumentMetadata.GenerateRevisionCode(purpose, doc.RevisionHistory);
 
                     // Update document's current values if this is the latest revision
                     if (doc.RevisionHistory.Max(r => r.Key) == selectedDate)
@@ -563,6 +568,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         doc.PurposeOfIssue = purpose;
                         doc.MethodOfIssue = method;
                         doc.IssuedBy = issuedBy;
+                        doc.Revision = revInfo.Revision;
                     }
                     updatedCount++;
                 }
@@ -592,146 +598,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
             if (saveDialog.ShowDialog() != true) return;
 
-            // Create the document
-            var document = new Document();
-            document.DefaultPageSetup.Orientation = MigraDoc.DocumentObjectModel.Orientation.Landscape;
-            document.DefaultPageSetup.PageFormat = PageFormat.A4;
-            document.DefaultPageSetup.TopMargin = Unit.FromCentimeter(1);
-            document.DefaultPageSetup.BottomMargin = Unit.FromCentimeter(1);
-            document.DefaultPageSetup.LeftMargin = Unit.FromCentimeter(1);
-            document.DefaultPageSetup.RightMargin = Unit.FromCentimeter(1);
+            // Initialize QuestPDF
+            QuestPDF.Settings.License = LicenseType.Community;
 
-            var section = document.AddSection();
-
-            // Add title
-            var title = section.AddParagraph("DRAWING REGISTER");
-            title.Format.Font.Size = 16;
-            title.Format.Font.Bold = true;
-            title.Format.SpaceAfter = Unit.FromCentimeter(0.5);
-            title.Format.Alignment = ParagraphAlignment.Center;
-
-            // Project Info Table
-            var infoTable = section.AddTable();
-            infoTable.Borders.Width = 0.5;
-            infoTable.Format.SpaceAfter = Unit.FromCentimeter(1);
-            
-            // Add two columns for project info
-            infoTable.AddColumn(Unit.FromCentimeter(4));
-            infoTable.AddColumn(Unit.FromCentimeter(10));
-
-            // Add project info rows
-            AddProjectInfoRow(infoTable, "DISCIPLINE:", DisciplineBox?.Text ?? "");
-            AddProjectInfoRow(infoTable, "REG NO:", RegNoBox?.Text ?? "");
-            AddProjectInfoRow(infoTable, "PROJECT NO:", ProjectNoBox?.Text ?? "");
-            AddProjectInfoRow(infoTable, "CLIENT NO:", ClientNoBox?.Text ?? "");
-            AddProjectInfoRow(infoTable, "PROJECT NAME:", ProjectNameBox?.Text ?? "");
-
-            // Main document table
-            var table = section.AddTable();
-            table.Borders.Width = 0.5;
-            table.Format.Font.Size = 9;
-
-            // Define columns with specific widths
-            table.AddColumn(Unit.FromCentimeter(4.5));  // Document No
-            table.AddColumn(Unit.FromCentimeter(6));    // Description
-            table.AddColumn(Unit.FromCentimeter(2));    // Package
-            table.AddColumn(Unit.FromCentimeter(2));    // Type
-            table.AddColumn(Unit.FromCentimeter(1.5));  // Size
-            table.AddColumn(Unit.FromCentimeter(2));    // Latest Rev
-            table.AddColumn(Unit.FromCentimeter(2.5));  // Latest Date
-
-            // Get last 3 issue dates
-            var lastThreeDates = _project.IssueDates
-                .OrderByDescending(d => d)
-                .Take(3)
-                .OrderBy(d => d)
-                .ToList();
-
-            foreach (var date in lastThreeDates)
+            // Create and generate the document
+            Document.Create(container =>
             {
-                table.AddColumn(Unit.FromCentimeter(2)); // Rev columns for last 3 dates
-            }
-
-            // Add header row
-            var headerRow = table.AddRow();
-            headerRow.Shading.Color = MigraDoc.DocumentObjectModel.Colors.LightGray;
-            headerRow.Format.Font.Bold = true;
-            headerRow.Format.Alignment = ParagraphAlignment.Center;
-            
-            // Add headers
-            int colIndex = 0;
-            headerRow.Cells[colIndex++].AddParagraph("DOCUMENT NO");
-            headerRow.Cells[colIndex++].AddParagraph("DESCRIPTION");
-            headerRow.Cells[colIndex++].AddParagraph("PACKAGE");
-            headerRow.Cells[colIndex++].AddParagraph("TYPE");
-            headerRow.Cells[colIndex++].AddParagraph("SIZE");
-            headerRow.Cells[colIndex++].AddParagraph("LATEST REV");
-            headerRow.Cells[colIndex++].AddParagraph("LATEST DATE");
-
-            // Add date headers
-            foreach (var date in lastThreeDates)
-            {
-                headerRow.Cells[colIndex++].AddParagraph(date.ToString("yyyy-MM-dd"));
-            }
-
-            // Style all header cells
-            foreach (Cell cell in headerRow.Cells)
-            {
-                cell.Format.Font.Bold = true;
-                cell.Format.Alignment = ParagraphAlignment.Center;
-                cell.VerticalAlignment = MigraDoc.DocumentObjectModel.Tables.VerticalAlignment.Center;
-                cell.Format.Font.Color = MigraDoc.DocumentObjectModel.Colors.Black;
-            }
-
-            // Add data rows
-            if (DocumentGrid?.Items != null)
-            {
-                foreach (var item in DocumentGrid.Items)
+                container.Page(page =>
                 {
-                    if (item is DocumentMetadata doc)
-                    {
-                        var row = table.AddRow();
-                        colIndex = 0;
+                    page.Size(PageSizes.A4.Landscape());
+                    page.Margin(1, Unit.Centimetre);
+                    page.DefaultTextStyle(x => x.FontSize(9));
 
-                        // Standard columns
-                        row.Cells[colIndex++].AddParagraph(doc.DocumentNumber);
-                        row.Cells[colIndex++].AddParagraph(doc.Description);
-                        row.Cells[colIndex++].AddParagraph(doc.Package);
-                        row.Cells[colIndex++].AddParagraph(doc.DocumentType);
-                        row.Cells[colIndex++].AddParagraph(doc.Size);
-
-                        // Latest revision
-                        var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                        row.Cells[colIndex++].AddParagraph(latestRev.Value?.Revision ?? "-");
-                        row.Cells[colIndex++].AddParagraph(latestRev.Key.ToString("yyyy-MM-dd"));
-
-                        // Historical revisions for last 3 dates
-                        foreach (var date in lastThreeDates)
-                        {
-                            var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
-                                ? revInfo.Revision
-                                : "-";
-                            row.Cells[colIndex++].AddParagraph(revision);
-                        }
-
-                        // Style all cells in the row
-                        foreach (Cell cell in row.Cells)
-                        {
-                            cell.Format.Alignment = ParagraphAlignment.Center;
-                            cell.VerticalAlignment = MigraDoc.DocumentObjectModel.Tables.VerticalAlignment.Center;
-                            cell.Format.Font.Size = 9;
-                        }
-                    }
-                }
-            }
-
-            // Render the document
-            var renderer = new PdfDocumentRenderer(true)
-            {
-                Document = document
-            };
-            renderer.RenderDocument();
-            renderer.PdfDocument.Save(saveDialog.FileName);
+                    page.Header().Element(ComposeHeader);
+                    page.Content().Element(ComposeContent);
+                });
+            })
+            .GeneratePdf(saveDialog.FileName);
 
             MessageBox.Show("PDF report generated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -741,22 +624,115 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void AddProjectInfoRow(Table table, string label, string value)
+    private void ComposeHeader(IContainer container)
     {
-        var row = table.AddRow();
-        row.Cells[0].AddParagraph(label).Format.Font.Bold = true;
-        row.Cells[0].Format.Alignment = ParagraphAlignment.Left;
-        row.Cells[1].AddParagraph(value);
-        row.Cells[1].Format.Alignment = ParagraphAlignment.Left;
-        
-        // Style the row
-        row.Format.Font.Size = 10;
-        foreach (Cell cell in row.Cells)
+        container.Column(column =>
         {
-            cell.VerticalAlignment = MigraDoc.DocumentObjectModel.Tables.VerticalAlignment.Center;
-            cell.Format.SpaceBefore = Unit.FromPoint(2);
-            cell.Format.SpaceAfter = Unit.FromPoint(2);
-        }
+            // Title
+            column.Item().Row(row =>
+            {
+                row.RelativeItem().AlignCenter().Text("DRAWING REGISTER")
+                    .FontSize(16).Bold();
+            });
+
+            // Project Info Table
+            column.Item().Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(1);
+                    columns.RelativeColumn(3);
+                });
+
+                AddProjectInfoRow(table, "DISCIPLINE:", DisciplineBox?.Text ?? "");
+                AddProjectInfoRow(table, "REG NO:", RegNoBox?.Text ?? "");
+                AddProjectInfoRow(table, "PROJECT NO:", ProjectNoBox?.Text ?? "");
+                AddProjectInfoRow(table, "CLIENT NO:", ClientNoBox?.Text ?? "");
+                AddProjectInfoRow(table, "PROJECT NAME:", ProjectNameBox?.Text ?? "");
+            });
+        });
+    }
+
+    private void ComposeContent(IContainer container)
+    {
+        if (DocumentGrid?.Items == null) return;
+
+        // Get last 3 issue dates
+        var lastThreeDates = _project.IssueDates
+            .OrderByDescending(d => d)
+            .Take(3)
+            .OrderBy(d => d)
+            .ToList();
+
+        container.Table(table =>
+        {
+            // Define columns
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(2);     // Document No
+                columns.RelativeColumn(3);     // Description
+                columns.RelativeColumn(1);     // Package
+                columns.RelativeColumn(1);     // Type
+                columns.RelativeColumn(0.75f); // Size
+                columns.RelativeColumn(1);     // Latest Rev
+                columns.RelativeColumn(1.25f); // Latest Date
+                
+                // Add columns for last 3 dates
+                foreach (var _ in lastThreeDates)
+                {
+                    columns.RelativeColumn(1);
+                }
+            });
+
+            // Add header row
+            table.Header(header =>
+            {
+                header.Cell().Background("#eb1845").AlignCenter().Text("DOCUMENT NO").Bold().FontColor(Colors.White);
+                header.Cell().Background("#eb1845").AlignCenter().Text("DESCRIPTION").Bold().FontColor(Colors.White);
+                header.Cell().Background("#eb1845").AlignCenter().Text("PACKAGE").Bold().FontColor(Colors.White);
+                header.Cell().Background("#eb1845").AlignCenter().Text("TYPE").Bold().FontColor(Colors.White);
+                header.Cell().Background("#eb1845").AlignCenter().Text("SIZE").Bold().FontColor(Colors.White);
+                header.Cell().Background("#eb1845").AlignCenter().Text("LATEST REV").Bold().FontColor(Colors.White);
+                header.Cell().Background("#eb1845").AlignCenter().Text("LATEST DATE").Bold().FontColor(Colors.White);
+
+                foreach (var date in lastThreeDates)
+                {
+                    header.Cell().Background("#eb1845").AlignCenter()
+                        .Text(date.ToString("yyyy-MM-dd")).Bold().FontColor(Colors.White);
+                }
+            });
+
+            // Add data rows
+            foreach (var item in DocumentGrid.Items)
+            {
+                if (item is not Models.DocumentMetadata doc) continue;
+
+                var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+
+                table.Cell().AlignCenter().Text(doc.DocumentNumber);
+                table.Cell().AlignCenter().Text(doc.Description);
+                table.Cell().AlignCenter().Text(doc.Package);
+                table.Cell().AlignCenter().Text(doc.DocumentType);
+                table.Cell().AlignCenter().Text(doc.Size);
+                table.Cell().AlignCenter().Text(latestRev.Value?.Revision ?? "-");
+                table.Cell().AlignCenter().Text(latestRev.Key.ToString("yyyy-MM-dd"));
+
+                // Add historical revisions for last 3 dates
+                foreach (var date in lastThreeDates)
+                {
+                    var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
+                        ? revInfo.Revision
+                        : "-";
+                    table.Cell().AlignCenter().Text(revision);
+                }
+            }
+        });
+    }
+
+    private void AddProjectInfoRow(TableDescriptor table, string label, string value)
+    {
+        table.Cell().AlignLeft().Text(label).Bold();
+        table.Cell().AlignLeft().Text(value);
     }
 
     protected virtual void Dispose(bool disposing)

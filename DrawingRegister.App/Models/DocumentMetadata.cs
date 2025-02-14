@@ -74,6 +74,67 @@ namespace DrawingRegister.App.Models
         public bool IsLatestRevision => 
             RevisionHistory.Any() && 
             Revision == RevisionHistory.Max(r => r.Value.Revision);
+
+        public static string GenerateRevisionCode(string purpose, Dictionary<DateTime, RevisionInfo> revisionHistory)
+        {
+            // If no purpose specified, use alphabetical sequence
+            if (string.IsNullOrEmpty(purpose))
+                return GetNextAlphabeticalRevision(revisionHistory);
+
+            // Get prefix based on purpose
+            string prefix = purpose.ToUpper() switch
+            {
+                "CONSTRUCTION" => "C",
+                "TENDER" => "T",
+                "PLANNING" => "P",
+                "INFORMATION" => "I",
+                _ => null
+            };
+
+            // If no specific prefix found, use alphabetical sequence
+            if (prefix == null)
+                return GetNextAlphabeticalRevision(revisionHistory);
+
+            // Get existing revisions with this prefix
+            var existingRevs = revisionHistory.Values
+                .Where(r => r.Revision != null && 
+                           r.Revision.TrimStart().StartsWith(prefix) && 
+                           r.Purpose?.ToUpper() == purpose.ToUpper())
+                .Select(r => r.Revision.TrimStart())
+                .ToList();
+
+            if (!existingRevs.Any())
+                return $"{prefix}01";
+
+            // Find highest number and increment
+            int maxNum = existingRevs
+                .Select(r => 
+                {
+                    if (r.Length <= 1) return 0;
+                    var numStr = r[1..].TrimStart();
+                    return int.TryParse(numStr, out int num) ? num : 0;
+                })
+                .Max();
+
+            return $"{prefix}{(maxNum + 1):D2}";
+        }
+
+        private static string GetNextAlphabeticalRevision(Dictionary<DateTime, RevisionInfo> revisionHistory)
+        {
+            if (!revisionHistory.Any())
+                return "A";
+
+            var alphabeticalRevs = revisionHistory.Values
+                .Where(r => r.Revision.Length == 1 && char.IsLetter(r.Revision[0]))
+                .Select(r => r.Revision[0])
+                .ToList();
+
+            if (!alphabeticalRevs.Any())
+                return "A";
+
+            char maxChar = alphabeticalRevs.Max();
+            return ((char)(maxChar + 1)).ToString();
+        }
     }
 
     public class RevisionInfo

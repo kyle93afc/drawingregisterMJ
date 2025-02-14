@@ -16,60 +16,96 @@
         <converters:LatestRevisionDateConverter x:Key="LatestRevisionDateConverter"/>
         <converters:RevisionAtDateConverter x:Key="RevisionAtDateConverter"/>
         
+        <!-- Global Effects -->
+        <DropShadowEffect x:Key="MaterialDropShadow" 
+                         BlurRadius="4" 
+                         Direction="270" 
+                         ShadowDepth="2" 
+                         Opacity="0.2" 
+                         Color="#000000"/>
+        
         <!-- Button Style -->
-        <Style TargetType="Button">
+        <Style x:Key="BaseButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#5a6268"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinWidth" Value="120"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
+                                CornerRadius="6"
+                                Effect="{StaticResource MaterialDropShadow}">
+                            <ContentPresenter x:Name="contentPresenter" 
+                                            HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"
+                                            TextBlock.FontWeight="SemiBold"
+                                            Margin="{TemplateBinding Padding}"/>
                         </Border>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="border"
+                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                      To="#4a5258" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="border"
+                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                      To="#5a6268" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3d444a"/>
+                                <Setter TargetName="contentPresenter" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                                <Setter Property="Foreground" Value="#757575"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#4a5258"/>
-                </Trigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#3d444a"/>
-                </Trigger>
-            </Style.Triggers>
         </Style>
 
+        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}"/>
+        
         <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButton" TargetType="Button">
+        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
             <Setter Property="Background" Value="#6c757d"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
             <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#5a6268"/>
-                </Trigger>
+                <EventTrigger RoutedEvent="MouseEnter">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
+                                          To="#5a6268" Duration="0:0:0.2"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="MouseLeave">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
+                                          To="#6c757d" Duration="0:0:0.2"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
                 <Trigger Property="IsPressed" Value="True">
                     <Setter Property="Background" Value="#545b62"/>
                 </Trigger>
@@ -190,21 +226,21 @@
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="Scan Outgoing PDF Folder" Click="ImportDocuments_Click"/>
-            <Button Content="Save Project" Click="SaveProject_Click"/>
-            <Button Content="Refresh View" Click="RefreshView_Click"/>
-            <Button Content="Generate PDF Report" Click="GeneratePdfReport_Click"/>
+            <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click"/>
+            <Button Content="SAVE PROJECT" Click="SaveProject_Click"/>
+            <Button Content="REFRESH VIEW" Click="RefreshView_Click"/>
+            <Button Content="GENERATE PDF REPORT" Click="GeneratePdfReport_Click"/>
         </StackPanel>
 
         <!-- Search Panel -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBox x:Name="SearchBox" Width="200" Margin="0,0,10,0" TextChanged="SearchBox_TextChanged"/>
-            <ComboBox x:Name="SearchTypeCombo" Width="120" Margin="0,0,10,0" SelectedIndex="0">
-                <ComboBoxItem Content="Document No"/>
-                <ComboBoxItem Content="Description"/>
-                <ComboBoxItem Content="Package"/>
-                <ComboBoxItem Content="Type"/>
+            <ComboBox x:Name="SearchTypeCombo" Width="200" Margin="0,0,10,0" SelectedIndex="0">
+                <ComboBoxItem Content="DOCUMENT NO"/>
+                <ComboBoxItem Content="DESCRIPTION"/>
+                <ComboBoxItem Content="PACKAGE"/>
+                <ComboBoxItem Content="TYPE"/>
             </ComboBox>
         </StackPanel>
 
@@ -214,8 +250,8 @@
                 <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
                 <DatePicker x:Name="EndDatePicker" Width="120" Margin="0,0,10,0"/>
-                <Button Content="Apply Filter" Click="DateFilter_Click"/>
-                <Button Content="Clear Filter" Click="ClearDateFilter_Click" Style="{StaticResource SecondaryButton}"/>
+                <Button Content="APPLY FILTER" Click="DateFilter_Click"/>
+                <Button Content="CLEAR FILTER" Click="ClearDateFilter_Click" Style="{StaticResource BaseButtonStyle}"/>
             </StackPanel>
             
             <StackPanel Orientation="Horizontal">
@@ -247,8 +283,8 @@
                 <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="20,0,10,0"/>
                 <TextBox x:Name="IssuedByFilter" Width="60" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper"/>
 
-                <Button Content="Save Issue Details" Click="SaveIssueDetails_Click" 
-                        Background="#eb1845" Foreground="White" Padding="15,5"/>
+                <Button Content="SAVE ISSUE DETAILS" Click="SaveIssueDetails_Click" 
+                        Style="{StaticResource BaseButtonStyle}"/>
             </StackPanel>
         </StackPanel>
 

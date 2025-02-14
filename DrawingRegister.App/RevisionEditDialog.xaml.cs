@@ -7,22 +7,26 @@ namespace DrawingRegister.App
 {
     public partial class RevisionEditDialog : Window
     {
+        private readonly DocumentMetadata _document;
         public string DocumentNumber { get; set; } = string.Empty;
         public DateTime IssueDate { get; set; }
         public string Purpose { get; set; } = string.Empty;
         public string Method { get; set; } = string.Empty;
         public string IssuedBy { get; set; } = string.Empty;
+        public string Revision { get; set; } = string.Empty;
 
-        public RevisionEditDialog(string documentNumber, DateTime issueDate, RevisionInfo revisionInfo)
+        public RevisionEditDialog(DocumentMetadata document, DateTime issueDate, RevisionInfo revisionInfo)
         {
             InitializeComponent();
             DataContext = this;
 
-            DocumentNumber = documentNumber;
+            _document = document;
+            DocumentNumber = document.DocumentNumber;
             IssueDate = issueDate;
             Purpose = revisionInfo.Purpose;
             Method = revisionInfo.Method;
             IssuedBy = revisionInfo.IssuedBy;
+            Revision = revisionInfo.Revision;
 
             // Set initial combo box selections
             if (!string.IsNullOrEmpty(Purpose))
@@ -48,6 +52,18 @@ namespace DrawingRegister.App
                     }
                 }
             }
+
+            // Hook up purpose change event
+            PurposeCombo.SelectionChanged += PurposeCombo_SelectionChanged;
+        }
+
+        private void PurposeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (PurposeCombo.SelectedItem != null)
+            {
+                string selectedPurpose = ((ComboBoxItem)PurposeCombo.SelectedItem).Content.ToString()!;
+                Revision = DocumentMetadata.GenerateRevisionCode(selectedPurpose, _document.RevisionHistory);
+            }
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -55,6 +71,8 @@ namespace DrawingRegister.App
             if (PurposeCombo.SelectedItem != null)
             {
                 Purpose = ((ComboBoxItem)PurposeCombo.SelectedItem).Content.ToString()!;
+                // Generate new revision code based on selected purpose
+                Revision = DocumentMetadata.GenerateRevisionCode(Purpose, _document.RevisionHistory);
             }
 
             if (MethodCombo.SelectedItem != null)

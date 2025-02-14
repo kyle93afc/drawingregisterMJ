@@ -236,7 +236,7 @@ public class ProjectManager : INotifyPropertyChanged
             }
 
             // Updated regex pattern to better handle drawing numbers and revisions
-            var regex = new Regex(@"^(?<projectNo>\d{5,6})-(?<code1>[^-]+)-(?<volume>[^-]+)-(?<code2>[^-]+)-(?<docType>[^-]+)-(?<docDiscipline>[^-]+)-(?<package>\d+)(-(?<number>\d+))?(-(?<revision>[A-Z]))?(-(?<description>.+))?$");
+            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+))?(?:-\s*(?<revision>[A-Z]\d{2}|[A-Z]))?(?:\s*-\s*(?<description>.+))?$");
             var match = regex.Match(fileName);
             
             if (!match.Success)
@@ -251,22 +251,22 @@ public class ProjectManager : INotifyPropertyChanged
                 continue;
             }
 
-            var documentNumber = $"{match.Groups["projectNo"].Value}-{match.Groups["code1"].Value}-{match.Groups["volume"].Value}-{match.Groups["code2"].Value}-{match.Groups["docType"].Value}-{match.Groups["docDiscipline"].Value}-{match.Groups["package"].Value}";
+            var documentNumber = $"{match.Groups["projectNo"].Value.Trim()}-{match.Groups["code1"].Value.Trim()}-{match.Groups["volume"].Value.Trim()}-{match.Groups["code2"].Value.Trim()}-{match.Groups["docType"].Value.Trim()}-{match.Groups["docDiscipline"].Value.Trim()}-{match.Groups["package"].Value.Trim()}";
             if (match.Groups["number"].Success)
             {
-                documentNumber += $"-{match.Groups["number"].Value}";
+                documentNumber += $"-{match.Groups["number"].Value.Trim()}";
             }
             
             // Get revision - if not in filename, try to detect from folder name
             string revision = "-";
             if (match.Groups["revision"].Success)
             {
-                revision = match.Groups["revision"].Value;
+                revision = match.Groups["revision"].Value.Trim();
             }
             else
             {
                 // Look for revision in folder name
-                var folderRevMatch = Regex.Match(parentFolder ?? "", @"REV[_\s-]*([A-Z])$", RegexOptions.IgnoreCase);
+                var folderRevMatch = Regex.Match(parentFolder ?? "", @"REV[_\s-]*([A-Z]\d{2}|[A-Z])$", RegexOptions.IgnoreCase);
                 if (folderRevMatch.Success)
                 {
                     revision = folderRevMatch.Groups[1].Value;
@@ -276,6 +276,17 @@ public class ProjectManager : INotifyPropertyChanged
                     revision = "-";  // Explicitly set to "-" if no revision found
                 }
             }
+
+            // Determine purpose based on revision code
+            string purpose = DeterminePurpose(filePath);
+            if (revision.StartsWith("I") && revision.Length == 3)
+                purpose = "Information";
+            else if (revision.StartsWith("C") && revision.Length == 3)
+                purpose = "Construction";
+            else if (revision.StartsWith("T") && revision.Length == 3)
+                purpose = "Tender";
+            else if (revision.StartsWith("P") && revision.Length == 3)
+                purpose = "Planning";
 
             // Get description - remove the revision letter if it's at the end
             string description = "";
@@ -303,7 +314,7 @@ public class ProjectManager : INotifyPropertyChanged
                 Discipline = Discipline,
                 RegisterNumber = RegisterNumber,
                 ClientNumber = ClientNumber,
-                PurposeOfIssue = DeterminePurpose(filePath),
+                PurposeOfIssue = purpose,
                 MethodOfIssue = DetermineMethodOfIssue(filePath),
                 IssuedBy = DetermineIssuedBy(filePath)
             };
@@ -311,7 +322,7 @@ public class ProjectManager : INotifyPropertyChanged
             var revInfo = new RevisionInfo
             {
                 Revision = revision,
-                Purpose = DeterminePurpose(filePath),
+                Purpose = purpose,
                 Method = DetermineMethodOfIssue(filePath),
                 IssuedBy = DetermineIssuedBy(filePath),
                 IsDistributed = true,
@@ -422,8 +433,14 @@ public class ProjectManager : INotifyPropertyChanged
     {
         try
         {
+            // Remove file extension and trim any trailing spaces
+            fileName = Path.GetFileNameWithoutExtension(fileName).TrimEnd();
+
             // Split by hyphen and get the description part
-            var parts = fileName.Split('-');
+            var parts = fileName.Split('-', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim()) // Trim each part
+                .ToArray();
+
             if (parts.Length > 8)
             {
                 var descParts = parts.Skip(8).ToList();
@@ -437,9 +454,9 @@ public class ProjectManager : INotifyPropertyChanged
             // If no description found in filename, try to parse from standard naming
             if (parts.Length >= 7)
             {
-                var type = parts[4]; // DR, SK, etc.
-                var discipline = parts[5]; // S, A, etc.
-                var category = parts[6]; // 00, 20, etc.
+                var type = parts[4].Trim(); // DR, SK, etc.
+                var discipline = parts[5].Trim(); // S, A, etc.
+                var category = parts[6].Trim(); // 00, 20, etc.
 
                 // Map common types and categories to descriptions
                 var descriptions = new Dictionary<string, string>
