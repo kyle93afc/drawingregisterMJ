@@ -645,7 +645,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             });
 
             // Project Info Table with styling
-            column.Item().Border(1).BorderColor("#cccccc").Padding(10).Table(table =>
+            column.Item().Padding(10).Table(table =>
             {
                 table.ColumnsDefinition(columns =>
                 {
@@ -681,7 +681,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         var lastThreeDates = _project.IssueDates
             .OrderByDescending(d => d)
             .Take(3)
-            .ToList(); // Removed the OrderBy to keep descending order
+            .ToList();
 
         container.Table(table =>
         {
@@ -735,7 +735,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 table.Cell().Element(cell => DataCell(cell, doc.Package, rowColor));
                 table.Cell().Element(cell => DataCell(cell, doc.DocumentType, rowColor));
                 table.Cell().Element(cell => DataCell(cell, doc.Size, rowColor));
-                table.Cell().Element(cell => DataCell(cell, latestRev.Value?.Revision ?? "-", rowColor));
+                table.Cell().Element(cell => DataCell(cell, latestRev.Value?.Revision ?? "", rowColor));
                 table.Cell().Element(cell => DataCell(cell, latestRev.Key.ToString("yyyy-MM-dd"), rowColor));
 
                 // Add historical revisions in descending order
@@ -743,7 +743,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 {
                     var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
                         ? revInfo.Revision
-                        : "-";
+                        : "";
                     table.Cell().Element(cell => DataCell(cell, revision, rowColor));
                 }
 
@@ -764,18 +764,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void DataCell(IContainer container, string text, string backgroundColor)
     {
-        container.Border(1)
-            .BorderColor("#cccccc")
-            .Background(backgroundColor)
+        // Replace "-" with empty string
+        var displayText = text == "-" ? "" : text;
+        container.Background(backgroundColor)
             .Padding(5)
             .AlignCenter()
-            .Text(text);
+            .Text(displayText);
     }
 
     private void AddProjectInfoCell(TableDescriptor table, string label, string value)
     {
-        table.Cell().Padding(5).AlignLeft().Text(label).Bold();
-        table.Cell().Padding(5).AlignLeft().Text(value);
+        table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(label).Bold();
+        table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(value);
     }
 
     protected virtual void Dispose(bool disposing)
