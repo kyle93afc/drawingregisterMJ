@@ -40,6 +40,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     public class DistributionItem : INotifyPropertyChanged
     {
         private string _clientName = string.Empty;
+        private string _description = string.Empty;
         private Dictionary<DateTime, bool> _distributionStatus = new();
 
         public string ClientName
@@ -49,6 +50,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 _clientName = value;
                 OnPropertyChanged(nameof(ClientName));
+            }
+        }
+
+        public string Description
+        {
+            get => _description;
+            set
+            {
+                _description = value;
+                OnPropertyChanged(nameof(Description));
             }
         }
 
@@ -163,16 +174,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void UpdateRevisionColumns()
     {
+        const double REVISION_COLUMN_WIDTH = 40; // Fixed width for revision columns
+
         // Get all unique issue dates from documents
         var issueDates = _project.Documents
             .SelectMany(d => d.RevisionHistory.Keys)
-            .Distinct()  // Remove duplicates before sorting
-            .OrderByDescending(d => d)  // Sort newest to oldest
+            .Distinct()
+            .OrderByDescending(d => d)
             .ToList();
 
         // Remove any existing revision date columns
         var existingRevisionColumns = DocumentGrid.Columns
-            .Where(c => c.Header.ToString()?.Contains("/") == true)  // Changed to match new date format
+            .Where(c => c.Header.ToString()?.Contains("/") == true)
             .ToList();
         foreach (var column in existingRevisionColumns)
         {
@@ -182,15 +195,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Add a column for each issue date
         foreach (var date in issueDates)
         {
-            var column = new System.Windows.Controls.DataGridTextColumn
+            var column = new DataGridTextColumn
             {
                 Header = date.ToString("dd/MM/yyyy"),
-                Width = DataGridLength.Auto,
-                MinWidth = 40,
+                Width = new DataGridLength(REVISION_COLUMN_WIDTH),
                 HeaderStyle = (Style)FindResource("RotatedColumnHeader"),
-                Binding = new System.Windows.Data.Binding("RevisionHistory")
+                Binding = new Binding("RevisionHistory")
                 {
-                    Converter = (System.Windows.Data.IValueConverter)FindResource("RevisionAtDateConverter"),
+                    Converter = (IValueConverter)FindResource("RevisionAtDateConverter"),
                     ConverterParameter = date
                 }
             };
@@ -863,6 +875,30 @@ private void AddProjectInfoCell(TableDescriptor table, string label, string valu
 
 private void UpdateDistributionColumns(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
 {
+    const double REVISION_COLUMN_WIDTH = 40; // Same fixed width as document grid
+
+    // Calculate total width of document grid columns (excluding revision columns)
+    double totalDocumentGridWidth = 0;
+    foreach (var column in DocumentGrid.Columns)
+    {
+        if (column is DataGridTextColumn textColumn && !textColumn.Header.ToString()?.Contains("/") == true)
+        {
+            totalDocumentGridWidth += textColumn.Width.Value;
+        }
+    }
+
+    // Split the total width between description and client name columns
+    double distributionColumnWidth = totalDocumentGridWidth / 2;
+    
+    // Update the widths of the description and client name columns
+    foreach (var column in DistributionGrid.Columns)
+    {
+        if (column is DataGridTextColumn textColumn)
+        {
+            textColumn.Width = new DataGridLength(distributionColumnWidth);
+        }
+    }
+
     // Get all unique issue dates from documents
     var issueDates = _project.Documents
         .SelectMany(d => d.RevisionHistory.Keys)
@@ -885,8 +921,8 @@ private void UpdateDistributionColumns(object? sender, System.Collections.Specia
         var column = new DataGridCheckBoxColumn
         {
             Header = "Rev",
-            Width = new DataGridLength(1, DataGridLengthUnitType.Auto),
-            MinWidth = 40,
+            Width = new DataGridLength(REVISION_COLUMN_WIDTH),
+            HeaderStyle = TryFindResource("HiddenHeader") as Style,
             Binding = new Binding($"DistributionStatus[{date}]")
             {
                 Mode = BindingMode.TwoWay,
@@ -910,7 +946,8 @@ private void DistributionGrid_AddingNewItem(object sender, AddingNewItemEventArg
 {
     var newItem = new DistributionItem
     {
-        ClientName = string.Empty
+        ClientName = string.Empty,
+        Description = string.Empty
     };
     
     // Initialize distribution status for all dates

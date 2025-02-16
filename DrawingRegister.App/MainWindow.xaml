@@ -16,6 +16,21 @@
         <converters:LatestRevisionDateConverter x:Key="LatestRevisionDateConverter"/>
         <converters:RevisionAtDateConverter x:Key="RevisionAtDateConverter"/>
         
+        <!-- Style to hide column headers -->
+        <Style x:Key="HiddenHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </Style>
+
+        <!-- Style for visible headers -->
+        <Style x:Key="VisibleHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#eb1845"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="BorderBrush" Value="#ddd"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        </Style>
+        
         <!-- Global Effects -->
         <DropShadowEffect x:Key="MaterialDropShadow" 
                          BlurRadius="4" 
@@ -182,11 +197,11 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Header Info -->
-            <RowDefinition Height="Auto"/>  <!-- Distribution Header -->
-            <RowDefinition Height="Auto"/>  <!-- Distribution Grid -->
             <RowDefinition Height="Auto"/>  <!-- Action Buttons -->
             <RowDefinition Height="Auto"/>  <!-- Search Panel -->
             <RowDefinition Height="Auto"/>  <!-- Date Filter -->
+            <RowDefinition Height="Auto"/>  <!-- Distribution Header -->
+            <RowDefinition Height="Auto"/>  <!-- Distribution Grid -->
             <RowDefinition Height="*"/>     <!-- Documents Grid -->
             <RowDefinition Height="Auto"/>  <!-- Revision Timeline -->
         </Grid.RowDefinitions>
@@ -230,58 +245,8 @@
             <TextBox x:Name="ProjectNameBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5"/>
         </Grid>
 
-        <!-- Distribution Header -->
-        <TextBlock Grid.Row="1" Text="DISTRIBUTION" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
-
-        <!-- Distribution Grid -->
-        <DataGrid x:Name="DistributionGrid" 
-                  Grid.Row="2"
-                  AutoGenerateColumns="False"
-                  Margin="0,0,0,20"
-                  AlternationCount="2"
-                  CanUserAddRows="True"
-                  Height="Auto"
-                  MinHeight="100"
-                  MaxHeight="200"
-                  BorderThickness="1"
-                  BorderBrush="#ddd"
-                  HorizontalScrollBarVisibility="Auto"
-                  AddingNewItem="DistributionGrid_AddingNewItem">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="CLIENT NAME" 
-                                  Binding="{Binding ClientName}"
-                                  Width="*"
-                                  MinWidth="120"/>
-                <DataGridTextColumn Header="DESCRIPTION" 
-                                  Width="*"
-                                  MinWidth="200"
-                                  IsReadOnly="True"/>
-                <DataGridTextColumn Header="PACKAGE" 
-                                  Width="Auto"
-                                  MinWidth="80"
-                                  IsReadOnly="True"/>
-                <DataGridTextColumn Header="TYPE" 
-                                  Width="Auto"
-                                  MinWidth="80"
-                                  IsReadOnly="True"/>
-                <DataGridTextColumn Header="SIZE" 
-                                  Width="Auto"
-                                  MinWidth="50"
-                                  IsReadOnly="True"/>
-                <DataGridTextColumn Header="LATEST REV" 
-                                  Width="Auto"
-                                  MinWidth="80"
-                                  IsReadOnly="True"/>
-                <DataGridTextColumn Header="LAST DATE OF ISSUE" 
-                                  Width="Auto"
-                                  MinWidth="100"
-                                  IsReadOnly="True"/>
-                <!-- Revision columns will be added dynamically -->
-            </DataGrid.Columns>
-        </DataGrid>
-
         <!-- Action Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click"/>
             <Button Content="SAVE PROJECT" Click="SaveProject_Click"/>
             <Button Content="REFRESH VIEW" Click="RefreshView_Click"/>
@@ -289,7 +254,7 @@
         </StackPanel>
 
         <!-- Search Panel -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBox x:Name="SearchBox" Width="200" Margin="0,0,10,0" TextChanged="SearchBox_TextChanged"/>
             <ComboBox x:Name="SearchTypeCombo" Width="200" Margin="0,0,10,0" SelectedIndex="0">
@@ -300,8 +265,8 @@
             </ComboBox>
         </StackPanel>
 
-        <!-- Move Date Filters to New Row -->
-        <StackPanel Grid.Row="5" Orientation="Vertical" Margin="0,0,0,10">
+        <!-- Date Filters -->
+        <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,0,0,10">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
@@ -344,6 +309,36 @@
             </StackPanel>
         </StackPanel>
 
+        <!-- Distribution Header -->
+        <TextBlock Grid.Row="4" Text="DISTRIBUTION" FontWeight="Bold" FontSize="14" Margin="0,0,0,5"/>
+
+        <!-- Distribution Grid -->
+        <DataGrid x:Name="DistributionGrid" 
+                  Grid.Row="5"
+                  AutoGenerateColumns="False"
+                  Margin="0,0,0,10"
+                  AlternationCount="2"
+                  CanUserAddRows="True"
+                  Height="Auto"
+                  MinHeight="100"
+                  MaxHeight="200"
+                  BorderThickness="1"
+                  BorderBrush="#ddd"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Auto"
+                  ColumnWidth="Auto"
+                  AddingNewItem="DistributionGrid_AddingNewItem">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="DESCRIPTION" 
+                                  Binding="{Binding Description}"
+                                  HeaderStyle="{StaticResource VisibleHeader}"/>
+                <DataGridTextColumn Header="CLIENT NAME" 
+                                  Binding="{Binding ClientName}"
+                                  HeaderStyle="{StaticResource VisibleHeader}"/>
+                <!-- Revision columns will be added dynamically with hidden headers -->
+            </DataGrid.Columns>
+        </DataGrid>
+
         <!-- Documents Grid -->
         <DataGrid x:Name="DocumentGrid" 
                   Grid.Row="6" 
@@ -354,20 +349,32 @@
                   AlternationCount="2"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Auto"
+                  ColumnWidth="Auto"
                   BorderThickness="1"
                   BorderBrush="#ddd">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="DOCUMENT NO" Binding="{Binding DocumentNumber}" Width="Auto" MinWidth="120"/>
-                <DataGridTextColumn Header="DESCRIPTION" Binding="{Binding Description}" Width="*" MinWidth="200"/>
-                <DataGridTextColumn Header="PACKAGE" Binding="{Binding Package}" Width="Auto" MinWidth="80"/>
-                <DataGridTextColumn Header="TYPE" Binding="{Binding DocumentType}" Width="Auto" MinWidth="80"/>
-                <DataGridTextColumn Header="SIZE" Binding="{Binding Size}" Width="Auto" MinWidth="50"/>
+                <DataGridTextColumn Header="DOCUMENT NO" 
+                                  Binding="{Binding DocumentNumber}" 
+                                  Width="120"/>
+                <DataGridTextColumn Header="DESCRIPTION" 
+                                  Binding="{Binding Description}" 
+                                  Width="200"/>
+                <DataGridTextColumn Header="PACKAGE" 
+                                  Binding="{Binding Package}" 
+                                  Width="80"/>
+                <DataGridTextColumn Header="TYPE" 
+                                  Binding="{Binding DocumentType}" 
+                                  Width="80"/>
+                <DataGridTextColumn Header="SIZE" 
+                                  Binding="{Binding Size}" 
+                                  Width="50"/>
                 <DataGridTextColumn Header="LATEST REV" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
-                                  Width="Auto" MinWidth="80"/>
+                                  Width="80"/>
                 <DataGridTextColumn Header="LAST DATE OF ISSUE" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionDateConverter}}"
-                                  Width="Auto" MinWidth="100"/>
+                                  Width="100"/>
+                <!-- Revision columns will be added dynamically -->
             </DataGrid.Columns>
         </DataGrid>
 
