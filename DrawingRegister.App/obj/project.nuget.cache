@@ -1,22 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "CFjbvXjrvBE=",
+  "dgSpecHash": "9g4RDn7Dl/Y=",
   "success": true,
   "projectFilePath": "C:\\temp\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\k.greig\\.nuget\\packages\\pdfsharp-migradoc-gdi\\1.50.5147\\pdfsharp-migradoc-gdi.1.50.5147.nupkg.sha512",
-    "C:\\Users\\k.greig\\.nuget\\packages\\system.text.encoding.codepages\\8.0.0\\system.text.encoding.codepages.8.0.0.nupkg.sha512"
+    "C:\\Users\\k.greig\\.nuget\\packages\\questpdf\\2025.1.2\\questpdf.2025.1.2.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1701",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "Package 'PDFsharp-MigraDoc-gdi 1.50.5147' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0-windows7.0'. This package may not be fully compatible with your project.",
-      "libraryId": "PDFsharp-MigraDoc-gdi",
-      "targetGraphs": [
-        "net8.0-windows7.0"
-      ]
-    }
-  ]
+  "logs": []
 }

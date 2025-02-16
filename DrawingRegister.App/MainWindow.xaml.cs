@@ -380,6 +380,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         try
         {
+            // Clear the selected document to return to full view
+            SelectedDocument = null;
+            DocumentGrid.SelectedItem = null;
+
             if (string.IsNullOrEmpty(_project._currentBasePath))
             {
                 MessageBox.Show("No folder selected. Please import documents first.", 
