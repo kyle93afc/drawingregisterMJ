@@ -35,6 +35,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private string _searchText = string.Empty;
     private Models.DocumentMetadata? _selectedDocument;
+    private ObservableCollection<DistributionItem> _distributionItems = new();
+
+    public class DistributionItem : INotifyPropertyChanged
+    {
+        private string _clientName = string.Empty;
+        private Dictionary<DateTime, bool> _distributionStatus = new();
+
+        public string ClientName
+        {
+            get => _clientName;
+            set
+            {
+                _clientName = value;
+                OnPropertyChanged(nameof(ClientName));
+            }
+        }
+
+        public Dictionary<DateTime, bool> DistributionStatus
+        {
+            get => _distributionStatus;
+            set
+            {
+                _distributionStatus = value;
+                OnPropertyChanged(nameof(DistributionStatus));
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -79,8 +112,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         PurposeOfIssueFilter.SelectedIndex = 0;
         MethodOfIssueFilter.SelectedIndex = 0;
 
+        // Initialize distribution grid
+        DistributionGrid.ItemsSource = _distributionItems;
+
         // Subscribe to project's documents collection changes
         _project.Documents.CollectionChanged += Documents_CollectionChanged;
+        _project.Documents.CollectionChanged += UpdateDistributionColumns;
 
         // Add event handlers for new filters
         PurposeOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
@@ -822,6 +859,71 @@ private void AddProjectInfoCell(TableDescriptor table, string label, string valu
 {
     table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(label).Bold();
     table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(value);
+}
+
+private void UpdateDistributionColumns(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+{
+    // Get all unique issue dates from documents
+    var issueDates = _project.Documents
+        .SelectMany(d => d.RevisionHistory.Keys)
+        .Distinct()
+        .OrderByDescending(d => d)
+        .ToList();
+
+    // Remove existing revision columns
+    var existingColumns = DistributionGrid.Columns
+        .Where(c => c.Header.ToString()?.StartsWith("Rev") == true)
+        .ToList();
+    foreach (var column in existingColumns)
+    {
+        DistributionGrid.Columns.Remove(column);
+    }
+
+    // Add checkbox columns for each revision date
+    foreach (var date in issueDates)
+    {
+        var column = new DataGridCheckBoxColumn
+        {
+            Header = "Rev",
+            Width = new DataGridLength(1, DataGridLengthUnitType.Auto),
+            MinWidth = 40,
+            Binding = new Binding($"DistributionStatus[{date}]")
+            {
+                Mode = BindingMode.TwoWay,
+                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+            }
+        };
+        DistributionGrid.Columns.Add(column);
+
+        // Initialize distribution status for existing items
+        foreach (var item in _distributionItems)
+        {
+            if (!item.DistributionStatus.ContainsKey(date))
+            {
+                item.DistributionStatus[date] = false;
+            }
+        }
+    }
+}
+
+private void DistributionGrid_AddingNewItem(object sender, AddingNewItemEventArgs e)
+{
+    var newItem = new DistributionItem
+    {
+        ClientName = string.Empty
+    };
+    
+    // Initialize distribution status for all dates
+    var issueDates = _project.Documents
+        .SelectMany(d => d.RevisionHistory.Keys)
+        .Distinct();
+
+    foreach (var date in issueDates)
+    {
+        newItem.DistributionStatus[date] = false;
+    }
+
+    e.NewItem = newItem;
 }
 
 protected virtual void Dispose(bool disposing)

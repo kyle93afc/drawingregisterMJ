@@ -183,6 +183,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>  <!-- Header Info -->
             <RowDefinition Height="Auto"/>  <!-- Distribution Header -->
+            <RowDefinition Height="Auto"/>  <!-- Distribution Grid -->
             <RowDefinition Height="Auto"/>  <!-- Action Buttons -->
             <RowDefinition Height="Auto"/>  <!-- Search Panel -->
             <RowDefinition Height="Auto"/>  <!-- Date Filter -->
@@ -232,8 +233,55 @@
         <!-- Distribution Header -->
         <TextBlock Grid.Row="1" Text="DISTRIBUTION" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
 
+        <!-- Distribution Grid -->
+        <DataGrid x:Name="DistributionGrid" 
+                  Grid.Row="2"
+                  AutoGenerateColumns="False"
+                  Margin="0,0,0,20"
+                  AlternationCount="2"
+                  CanUserAddRows="True"
+                  Height="Auto"
+                  MinHeight="100"
+                  MaxHeight="200"
+                  BorderThickness="1"
+                  BorderBrush="#ddd"
+                  HorizontalScrollBarVisibility="Auto"
+                  AddingNewItem="DistributionGrid_AddingNewItem">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="CLIENT NAME" 
+                                  Binding="{Binding ClientName}"
+                                  Width="*"
+                                  MinWidth="120"/>
+                <DataGridTextColumn Header="DESCRIPTION" 
+                                  Width="*"
+                                  MinWidth="200"
+                                  IsReadOnly="True"/>
+                <DataGridTextColumn Header="PACKAGE" 
+                                  Width="Auto"
+                                  MinWidth="80"
+                                  IsReadOnly="True"/>
+                <DataGridTextColumn Header="TYPE" 
+                                  Width="Auto"
+                                  MinWidth="80"
+                                  IsReadOnly="True"/>
+                <DataGridTextColumn Header="SIZE" 
+                                  Width="Auto"
+                                  MinWidth="50"
+                                  IsReadOnly="True"/>
+                <DataGridTextColumn Header="LATEST REV" 
+                                  Width="Auto"
+                                  MinWidth="80"
+                                  IsReadOnly="True"/>
+                <DataGridTextColumn Header="LAST DATE OF ISSUE" 
+                                  Width="Auto"
+                                  MinWidth="100"
+                                  IsReadOnly="True"/>
+                <!-- Revision columns will be added dynamically -->
+            </DataGrid.Columns>
+        </DataGrid>
+
         <!-- Action Buttons -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click"/>
             <Button Content="SAVE PROJECT" Click="SaveProject_Click"/>
             <Button Content="REFRESH VIEW" Click="RefreshView_Click"/>
@@ -241,7 +289,7 @@
         </StackPanel>
 
         <!-- Search Panel -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0"/>
             <TextBox x:Name="SearchBox" Width="200" Margin="0,0,10,0" TextChanged="SearchBox_TextChanged"/>
             <ComboBox x:Name="SearchTypeCombo" Width="200" Margin="0,0,10,0" SelectedIndex="0">
@@ -253,7 +301,7 @@
         </StackPanel>
 
         <!-- Move Date Filters to New Row -->
-        <StackPanel Grid.Row="4" Orientation="Vertical" Margin="0,0,0,10">
+        <StackPanel Grid.Row="5" Orientation="Vertical" Margin="0,0,0,10">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
                 <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
@@ -298,7 +346,7 @@
 
         <!-- Documents Grid -->
         <DataGrid x:Name="DocumentGrid" 
-                  Grid.Row="5" 
+                  Grid.Row="6" 
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   SelectionMode="Single"
@@ -324,7 +372,7 @@
         </DataGrid>
 
         <!-- Revision Timeline -->
-        <ScrollViewer Grid.Row="6" 
+        <ScrollViewer Grid.Row="7" 
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
                       Margin="0,10,0,0">
