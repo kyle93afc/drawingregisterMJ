@@ -48,6 +48,7 @@
             <Setter Property="Margin" Value="0,0,12,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -135,6 +136,7 @@
             <Setter Property="BorderBrush" Value="#ddd"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="14"/>
         </Style>
 
         <Style x:Key="RotatedColumnHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -183,6 +185,7 @@
         <Style TargetType="DataGridCell">
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FontSize" Value="14"/>
         </Style>
 
         <!-- Add Revision Edit Dialog -->
@@ -229,88 +232,88 @@
                    Margin="0,0,0,20"/>
 
             <!-- Row 1 -->
-            <TextBlock Text="DISCIPLINE:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="DisciplineBox" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5"/>
-            <TextBlock Text="REG NO:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="RegNoBox" Grid.Row="1" Grid.Column="3" Width="300" Margin="0,0,0,5"/>
+            <TextBlock Text="DISCIPLINE:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
+            <TextBox x:Name="DisciplineBox" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5" FontSize="14"/>
+            <TextBlock Text="REG NO:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
+            <TextBox x:Name="RegNoBox" Grid.Row="1" Grid.Column="3" Width="300" Margin="0,0,0,5" FontSize="14"/>
 
             <!-- Row 2 -->
-            <TextBlock Text="PROJECT NO:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="ProjectNoBox" Grid.Row="2" Grid.Column="1" Margin="0,0,20,5"/>
-            <TextBlock Text="CLIENT NO:" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="ClientNoBox" Grid.Row="2" Grid.Column="3" Margin="0,0,0,5"/>
+            <TextBlock Text="PROJECT NO:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
+            <TextBox x:Name="ProjectNoBox" Grid.Row="2" Grid.Column="1" Margin="0,0,20,5" FontSize="14"/>
+            <TextBlock Text="CLIENT NO:" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
+            <TextBox x:Name="ClientNoBox" Grid.Row="2" Grid.Column="3" Margin="0,0,0,5" FontSize="14"/>
 
             <!-- Row 3 -->
-            <TextBlock Text="PROJECT NAME:" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5"/>
-            <TextBox x:Name="ProjectNameBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5"/>
+            <TextBlock Text="PROJECT NAME:" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
+            <TextBox x:Name="ProjectNameBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5" FontSize="14"/>
         </Grid>
 
         <!-- Action Buttons -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click"/>
-            <Button Content="SAVE PROJECT" Click="SaveProject_Click"/>
-            <Button Content="REFRESH VIEW" Click="RefreshView_Click"/>
-            <Button Content="GENERATE PDF REPORT" Click="GeneratePdfReport_Click"/>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,5">
+            <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
+            <Button Content="SAVE PROJECT" Click="SaveProject_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
+            <Button Content="REFRESH VIEW" Click="RefreshView_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
+            <Button Content="GENERATE PDF REPORT" Click="GeneratePdfReport_Click" Style="{StaticResource BaseButtonStyle}" Height="35" FontSize="14"/>
         </StackPanel>
 
         <!-- Search Panel -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <TextBox x:Name="SearchBox" Width="200" Margin="0,0,10,0" TextChanged="SearchBox_TextChanged"/>
-            <ComboBox x:Name="SearchTypeCombo" Width="200" Margin="0,0,10,0" SelectedIndex="0">
-                <ComboBoxItem Content="DOCUMENT NO"/>
-                <ComboBoxItem Content="DESCRIPTION"/>
-                <ComboBoxItem Content="PACKAGE"/>
-                <ComboBoxItem Content="TYPE"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,5">
+            <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
+            <TextBox x:Name="SearchBox" Width="200" TextChanged="SearchBox_TextChanged" Height="35" Margin="0,0,10,0" FontSize="14"/>
+            <ComboBox x:Name="SearchTypeCombo" Width="120" Height="35" FontSize="14">
+                <ComboBoxItem Content="Document No" FontSize="14"/>
+                <ComboBoxItem Content="Description" FontSize="14"/>
+                <ComboBoxItem Content="Package" FontSize="14"/>
+                <ComboBoxItem Content="Type" FontSize="14"/>
             </ComboBox>
         </StackPanel>
 
-        <!-- Date Filters -->
-        <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,0,0,10">
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <DatePicker x:Name="StartDatePicker" Width="120" Margin="0,0,10,0"/>
-                <DatePicker x:Name="EndDatePicker" Width="120" Margin="0,0,10,0"/>
-                <Button Content="APPLY FILTER" Click="DateFilter_Click"/>
-                <Button Content="CLEAR FILTER" Click="ClearDateFilter_Click" Style="{StaticResource BaseButtonStyle}"/>
+        <!-- Date Filter -->
+        <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,0,0,5">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
+                <DatePicker x:Name="StartDatePicker" Width="120" Height="35" Margin="0,0,10,0" FontSize="14"/>
+                <DatePicker x:Name="EndDatePicker" Width="120" Height="35" Margin="0,0,10,0" FontSize="14"/>
+                <Button Content="APPLY FILTER" Click="DateFilter_Click" Height="35" Margin="0,0,5,0" FontSize="14"/>
+                <Button Content="CLEAR FILTER" Click="ClearDateFilter_Click" Style="{StaticResource BaseButtonStyle}" Height="35" FontSize="14"/>
             </StackPanel>
             
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="FILTER BY DATE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <ComboBox x:Name="IssueDateFilter" Width="200" Margin="0,0,10,0" SelectionChanged="IssueDateFilter_SelectionChanged">
-                    <ComboBoxItem Content="All Dates"/>
+                <TextBlock Text="FILTER BY DATE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
+                <ComboBox x:Name="IssueDateFilter" Width="200" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="IssueDateFilter_SelectionChanged">
+                    <ComboBoxItem Content="All Dates" FontSize="14"/>
                 </ComboBox>
 
-                <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0"/>
-                <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Margin="0,0,10,0">
-                    <ComboBoxItem Content="All"/>
-                    <ComboBoxItem Content="Approval"/>
-                    <ComboBoxItem Content="Construction"/>
-                    <ComboBoxItem Content="Draft"/>
-                    <ComboBoxItem Content="Feasibility"/>
-                    <ComboBoxItem Content="Information"/>
-                    <ComboBoxItem Content="Planning"/>
-                    <ComboBoxItem Content="Tender"/>
-                    <ComboBoxItem Content="Warrant"/>
+                <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
+                <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14">
+                    <ComboBoxItem Content="All" FontSize="14"/>
+                    <ComboBoxItem Content="Approval" FontSize="14"/>
+                    <ComboBoxItem Content="Construction" FontSize="14"/>
+                    <ComboBoxItem Content="Draft" FontSize="14"/>
+                    <ComboBoxItem Content="Feasibility" FontSize="14"/>
+                    <ComboBoxItem Content="Information" FontSize="14"/>
+                    <ComboBoxItem Content="Planning" FontSize="14"/>
+                    <ComboBoxItem Content="Tender" FontSize="14"/>
+                    <ComboBoxItem Content="Warrant" FontSize="14"/>
                 </ComboBox>
 
-                <TextBlock Text="METHOD OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0"/>
-                <ComboBox x:Name="MethodOfIssueFilter" Width="120" Margin="0,0,10,0">
-                    <ComboBoxItem Content="All"/>
-                    <ComboBoxItem Content="Email"/>
-                    <ComboBoxItem Content="Sharepoint"/>
+                <TextBlock Text="METHOD OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
+                <ComboBox x:Name="MethodOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14">
+                    <ComboBoxItem Content="All" FontSize="14"/>
+                    <ComboBoxItem Content="Email" FontSize="14"/>
+                    <ComboBoxItem Content="Sharepoint" FontSize="14"/>
                 </ComboBox>
 
-                <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="20,0,10,0"/>
-                <TextBox x:Name="IssuedByFilter" Width="60" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper"/>
+                <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
+                <TextBox x:Name="IssuedByFilter" Width="60" Height="35" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper" FontSize="14"/>
 
-                <Button Content="SAVE ISSUE DETAILS" Click="SaveIssueDetails_Click" 
+                <Button Content="SAVE ISSUE DETAILS" Click="SaveIssueDetails_Click" Height="35" FontSize="14"
                         Style="{StaticResource BaseButtonStyle}"/>
             </StackPanel>
         </StackPanel>
 
         <!-- Distribution Header -->
-        <TextBlock Grid.Row="4" Text="DISTRIBUTION" FontWeight="Bold" FontSize="14" Margin="0,0,0,5"/>
+        <TextBlock Grid.Row="4" Text="DISTRIBUTION" FontWeight="Bold" FontSize="16" Margin="0,0,0,5"/>
 
         <!-- Distribution Grid -->
         <DataGrid x:Name="DistributionGrid" 
@@ -327,14 +330,19 @@
                   HorizontalScrollBarVisibility="Auto"
                   VerticalScrollBarVisibility="Auto"
                   ColumnWidth="Auto"
-                  AddingNewItem="DistributionGrid_AddingNewItem">
+                  AddingNewItem="DistributionGrid_AddingNewItem"
+                  FontSize="14">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="DESCRIPTION" 
                                   Binding="{Binding Description}"
-                                  HeaderStyle="{StaticResource VisibleHeader}"/>
-                <DataGridTextColumn Header="CLIENT NAME" 
+                                  Width="*"
+                                  HeaderStyle="{StaticResource VisibleHeader}"
+                                  FontSize="14"/>
+                <DataGridTextColumn Header="NAME" 
                                   Binding="{Binding ClientName}"
-                                  HeaderStyle="{StaticResource VisibleHeader}"/>
+                                  Width="*"
+                                  HeaderStyle="{StaticResource VisibleHeader}"
+                                  FontSize="14"/>
                 <!-- Revision columns will be added dynamically with hidden headers -->
             </DataGrid.Columns>
         </DataGrid>
@@ -351,29 +359,42 @@
                   HorizontalScrollBarVisibility="Auto"
                   ColumnWidth="Auto"
                   BorderThickness="1"
-                  BorderBrush="#ddd">
+                  BorderBrush="#ddd"
+                  FontSize="14"
+                  EnableColumnVirtualization="True"
+                  EnableRowVirtualization="True"
+                  CanUserResizeColumns="True"
+                  CanUserReorderColumns="True"
+                  GridLinesVisibility="All">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="DOCUMENT NO" 
                                   Binding="{Binding DocumentNumber}" 
-                                  Width="120"/>
+                                  Width="Auto"
+                                  FontSize="14"/>
                 <DataGridTextColumn Header="DESCRIPTION" 
                                   Binding="{Binding Description}" 
-                                  Width="200"/>
+                                  Width="Auto"
+                                  FontSize="14"/>
                 <DataGridTextColumn Header="PACKAGE" 
                                   Binding="{Binding Package}" 
-                                  Width="80"/>
+                                  Width="Auto"
+                                  FontSize="14"/>
                 <DataGridTextColumn Header="TYPE" 
                                   Binding="{Binding DocumentType}" 
-                                  Width="80"/>
+                                  Width="Auto"
+                                  FontSize="14"/>
                 <DataGridTextColumn Header="SIZE" 
                                   Binding="{Binding Size}" 
-                                  Width="50"/>
+                                  Width="Auto"
+                                  FontSize="14"/>
                 <DataGridTextColumn Header="LATEST REV" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
-                                  Width="80"/>
+                                  Width="Auto"
+                                  FontSize="14"/>
                 <DataGridTextColumn Header="LAST DATE OF ISSUE" 
                                   Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionDateConverter}}"
-                                  Width="100"/>
+                                  Width="Auto"
+                                  FontSize="14"/>
                 <!-- Revision columns will be added dynamically -->
             </DataGrid.Columns>
         </DataGrid>

@@ -428,6 +428,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void DocumentGrid_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // If clicked on empty space (not on a row)
+        if (e.OriginalSource is System.Windows.Controls.DataGridRow) return;
+        
+        // Clear selection and selected document
+        DocumentGrid.SelectedItem = null;
+        SelectedDocument = null;
+    }
+
     private void DocumentGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
@@ -811,7 +821,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             header.Cell().Element(HeaderCell).Text("TYPE");
             header.Cell().Element(HeaderCell).Text("SIZE");
             header.Cell().Element(HeaderCell).Text("LATEST REV");
-            header.Cell().Element(HeaderCell).Text("LATEST DATE");
+            header.Cell().Element(HeaderCell).Text("LATEST DATE");      
 
             // Add date headers in descending order
             foreach (var date in lastThreeDates)
