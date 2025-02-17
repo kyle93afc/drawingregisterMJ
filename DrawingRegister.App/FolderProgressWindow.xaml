@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="DrawingRegister.App.FolderProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Folder Scan Progress" Height="400" Width="600"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
+        <StackPanel Orientation="Vertical">
+            <TextBlock Text="Folder Scan Progress" 
+                      FontSize="16" 
+                      FontWeight="Bold" 
+                      Margin="0,0,0,10"/>
+            <ListBox ItemsSource="{Binding FolderStatuses}" Height="300">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel>
+                            <TextBlock Text="{Binding FolderName}" Width="400"/>
+                            <TextBlock Text="{Binding StatusIcon}" 
+                                      FontSize="16" 
+                                      Foreground="{Binding StatusColor}" 
+                                      Margin="10,0,0,0"/>
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+    </Grid>
+</Window> 

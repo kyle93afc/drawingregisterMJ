@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.IO;
 
 namespace DrawingRegister.App.Models;
 
@@ -14,7 +15,26 @@ public class ProjectStorage
     public string ClientNumber { get; set; } = string.Empty;
     public string BaseFolderPath { get; set; } = string.Empty;
     public DateTime LastScanDate { get; set; }
+    public DateTime LastProcessedDate { get; set; }
     public List<DocumentStorageInfo> Documents { get; set; } = new();
+    public List<DrawingProject> Projects { get; set; } = new();
+
+    public static ProjectStorage Load(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            var json = File.ReadAllText(filePath);
+            return JsonSerializer.Deserialize<ProjectStorage>(json) ?? new ProjectStorage();
+        }
+        return new ProjectStorage();
+    }
+
+    public void Save(string filePath)
+    {
+        LastProcessedDate = DateTime.Now;
+        var json = JsonSerializer.Serialize(this);
+        File.WriteAllText(filePath, json);
+    }
 }
 
 public class DocumentStorageInfo

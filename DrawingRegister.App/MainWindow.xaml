@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:DrawingRegister.App"
         xmlns:converters="clr-namespace:DrawingRegister.App.Converters"
         mc:Ignorable="d"
-        Title="SER DOCUMENT AND DRAWING REGISTER" Height="800" Width="1200">
+        Title="DOCUMENT AND DRAWING REGISTER" Height="800" Width="1200">
     <Window.Resources>
         <converters:DateToColumnConverter x:Key="DateToColumnConverter"/>
         <converters:LatestRevisionConverter x:Key="LatestRevisionConverter"/>
@@ -195,6 +195,13 @@
             <Setter Property="WindowStyle" Value="ToolWindow"/>
             <Setter Property="ResizeMode" Value="NoResize"/>
         </Style>
+
+        <!-- Add global style at top -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,2"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -261,10 +268,15 @@
             <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
             <TextBox x:Name="SearchBox" Width="200" TextChanged="SearchBox_TextChanged" Height="35" Margin="0,0,10,0" FontSize="14"/>
             <ComboBox x:Name="SearchTypeCombo" Width="120" Height="35" FontSize="14">
-                <ComboBoxItem Content="Document No" FontSize="14"/>
-                <ComboBoxItem Content="Description" FontSize="14"/>
-                <ComboBoxItem Content="Package" FontSize="14"/>
-                <ComboBoxItem Content="Type" FontSize="14"/>
+                <ComboBox.ItemContainerStyle>
+                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                        <Setter Property="FontSize" Value="14"/>
+                    </Style>
+                </ComboBox.ItemContainerStyle>
+                <ComboBoxItem Content="Document No"/>
+                <ComboBoxItem Content="Description"/>
+                <ComboBoxItem Content="Package"/>
+                <ComboBoxItem Content="Type"/>
             </ComboBox>
         </StackPanel>
 
@@ -439,5 +451,20 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- Add Folder Status display below existing content inside the root Grid -->
+        <StackPanel Orientation="Vertical" Margin="10">
+            <TextBlock Text="Folder Processing Status:" FontWeight="Bold" Margin="0,10,0,5"/>
+            <ListBox ItemsSource="{Binding FolderStatuses}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel>
+                            <TextBlock Text="{Binding FolderName}" Width="200"/>
+                            <TextBlock Text="{Binding StatusIcon}" FontSize="16" Foreground="{Binding StatusColor}" Margin="10,0,0,0"/>
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
     </Grid>
 </Window>

@@ -23,6 +23,8 @@ using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using IContainer = QuestPDF.Infrastructure.IContainer;
 using Colors = QuestPDF.Helpers.Colors;
 using QuestPDF.Elements.Table;
+using System.Windows.Forms;
+using System.Windows.Threading;
 
 namespace DrawingRegister.App;
 
@@ -351,27 +353,41 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void ImportDocuments_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new Microsoft.Win32.OpenFolderDialog
+        var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
-            Title = "Select the project folder containing PDFs to scan"
+            Description = "Select PDF folder to scan",
+            UseDescriptionForTitle = true
         };
 
-        if (dialog.ShowDialog() == true)
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
             try
             {
-                _project.ImportDocuments(dialog.FolderName);
-                MessageBox.Show($"Successfully imported {_project.Documents.Count} documents.", 
-                    "Import Complete", 
-                    MessageBoxButton.OK, 
-                    MessageBoxImage.Information);
+                // Open the progress window
+                var progressWindow = new FolderProgressWindow();
+                progressWindow.Show();
+
+                // Wire up the folder status callback
+                _project.OnFolderStatusUpdated = (folderName, status) =>
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var existing = progressWindow.FolderStatuses.FirstOrDefault(fs => fs.FolderName == folderName);
+                        if (existing != null)
+                            existing.Status = status;
+                        else
+                            progressWindow.FolderStatuses.Add(new FolderStatusViewModel(folderName, status));
+                    });
+                };
+
+                _project.ImportDocuments(dialog.SelectedPath);
+                UpdateIssueDateFilterOptions();
+                UpdateRevisionColumns();
+                FilterDocuments();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error importing documents: {ex.Message}", 
-                    "Import Error", 
-                    MessageBoxButton.OK, 
-                    MessageBoxImage.Error);
+                MessageBox.Show($"Error importing documents: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -704,7 +720,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Title Row with logo
             column.Item().Row(row =>
             {
-                row.RelativeItem(3).Text("SER DOCUMENT AND DRAWING REGISTER")
+                row.RelativeItem(3).Text("DOCUMENT AND DRAWING REGISTER")
                     .FontSize(18)
                     .Bold()
                     .FontColor("#000000");
