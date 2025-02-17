@@ -43,7 +43,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         private string _clientName = string.Empty;
         private string _description = string.Empty;
-        private Dictionary<DateTime, bool> _distributionStatus = new();
+        private Dictionary<string, bool> _distributionStatus = new();
 
         public string ClientName
         {
@@ -65,7 +65,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
         }
 
-        public Dictionary<DateTime, bool> DistributionStatus
+        public Dictionary<string, bool> DistributionStatus
         {
             get => _distributionStatus;
             set
@@ -929,11 +929,11 @@ private void UpdateDistributionColumns(object? sender, System.Collections.Specia
         }
     }
 
-    // Get all unique issue dates from documents
-    var issueDates = _project.Documents
-        .SelectMany(d => d.RevisionHistory.Keys)
-        .Distinct()
-        .OrderByDescending(d => d)
+    // Get all revisions grouped by date
+    var revisionsByDate = _project.Documents
+        .SelectMany(d => d.RevisionHistory)
+        .GroupBy(r => r.Key)
+        .OrderByDescending(g => g.Key)
         .ToList();
 
     // Remove existing revision columns
@@ -946,27 +946,35 @@ private void UpdateDistributionColumns(object? sender, System.Collections.Specia
     }
 
     // Add checkbox columns for each revision date
-    foreach (var date in issueDates)
+    foreach (var dateGroup in revisionsByDate)
     {
-        var column = new DataGridCheckBoxColumn
-        {
-            Header = "Rev",
-            Width = new DataGridLength(REVISION_COLUMN_WIDTH),
-            HeaderStyle = TryFindResource("HiddenHeader") as Style,
-            Binding = new Binding($"DistributionStatus[{date}]")
-            {
-                Mode = BindingMode.TwoWay,
-                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-            }
-        };
-        DistributionGrid.Columns.Add(column);
+        var date = dateGroup.Key;
+        var revisionsOnDate = dateGroup.Count();
 
-        // Initialize distribution status for existing items
-        foreach (var item in _distributionItems)
+        // Create a column for each revision on this date
+        for (int i = 0; i < revisionsOnDate; i++)
         {
-            if (!item.DistributionStatus.ContainsKey(date))
+            var column = new DataGridCheckBoxColumn
             {
-                item.DistributionStatus[date] = false;
+                Header = $"Rev {i + 1}",
+                Width = new DataGridLength(REVISION_COLUMN_WIDTH),
+                HeaderStyle = TryFindResource("HiddenHeader") as Style,
+                Binding = new Binding($"DistributionStatus[{date}_{i}]")
+                {
+                    Mode = BindingMode.TwoWay,
+                    UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+                }
+            };
+            DistributionGrid.Columns.Add(column);
+
+            // Initialize distribution status for existing items
+            foreach (var item in _distributionItems)
+            {
+                var key = $"{date}_{i}";
+                if (!item.DistributionStatus.ContainsKey(key))
+                {
+                    item.DistributionStatus[key] = false;
+                }
             }
         }
     }
