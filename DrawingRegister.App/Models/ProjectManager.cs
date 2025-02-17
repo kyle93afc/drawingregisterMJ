@@ -24,7 +24,7 @@ public class ProjectManager : INotifyPropertyChanged
     public ObservableCollection<DocumentMetadata> Documents { get; } = new();
     public List<DateTime> IssueDates { get; } = new();
 
-    private ProjectStorage? _currentStorage;
+    public ProjectStorage? _currentStorage;
     public Action<string, string>? OnFolderStatusUpdated { get; set; }
 
     public string ProjectNumber

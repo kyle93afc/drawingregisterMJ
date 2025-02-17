@@ -136,6 +136,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         PurposeOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
         MethodOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
         IssuedByFilter.TextChanged += (s, e) => FilterDocuments();
+
+        // Load distribution items if they exist
+        if (_project._currentStorage?.DistributionItems != null)
+        {
+            foreach (var item in _project._currentStorage.DistributionItems)
+            {
+                _distributionItems.Add(new DistributionItem
+                {
+                    ClientName = item.ClientName,
+                    Description = item.Description,
+                    DistributionStatus = item.DistributionStatus
+                });
+            }
+        }
     }
 
     private void Documents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -298,6 +312,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         try
         {
+            // Save distribution items to storage
+            if (_project._currentStorage != null)
+            {
+                _project._currentStorage.DistributionItems = _distributionItems.Select(item => new Models.DistributionStorageInfo
+                {
+                    ClientName = item.ClientName,
+                    Description = item.Description,
+                    DistributionStatus = item.DistributionStatus
+                }).ToList();
+            }
+
             _project.SaveProjectData();
             MessageBox.Show("Project saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -989,13 +1014,22 @@ private void DistributionGrid_AddingNewItem(object sender, AddingNewItemEventArg
     };
     
     // Initialize distribution status for all dates
-    var issueDates = _project.Documents
-        .SelectMany(d => d.RevisionHistory.Keys)
-        .Distinct();
+    var revisionsByDate = _project.Documents
+        .SelectMany(d => d.RevisionHistory)
+        .GroupBy(r => r.Key)
+        .OrderByDescending(g => g.Key)
+        .ToList();
 
-    foreach (var date in issueDates)
+    foreach (var dateGroup in revisionsByDate)
     {
-        newItem.DistributionStatus[date] = false;
+        var date = dateGroup.Key;
+        var revisionsOnDate = dateGroup.Count();
+
+        for (int i = 0; i < revisionsOnDate; i++)
+        {
+            var key = $"{date}_{i}";
+            newItem.DistributionStatus[key] = false;
+        }
     }
 
     e.NewItem = newItem;
