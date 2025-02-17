@@ -360,12 +360,7 @@
                   ColumnWidth="Auto"
                   BorderThickness="1"
                   BorderBrush="#ddd"
-                  FontSize="14"
-                  EnableColumnVirtualization="True"
-                  EnableRowVirtualization="True"
-                  CanUserResizeColumns="True"
-                  CanUserReorderColumns="True"
-                  GridLinesVisibility="All">
+                  FontSize="14">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="DOCUMENT NO" 
                                   Binding="{Binding DocumentNumber}" 
