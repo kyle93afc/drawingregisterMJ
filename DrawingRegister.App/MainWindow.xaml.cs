@@ -680,7 +680,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 Filter = "PDF files (*.pdf)|*.pdf",
                 DefaultExt = "pdf",
-                FileName = $"Drawing_Register_{DateTime.Now:yyyyMMdd}"
+                FileName = $"{_project.RegNo}_{DateTime.Now:yyyyMMdd}"
             };
 
             if (saveDialog.ShowDialog() == true)
@@ -707,6 +707,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 .GeneratePdf(saveDialog.FileName);
 
                 MessageBox.Show($"PDF saved successfully to:\n{saveDialog.FileName}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                
+                // Open the PDF after saving
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = saveDialog.FileName,
+                    UseShellExecute = true
+                });
             }
         }
         catch (Exception ex)
@@ -731,7 +738,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 // Logo with proper image handling and error checking
                 try
                 {
-                    var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "Resources", "WHITE LOGO RED BACKGROUND.jpg");
+                    var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                    var exeDir = Path.GetDirectoryName(exePath);
+                    var logoPath = Path.Combine(exeDir!, "Resources", "WHITE LOGO RED BACKGROUND.jpg");
+                    
                     if (File.Exists(logoPath))
                     {
                         row.RelativeItem().AlignRight().Container().Height(35).Image(logoPath).FitHeight();

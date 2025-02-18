@@ -17,10 +17,13 @@
   <ItemGroup>
     <None Remove="**/*.pdf" />
     <None Remove="Resources/company-logo.png" />
+    <None Remove="Resources/WHITE LOGO RED BACKGROUND.jpg" />
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Resources/company-logo.png" />
+    <Content Include="Resources/WHITE LOGO RED BACKGROUND.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
