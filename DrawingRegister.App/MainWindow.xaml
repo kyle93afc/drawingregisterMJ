@@ -232,11 +232,11 @@
             </Grid.RowDefinitions>
 
             <!-- Logo -->
-            <Image Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" 
+            <Image Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
                    Source="/Resources/company-logo.png" 
-                   Height="100" 
+                   Height="50" 
                    HorizontalAlignment="Left" 
-                   Margin="0,0,0,20"/>
+                   Margin="0,0,0,10"/>
 
             <!-- Row 1 -->
             <TextBlock Text="DISCIPLINE:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
@@ -256,7 +256,7 @@
         </Grid>
 
         <!-- Action Buttons -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,5">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,5">
             <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="SAVE PROJECT" Click="SaveProject_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="REFRESH VIEW" Click="RefreshView_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
@@ -284,8 +284,8 @@
         <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,0,0,5">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                 <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
-                <DatePicker x:Name="StartDatePicker" Width="120" Height="35" Margin="0,0,10,0" FontSize="14"/>
-                <DatePicker x:Name="EndDatePicker" Width="120" Height="35" Margin="0,0,10,0" FontSize="14"/>
+                <DatePicker x:Name="StartDatePicker" Width="200" Height="35" Margin="0,0,10,0" FontSize="14"/>
+                <DatePicker x:Name="EndDatePicker" Width="200" Height="35" Margin="0,0,10,0" FontSize="14"/>
                 <Button Content="APPLY FILTER" Click="DateFilter_Click" Height="35" Margin="0,0,5,0" FontSize="14"/>
                 <Button Content="CLEAR FILTER" Click="ClearDateFilter_Click" Style="{StaticResource BaseButtonStyle}" Height="35" FontSize="14"/>
             </StackPanel>
@@ -452,19 +452,5 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <!-- Add Folder Status display below existing content inside the root Grid -->
-        <StackPanel Orientation="Vertical" Margin="10">
-            <TextBlock Text="Folder Processing Status:" FontWeight="Bold" Margin="0,10,0,5"/>
-            <ListBox ItemsSource="{Binding FolderStatuses}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <DockPanel>
-                            <TextBlock Text="{Binding FolderName}" Width="200"/>
-                            <TextBlock Text="{Binding StatusIcon}" FontSize="16" Foreground="{Binding StatusColor}" Margin="10,0,0,0"/>
-                        </DockPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </StackPanel>
     </Grid>
 </Window>
