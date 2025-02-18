@@ -79,15 +79,35 @@ public class ProjectManager : INotifyPropertyChanged
 
     public void ImportDocuments(string folderPath)
     {
+        // Clear all existing data when starting a new import
+        Documents.Clear();
+        IssueDates.Clear();
+        ProjectNumber = string.Empty;
+        ProjectName = string.Empty;
+        Discipline = string.Empty;
+        RegisterNumber = string.Empty;
+        ClientNumber = string.Empty;
+
         _currentBasePath = folderPath;
         var storageFile = Path.Combine(folderPath, STORAGE_FILENAME);
         
-        // Load existing data with last processed date
+        // Try to load existing project data if it exists
         _currentStorage = ProjectStorage.Load(storageFile);
+        var processedFolders = new HashSet<string>();
         
-        // Try to load existing data
         if (_currentStorage != null)
         {
+            Console.WriteLine("\n=== Loading Existing Project Data ===");
+            
+            // Restore project metadata from storage first
+            ProjectNumber = _currentStorage.ProjectNumber;
+            ProjectName = _currentStorage.ProjectName;
+            Discipline = _currentStorage.Discipline;
+            RegisterNumber = _currentStorage.RegisterNumber;
+            ClientNumber = _currentStorage.ClientNumber;
+            
+            Console.WriteLine($"Restored project metadata: {ProjectNumber} - {ProjectName} - {Discipline}");
+            
             // Load existing documents
             foreach (var doc in _currentStorage.Documents)
             {
@@ -98,7 +118,7 @@ public class ProjectManager : INotifyPropertyChanged
                     Package = doc.Package,
                     DocumentType = doc.DocumentType,
                     Size = doc.Size,
-                    ProjectNumber = ProjectNumber,
+                    ProjectNumber = ProjectNumber,  // Use the restored project metadata
                     ProjectName = ProjectName,
                     Discipline = Discipline,
                     RegisterNumber = RegisterNumber,
@@ -120,32 +140,40 @@ public class ProjectManager : INotifyPropertyChanged
 
                 Documents.Add(metadata);
             }
+
+            // Track which folders we've already processed
+            processedFolders = new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath));
+            Console.WriteLine($"Found {processedFolders.Count} previously processed folders");
+        }
+        else
+        {
+            // Create new storage if none exists
+            _currentStorage = new ProjectStorage 
+            { 
+                BaseFolderPath = folderPath,
+                LastScanDate = DateTime.Now,
+                LastProcessedDate = DateTime.Now,
+                Projects = new List<DrawingProject>()
+            };
         }
 
-        // Scan for new files with incremental check
+        // Scan for new files
         var subDirectories = Directory.GetDirectories(folderPath);
         Console.WriteLine($"\n=== Starting Directory Scan ===");
         
-        // Filter directories that need processing
+        // Filter directories that need processing - only process unprocessed folders
         var dateDirectories = subDirectories
             .Where(dir => 
             {
                 var dirInfo = new DirectoryInfo(dir);
                 
-                // Skip already processed folders
-                if (_currentStorage != null && 
-                    dirInfo.LastWriteTime < _currentStorage.LastProcessedDate && 
-                    _currentStorage.Projects.Any(p => p.FolderPath == dir))
+                // Skip if folder is already processed
+                if (processedFolders.Contains(dir))
                 {
                     var folderName = Path.GetFileName(dir);
-                    if (!Regex.IsMatch(folderName, @"^\d{8}"))
-                    {
-                        Console.WriteLine($"⏩ Skipping unchanged directory: {folderName}");
-                        OnFolderStatusUpdated?.Invoke(folderName, "Skipped");
-                        return false;
-                    }
-                    Console.WriteLine($"  Including folder with date even if unchanged: {folderName}");
-                    OnFolderStatusUpdated?.Invoke(folderName, "Processed");
+                    Console.WriteLine($"⏩ Skipping previously processed directory: {folderName}");
+                    OnFolderStatusUpdated?.Invoke(folderName, "Skipped");
+                    return false;
                 }
                 
                 Console.WriteLine($"\n🔍 Scanning directory: {Path.GetFileName(dir)}");
@@ -251,11 +279,15 @@ public class ProjectManager : INotifyPropertyChanged
             throw new Exception("Could not detect project number from PDF filenames. Please ensure files follow the naming convention.");
         }
 
-        // Update project number
-        ProjectNumber = detectedProjectNo;
-
-        Documents.Clear();
-        IssueDates.Clear();
+        // Only update project number if it's not already set from storage
+        if (string.IsNullOrEmpty(ProjectNumber))
+        {
+            ProjectNumber = detectedProjectNo;
+        }
+        else if (ProjectNumber != detectedProjectNo)
+        {
+            throw new Exception($"Project number mismatch. Storage has {ProjectNumber} but found {detectedProjectNo} in PDF files.");
+        }
 
         // First collect all issue dates from folder names and file dates
         var allIssueDates = dateDirectories
