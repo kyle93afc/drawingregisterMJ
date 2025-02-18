@@ -635,46 +635,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         if (DateTime.TryParseExact(selectedContent, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
         {
-            // Check if there are multiple purposes for this date
-            var existingPurposes = _project.Documents
-                .SelectMany(d => d.RevisionHistory)
-                .Where(r => r.Key.Date == selectedDate.Date)
-                .Select(r => r.Value.Purpose)
-                .Distinct()
-                .ToList();
-
-            if (existingPurposes.Count > 1)
-            {
-                var result = MessageBox.Show(
-                    $"This date ({selectedContent}) has multiple purposes:\n{string.Join(", ", existingPurposes)}\n\nDo you want to update all documents to use '{purpose}'?",
-                    "Multiple Purposes Found",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-
-                if (result != MessageBoxResult.Yes)
-                {
-                    return;
-                }
-            }
-
             // Update all documents that have a revision on this date
             var updatedCount = 0;
             foreach (var doc in _project.Documents)
             {
-                if (doc.RevisionHistory.TryGetValue(selectedDate, out var revInfo))
+                var matchingRevisions = doc.RevisionHistory
+                    .Where(r => r.Key.Date == selectedDate.Date)
+                    .ToList();
+
+                foreach (var revision in matchingRevisions)
                 {
-                    revInfo.Purpose = purpose;
-                    revInfo.Method = method;
+                    var revInfo = revision.Value;
+                    // Only update the IssuedBy field
                     revInfo.IssuedBy = issuedBy;
-                    revInfo.Revision = DrawingRegister.App.Models.DocumentMetadata.GenerateRevisionCode(purpose, doc.RevisionHistory);
 
                     // Update document's current values if this is the latest revision
-                    if (doc.RevisionHistory.Max(r => r.Key) == selectedDate)
+                    if (doc.RevisionHistory.Max(r => r.Key) == revision.Key)
                     {
-                        doc.PurposeOfIssue = purpose;
-                        doc.MethodOfIssue = method;
                         doc.IssuedBy = issuedBy;
-                        doc.Revision = revInfo.Revision;
                     }
                     updatedCount++;
                 }
