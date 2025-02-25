@@ -66,7 +66,7 @@ namespace DrawingRegister.App.Models
         public string RegisterNumber { get; set; } = string.Empty;
 
         // Distribution Information
-        public Dictionary<string, string> Stakeholders { get; set; } = new();
+        public Dictionary<string, StakeholderInfo> Stakeholders { get; set; } = new();
 
         // Revision History - Dictionary of date to revision info
         public Dictionary<DateTime, RevisionInfo> RevisionHistory { get; set; } = new();
@@ -135,6 +135,35 @@ namespace DrawingRegister.App.Models
             char maxChar = alphabeticalRevs.Max();
             return ((char)(maxChar + 1)).ToString();
         }
+        
+        // Helper method to check if a document was distributed to a stakeholder at a specific issue date
+        public bool WasDistributedTo(string stakeholderId, DateTime issueDate)
+        {
+            if (!Stakeholders.TryGetValue(stakeholderId, out var stakeholder))
+                return false;
+                
+            return stakeholder.DistributionDates.Contains(issueDate);
+        }
+        
+        // Helper method to toggle distribution status for a stakeholder at a specific issue date
+        public void ToggleDistribution(string stakeholderId, string stakeholderName, string company, DateTime issueDate)
+        {
+            if (!Stakeholders.TryGetValue(stakeholderId, out var stakeholder))
+            {
+                stakeholder = new StakeholderInfo
+                {
+                    Name = stakeholderName,
+                    Company = company,
+                    DistributionDates = new List<DateTime>()
+                };
+                Stakeholders[stakeholderId] = stakeholder;
+            }
+            
+            if (stakeholder.DistributionDates.Contains(issueDate))
+                stakeholder.DistributionDates.Remove(issueDate);
+            else
+                stakeholder.DistributionDates.Add(issueDate);
+        }
     }
 
     public class RevisionInfo
@@ -151,6 +180,6 @@ namespace DrawingRegister.App.Models
     {
         public string Name { get; set; } = string.Empty;
         public string Company { get; set; } = string.Empty;
-        public List<DateTime> ReceivedRevisions { get; set; } = new();
+        public List<DateTime> DistributionDates { get; set; } = new();
     }
 } 

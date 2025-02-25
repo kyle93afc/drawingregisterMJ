@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="DrawingRegister.App.DistributionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:DrawingRegister.App"
+        mc:Ignorable="d"
+        Title="Distribution Management" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <!-- Button Style -->
+        <Style x:Key="BaseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#5a6268"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ContentPresenter x:Name="contentPresenter" 
+                                            HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"
+                                            TextBlock.FontWeight="SemiBold"
+                                            Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="border"
+                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                      To="#4a5258" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="border"
+                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                      To="#5a6268" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3d444a"/>
+                                <Setter TargetName="contentPresenter" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                                <Setter Property="Foreground" Value="#757575"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Primary Button Style -->
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+            <Setter Property="Background" Value="#eb1845"/>
+        </Style>
+        
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
+            <Setter Property="Background" Value="#5a6268"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="DISTRIBUTION" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+        
+        <!-- Document Info -->
+        <Grid Grid.Row="1" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Document Number:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DocumentNumber}" Margin="0,0,20,5"/>
+            
+            <TextBlock Grid.Row="0" Grid.Column="2" Text="Revision:" FontWeight="SemiBold" Margin="0,0,10,5"/>
+            <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Revision}" Margin="0,0,0,5"/>
+            
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Description:" FontWeight="SemiBold" Margin="0,0,10,0"/>
+            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Description}" TextWrapping="Wrap"/>
+        </Grid>
+        
+        <!-- Distribution Management -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Stakeholders List -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Stakeholders" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                
+                <ListView Grid.Row="1" x:Name="StakeholdersList" SelectionMode="Single" Margin="0,0,0,10">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150"/>
+                            <GridViewColumn Header="Company" DisplayMemberBinding="{Binding Company}" Width="150"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+                
+                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                    <Button x:Name="AddStakeholderButton" Content="Add" Style="{StaticResource SecondaryButtonStyle}" 
+                            Click="AddStakeholder_Click" Margin="0,0,10,0"/>
+                    <Button x:Name="EditStakeholderButton" Content="Edit" Style="{StaticResource SecondaryButtonStyle}" 
+                            Click="EditStakeholder_Click" Margin="0,0,10,0"/>
+                    <Button x:Name="RemoveStakeholderButton" Content="Remove" Style="{StaticResource SecondaryButtonStyle}" 
+                            Click="RemoveStakeholder_Click"/>
+                </StackPanel>
+            </Grid>
+            
+            <!-- Separator -->
+            <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" 
+                          Background="#DDDDDD" Margin="10,0"/>
+            
+            <!-- Distribution Matrix -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Distribution by Issue Date" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <Grid x:Name="DistributionGrid">
+                        <!-- This grid will be populated dynamically -->
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <!-- Additional rows will be added dynamically -->
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <!-- Additional columns will be added dynamically -->
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Header cell -->
+                        <Border Grid.Row="0" Grid.Column="0" Background="#eb1845" Padding="10,5">
+                            <TextBlock Text="Stakeholder" Foreground="White" FontWeight="SemiBold"/>
+                        </Border>
+                        
+                        <!-- Issue date headers and distribution checkboxes will be added dynamically -->
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+        
+        <!-- Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButtonStyle}" 
+                    Click="Save_Click" Margin="0,0,10,0"/>
+            <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource SecondaryButtonStyle}" 
+                    Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window> 

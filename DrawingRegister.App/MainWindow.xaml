@@ -259,6 +259,7 @@
             <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="SAVE PROJECT" Click="SaveProject_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="REFRESH VIEW" Click="RefreshView_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
+            <Button Content="MANAGE DISTRIBUTION" Click="ManageDistribution_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="GENERATE PDF REPORT" Click="GeneratePdfReport_Click" Style="{StaticResource BaseButtonStyle}" Height="35" FontSize="14"/>
         </StackPanel>
 
@@ -430,6 +431,11 @@
                   BorderThickness="1"
                   BorderBrush="#ddd"
                   FontSize="14">
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Manage Distribution" Click="ManageDistribution_Click"/>
+                </ContextMenu>
+            </DataGrid.ContextMenu>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="DOCUMENT NO" 
                                   Binding="{Binding DocumentNumber}" 

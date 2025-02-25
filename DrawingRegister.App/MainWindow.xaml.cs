@@ -1055,6 +1055,24 @@ private void IssuedByFilter_TextChanged(object sender, TextChangedEventArgs e)
     CurrentIssuedByIndicator.Text = IssuedByFilter.Text.Length > 0 ? IssuedByFilter.Text.Substring(0, Math.Min(2, IssuedByFilter.Text.Length)) : "";
 }
 
+private void ManageDistribution_Click(object sender, RoutedEventArgs e)
+{
+    if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
+    {
+        var dialog = new DistributionDialog(selectedDoc);
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true)
+        {
+            // Refresh the UI if needed
+            DocumentGrid.Items.Refresh();
+        }
+    }
+    else
+    {
+        MessageBox.Show("Please select a document first.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+}
+
 protected virtual void Dispose(bool disposing)
 {
     if (!_disposed)

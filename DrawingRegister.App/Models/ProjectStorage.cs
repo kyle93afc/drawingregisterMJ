@@ -18,7 +18,6 @@ public class ProjectStorage
     public DateTime LastProcessedDate { get; set; }
     public List<DocumentStorageInfo> Documents { get; set; } = new();
     public List<DrawingProject> Projects { get; set; } = new();
-    public List<DistributionStorageInfo> DistributionItems { get; set; } = new();
 
     public static ProjectStorage Load(string filePath)
     {
@@ -56,11 +55,4 @@ public class RevisionStorageInfo
     public string IssuedBy { get; set; } = string.Empty;
     public bool IsDistributed { get; set; }
     public string FilePath { get; set; } = string.Empty;
-}
-
-public class DistributionStorageInfo
-{
-    public string ClientName { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public Dictionary<string, bool> DistributionStatus { get; set; } = new();
 } 
