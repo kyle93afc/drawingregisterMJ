@@ -370,30 +370,30 @@
                     <!-- Method Indicators Row -->
                     <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
                         <!-- Purpose of Issue -->
-                        <TextBlock Grid.Column="1" Text="Purpose of Issue" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5,10,5" FontWeight="Bold"/>
-                        <Border Grid.Column="2" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
+                        <TextBlock Grid.Column="0" Text="Purpose of Issue" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                        <Border Grid.Column="1" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
                             <TextBlock x:Name="CurrentPurposeIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
                         </Border>
                         
                         <!-- Method of Issue -->
-                        <TextBlock Grid.Column="3" Text="Method of Issue" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5,10,5" FontWeight="Bold"/>
-                        <Border Grid.Column="4" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
+                        <TextBlock Grid.Column="2" Text="Method of Issue" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                        <Border Grid.Column="3" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
                             <TextBlock x:Name="CurrentMethodIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
                         </Border>
                         
                         <!-- Issued By -->
-                        <TextBlock Grid.Column="5" Text="Issued By" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5,10,5" FontWeight="Bold"/>
-                        <Border Grid.Column="6" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
+                        <TextBlock Grid.Column="4" Text="Issued By" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                        <Border Grid.Column="5" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
                             <TextBlock x:Name="CurrentIssuedByIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
                         </Border>
                     </Grid>
@@ -401,13 +401,13 @@
                     <!-- Date Row -->
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         
-                        <TextBlock Grid.Column="1" Text="Date of Issue" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5,10,5" FontWeight="Bold"/>
-                        <Border Grid.Column="2" BorderBrush="Black" BorderThickness="1" Width="100" Height="25" Margin="0,5,10,5">
+                        <TextBlock Grid.Column="0" Text="Date of Issue" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                        <Border Grid.Column="1" BorderBrush="Black" BorderThickness="1" Width="100" Height="25" Margin="0,5,10,5">
                             <TextBlock x:Name="CurrentIssueDate" Text="{Binding ElementName=IssueDateFilter, Path=SelectedItem.Content}" 
                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
