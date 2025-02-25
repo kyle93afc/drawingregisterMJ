@@ -37,50 +37,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private string _searchText = string.Empty;
     private Models.DocumentMetadata? _selectedDocument;
-    private ObservableCollection<DistributionItem> _distributionItems = new();
-
-    public class DistributionItem : INotifyPropertyChanged
-    {
-        private string _clientName = string.Empty;
-        private string _description = string.Empty;
-        private Dictionary<string, bool> _distributionStatus = new();
-
-        public string ClientName
-        {
-            get => _clientName;
-            set
-            {
-                _clientName = value;
-                OnPropertyChanged(nameof(ClientName));
-            }
-        }
-
-        public string Description
-        {
-            get => _description;
-            set
-            {
-                _description = value;
-                OnPropertyChanged(nameof(Description));
-            }
-        }
-
-        public Dictionary<string, bool> DistributionStatus
-        {
-            get => _distributionStatus;
-            set
-            {
-                _distributionStatus = value;
-                OnPropertyChanged(nameof(DistributionStatus));
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -125,31 +81,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         PurposeOfIssueFilter.SelectedIndex = 0;
         MethodOfIssueFilter.SelectedIndex = 0;
 
-        // Initialize distribution grid
-        DistributionGrid.ItemsSource = _distributionItems;
-
         // Subscribe to project's documents collection changes
         _project.Documents.CollectionChanged += Documents_CollectionChanged;
-        _project.Documents.CollectionChanged += UpdateDistributionColumns;
 
         // Add event handlers for new filters
         PurposeOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
         MethodOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
         IssuedByFilter.TextChanged += (s, e) => FilterDocuments();
-
-        // Load distribution items if they exist
-        if (_project._currentStorage?.DistributionItems != null)
-        {
-            foreach (var item in _project._currentStorage.DistributionItems)
-            {
-                _distributionItems.Add(new DistributionItem
-                {
-                    ClientName = item.ClientName,
-                    Description = item.Description,
-                    DistributionStatus = item.DistributionStatus
-                });
-            }
-        }
     }
 
     private void Documents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -280,7 +218,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 // Set the values in the UI
                 foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
                 {
-                    if (item.Content.ToString() == commonPurpose)
+                    if (item.Content.ToString().Contains(commonPurpose.Substring(0, 1)))
                     {
                         PurposeOfIssueFilter.SelectedItem = item;
                         break;
@@ -289,7 +227,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
                 foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
                 {
-                    if (item.Content.ToString() == commonMethod)
+                    if (item.Content.ToString().Contains(commonMethod.Substring(0, 1)))
                     {
                         MethodOfIssueFilter.SelectedItem = item;
                         break;
@@ -297,6 +235,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 }
 
                 IssuedByFilter.Text = commonIssuer;
+                
+                // Update the visual indicators
+                UpdateIssueIndicators(commonPurpose, commonMethod);
             }
             else
             {
@@ -304,7 +245,89 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 PurposeOfIssueFilter.SelectedIndex = 0;
                 MethodOfIssueFilter.SelectedIndex = 0;
                 IssuedByFilter.Text = string.Empty;
+                
+                // Clear the visual indicators
+                UpdateIssueIndicators(string.Empty, string.Empty);
             }
+        }
+    }
+
+    private void UpdateIssueIndicators(string purpose, string method)
+    {
+        // Reset all purpose indicators
+        ResetIndicator(PurposeA);
+        ResetIndicator(PurposeC);
+        ResetIndicator(PurposeI);
+        ResetIndicator(PurposeT);
+        
+        // Reset all method indicators
+        ResetIndicator(MethodE);
+        ResetIndicator(MethodS);
+        ResetIndicator(MethodP);
+        ResetIndicator(MethodH);
+        
+        // Highlight the selected purpose
+        if (!string.IsNullOrEmpty(purpose))
+        {
+            if (purpose.StartsWith("A"))
+                HighlightIndicator(PurposeA);
+            else if (purpose.StartsWith("C"))
+                HighlightIndicator(PurposeC);
+            else if (purpose.StartsWith("I"))
+                HighlightIndicator(PurposeI);
+            else if (purpose.StartsWith("T"))
+                HighlightIndicator(PurposeT);
+        }
+        
+        // Highlight the selected method
+        if (!string.IsNullOrEmpty(method))
+        {
+            if (method.StartsWith("E"))
+                HighlightIndicator(MethodE);
+            else if (method.StartsWith("S"))
+                HighlightIndicator(MethodS);
+            else if (method.StartsWith("P"))
+                HighlightIndicator(MethodP);
+            else if (method.StartsWith("H"))
+                HighlightIndicator(MethodH);
+        }
+    }
+    
+    private void ResetIndicator(Border indicator)
+    {
+        indicator.Background = System.Windows.Media.Brushes.Transparent;
+        indicator.BorderBrush = System.Windows.Media.Brushes.Gray;
+        var textBlock = indicator.Child as TextBlock;
+        if (textBlock != null)
+            textBlock.Foreground = System.Windows.Media.Brushes.Gray;
+    }
+    
+    private void HighlightIndicator(Border indicator)
+    {
+        indicator.Background = System.Windows.Media.Brushes.LightBlue;
+        indicator.BorderBrush = System.Windows.Media.Brushes.Blue;
+        var textBlock = indicator.Child as TextBlock;
+        if (textBlock != null)
+            textBlock.Foreground = System.Windows.Media.Brushes.Blue;
+    }
+    
+    private void PurposeOfIssueFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        FilterDocuments();
+        
+        if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() != "All")
+        {
+            UpdateIssueIndicators(selectedItem.Content.ToString(), null);
+        }
+    }
+    
+    private void MethodOfIssueFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        FilterDocuments();
+        
+        if (MethodOfIssueFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() != "All")
+        {
+            UpdateIssueIndicators(null, selectedItem.Content.ToString());
         }
     }
 
@@ -312,17 +335,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         try
         {
-            // Save distribution items to storage
-            if (_project._currentStorage != null)
-            {
-                _project._currentStorage.DistributionItems = _distributionItems.Select(item => new Models.DistributionStorageInfo
-                {
-                    ClientName = item.ClientName,
-                    Description = item.Description,
-                    DistributionStatus = item.DistributionStatus
-                }).ToList();
-            }
-
             _project.SaveProjectData();
             MessageBox.Show("Project saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -339,41 +351,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void FilterDocuments()
     {
-        ICollectionView view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
-        if (string.IsNullOrWhiteSpace(SearchBox.Text) && 
-            PurposeOfIssueFilter.SelectedIndex <= 0 && 
-            MethodOfIssueFilter.SelectedIndex <= 0 && 
-            string.IsNullOrWhiteSpace(IssuedByFilter.Text))
+        // Get the current filters
+        string purposeFilter = "All";
+        string methodFilter = "All";
+        
+        if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem)
+            purposeFilter = purposeItem.Content.ToString();
+            
+        if (MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem)
+            methodFilter = methodItem.Content.ToString();
+            
+        string issuedByFilter = IssuedByFilter.Text.Trim();
+        
+        // Start with all documents
+        var filteredDocs = _project.Documents.ToList();
+        
+        // Apply purpose filter
+        if (purposeFilter != "All")
         {
-            view.Filter = null;
-            return;
+            string purpose = purposeFilter.Split('-')[0].Trim();
+            filteredDocs = filteredDocs
+                .Where(d => d.RevisionHistory.Any(r => r.Value.Purpose.StartsWith(purpose)))
+                .ToList();
         }
-
-        string searchText = SearchBox.Text.ToLower();
-        var searchType = ((ComboBoxItem)SearchTypeCombo.SelectedItem).Content.ToString();
-        var purposeOfIssue = PurposeOfIssueFilter.SelectedIndex > 0 ? ((ComboBoxItem)PurposeOfIssueFilter.SelectedItem).Content.ToString() : null;
-        var methodOfIssue = MethodOfIssueFilter.SelectedIndex > 0 ? ((ComboBoxItem)MethodOfIssueFilter.SelectedItem).Content.ToString() : null;
-        var issuedBy = IssuedByFilter.Text.Trim().ToUpper();
-
-        view.Filter = obj =>
+        
+        // Apply method filter
+        if (methodFilter != "All")
         {
-            if (obj is not Models.DocumentMetadata doc) return false;
-
-            bool matchesSearch = string.IsNullOrWhiteSpace(searchText) || searchType switch
-            {
-                "Document No" => doc.DocumentNumber.ToLower().Contains(searchText),
-                "Description" => doc.Description.ToLower().Contains(searchText),
-                "Package" => doc.Package.ToLower().Contains(searchText),
-                "Type" => doc.DocumentType.ToLower().Contains(searchText),
-                _ => false
-            };
-
-            bool matchesPurpose = purposeOfIssue == null || doc.PurposeOfIssue == purposeOfIssue;
-            bool matchesMethod = methodOfIssue == null || doc.MethodOfIssue == methodOfIssue;
-            bool matchesIssuedBy = string.IsNullOrWhiteSpace(issuedBy) || doc.IssuedBy == issuedBy;
-
-            return matchesSearch && matchesPurpose && matchesMethod && matchesIssuedBy;
-        };
+            string method = methodFilter.Split('-')[0].Trim();
+            filteredDocs = filteredDocs
+                .Where(d => d.RevisionHistory.Any(r => r.Value.Method.StartsWith(method)))
+                .ToList();
+        }
+        
+        // Apply issued by filter
+        if (!string.IsNullOrEmpty(issuedByFilter))
+        {
+            filteredDocs = filteredDocs
+                .Where(d => d.RevisionHistory.Any(r => 
+                    r.Value.IssuedBy.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+        
+        // Update the grid
+        DocumentGrid.ItemsSource = filteredDocs.OrderBy(d => d.DocumentNumber).ToList();
     }
 
     private void ImportDocuments_Click(object sender, RoutedEventArgs e)
@@ -680,7 +701,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 Filter = "PDF files (*.pdf)|*.pdf",
                 DefaultExt = "pdf",
-                FileName = $"{_project.RegNo}_{DateTime.Now:yyyyMMdd}"
+                FileName = $"{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}"
             };
 
             if (saveDialog.ShowDialog() == true)
@@ -821,6 +842,73 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             .Take(3)
             .ToList();
 
+        // Add issue information section
+        container.PaddingBottom(10).Table(issueInfoTable => {
+            // Define columns
+            issueInfoTable.ColumnsDefinition(columns => {
+                columns.RelativeColumn(1);
+                columns.RelativeColumn(8);
+            });
+
+            // Date of Issue row
+            issueInfoTable.Cell().Element(HeaderCell).Text("");
+            issueInfoTable.Cell().AlignRight().Element(HeaderCell).Text("Date of Issue");
+
+            // Purpose of Issue row
+            issueInfoTable.Cell().Element(cell => cell.Background("#ffffff").Padding(5).AlignLeft().Text("Purpose of Issue :").Bold());
+            issueInfoTable.Cell().Element(cell => {
+                cell.Background("#ffffff").Padding(5).Row(row => {
+                    row.AutoItem().Text(text => {
+                        text.Span("A").Underline();
+                        text.Span("pproval   ");
+                        
+                        text.Span("C").Underline();
+                        text.Span("onstruction   ");
+                        
+                        text.Span("D").Underline();
+                        text.Span("raft   ");
+                        
+                        text.Span("F").Underline();
+                        text.Span("easibility   ");
+                        
+                        text.Span("I").Underline();
+                        text.Span("nformation   ");
+                        
+                        text.Span("P").Underline();
+                        text.Span("lanning   ");
+                        
+                        text.Span("T").Underline();
+                        text.Span("ender   ");
+                        
+                        text.Span("W").Underline();
+                        text.Span("arrant");
+                    });
+                });
+            });
+
+            // Method of Issue row
+            issueInfoTable.Cell().Element(cell => cell.Background("#ffffff").Padding(5).AlignLeft().Text("Method of Issue :").Bold());
+            issueInfoTable.Cell().Element(cell => {
+                cell.Background("#ffffff").Padding(5).Row(row => {
+                    row.AutoItem().Text(text => {
+                        text.Span("E").Underline();
+                        text.Span("mail   ");
+                        
+                        text.Span("S").Underline();
+                        text.Span("harepoint   ");
+                        
+                        text.Span("P").Underline();
+                        text.Span("aper");
+                    });
+                });
+            });
+
+            // Issued By row
+            issueInfoTable.Cell().Element(cell => cell.Background("#ffffff").Padding(5).AlignLeft().Text("Issued by :").Bold());
+            issueInfoTable.Cell().Element(cell => cell.Background("#ffffff").Padding(5).AlignLeft().Text(IssuedByFilter.Text ?? ""));
+        });
+
+        // Add document table
         container.Table(table =>
         {
             // Define columns with better proportions
@@ -916,111 +1004,9 @@ private void AddProjectInfoCell(TableDescriptor table, string label, string valu
     table.Cell().Background("#ffffff").Padding(5).AlignLeft().Text(value);
 }
 
-private void UpdateDistributionColumns(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+private void IssuedByFilter_TextChanged(object sender, TextChangedEventArgs e)
 {
-    const double REVISION_COLUMN_WIDTH = 40; // Same fixed width as document grid
-
-    // Calculate total width of document grid columns (excluding revision columns)
-    double totalDocumentGridWidth = 0;
-    foreach (var column in DocumentGrid.Columns)
-    {
-        if (column is DataGridTextColumn textColumn && !textColumn.Header.ToString()?.Contains("/") == true)
-        {
-            totalDocumentGridWidth += textColumn.Width.Value;
-        }
-    }
-
-    // Split the total width between description and client name columns
-    double distributionColumnWidth = totalDocumentGridWidth / 2;
-    
-    // Update the widths of the description and client name columns
-    foreach (var column in DistributionGrid.Columns)
-    {
-        if (column is DataGridTextColumn textColumn)
-        {
-            textColumn.Width = new DataGridLength(distributionColumnWidth);
-        }
-    }
-
-    // Get all revisions grouped by date
-    var revisionsByDate = _project.Documents
-        .SelectMany(d => d.RevisionHistory)
-        .GroupBy(r => r.Key)
-        .OrderByDescending(g => g.Key)
-        .ToList();
-
-    // Remove existing revision columns
-    var existingColumns = DistributionGrid.Columns
-        .Where(c => c.Header.ToString()?.StartsWith("Rev") == true)
-        .ToList();
-    foreach (var column in existingColumns)
-    {
-        DistributionGrid.Columns.Remove(column);
-    }
-
-    // Add checkbox columns for each revision date
-    foreach (var dateGroup in revisionsByDate)
-    {
-        var date = dateGroup.Key;
-        var revisionsOnDate = dateGroup.Count();
-
-        // Create a column for each revision on this date
-        for (int i = 0; i < revisionsOnDate; i++)
-        {
-            var column = new DataGridCheckBoxColumn
-            {
-                Header = $"Rev {i + 1}",
-                Width = new DataGridLength(REVISION_COLUMN_WIDTH),
-                HeaderStyle = TryFindResource("HiddenHeader") as Style,
-                Binding = new Binding($"DistributionStatus[{date}_{i}]")
-                {
-                    Mode = BindingMode.TwoWay,
-                    UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
-                }
-            };
-            DistributionGrid.Columns.Add(column);
-
-            // Initialize distribution status for existing items
-            foreach (var item in _distributionItems)
-            {
-                var key = $"{date}_{i}";
-                if (!item.DistributionStatus.ContainsKey(key))
-                {
-                    item.DistributionStatus[key] = false;
-                }
-            }
-        }
-    }
-}
-
-private void DistributionGrid_AddingNewItem(object sender, AddingNewItemEventArgs e)
-{
-    var newItem = new DistributionItem
-    {
-        ClientName = string.Empty,
-        Description = string.Empty
-    };
-    
-    // Initialize distribution status for all dates
-    var revisionsByDate = _project.Documents
-        .SelectMany(d => d.RevisionHistory)
-        .GroupBy(r => r.Key)
-        .OrderByDescending(g => g.Key)
-        .ToList();
-
-    foreach (var dateGroup in revisionsByDate)
-    {
-        var date = dateGroup.Key;
-        var revisionsOnDate = dateGroup.Count();
-
-        for (int i = 0; i < revisionsOnDate; i++)
-        {
-            var key = $"{date}_{i}";
-            newItem.DistributionStatus[key] = false;
-        }
-    }
-
-    e.NewItem = newItem;
+    FilterDocuments();
 }
 
 protected virtual void Dispose(bool disposing)

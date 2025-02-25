@@ -210,8 +210,7 @@
             <RowDefinition Height="Auto"/>  <!-- Action Buttons -->
             <RowDefinition Height="Auto"/>  <!-- Search Panel -->
             <RowDefinition Height="Auto"/>  <!-- Date Filter -->
-            <RowDefinition Height="Auto"/>  <!-- Distribution Header -->
-            <RowDefinition Height="Auto"/>  <!-- Distribution Grid -->
+            <RowDefinition Height="Auto"/>  <!-- Issue Information Section -->
             <RowDefinition Height="*"/>     <!-- Documents Grid -->
             <RowDefinition Height="Auto"/>  <!-- Revision Timeline -->
         </Grid.RowDefinitions>
@@ -297,71 +296,90 @@
                 </ComboBox>
 
                 <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14">
+                <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
                     <ComboBoxItem Content="All" FontSize="14"/>
-                    <ComboBoxItem Content="Approval" FontSize="14"/>
-                    <ComboBoxItem Content="Construction" FontSize="14"/>
-                    <ComboBoxItem Content="Draft" FontSize="14"/>
-                    <ComboBoxItem Content="Feasibility" FontSize="14"/>
-                    <ComboBoxItem Content="Information" FontSize="14"/>
-                    <ComboBoxItem Content="Planning" FontSize="14"/>
-                    <ComboBoxItem Content="Tender" FontSize="14"/>
-                    <ComboBoxItem Content="Warrant" FontSize="14"/>
+                    <ComboBoxItem Content="A - Approval" FontSize="14"/>
+                    <ComboBoxItem Content="C - Construction" FontSize="14"/>
+                    <ComboBoxItem Content="I - Information" FontSize="14"/>
+                    <ComboBoxItem Content="T - Tender" FontSize="14"/>
                 </ComboBox>
+                
+                <!-- Purpose Indicators -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                    <Border x:Name="PurposeA" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="A" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                    <Border x:Name="PurposeC" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="C" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                    <Border x:Name="PurposeI" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="I" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                    <Border x:Name="PurposeT" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="T" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                </StackPanel>
 
                 <TextBlock Text="METHOD OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="MethodOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14">
+                <ComboBox x:Name="MethodOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="MethodOfIssueFilter_SelectionChanged">
                     <ComboBoxItem Content="All" FontSize="14"/>
-                    <ComboBoxItem Content="Email" FontSize="14"/>
-                    <ComboBoxItem Content="Sharepoint" FontSize="14"/>
+                    <ComboBoxItem Content="E - Email" FontSize="14"/>
+                    <ComboBoxItem Content="S - SharePoint" FontSize="14"/>
+                    <ComboBoxItem Content="P - Post" FontSize="14"/>
+                    <ComboBoxItem Content="H - Hand" FontSize="14"/>
                 </ComboBox>
+                
+                <!-- Method Indicators -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                    <Border x:Name="MethodE" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="E" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                    <Border x:Name="MethodS" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                    <Border x:Name="MethodP" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                    <Border x:Name="MethodH" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
+                        <TextBlock Text="H" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
+                    </Border>
+                </StackPanel>
 
                 <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
-                <TextBox x:Name="IssuedByFilter" Width="60" Height="35" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper" FontSize="14"/>
+                <TextBox x:Name="IssuedByFilter" Width="60" Height="35" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper" FontSize="14" TextChanged="IssuedByFilter_TextChanged"/>
 
                 <Button Content="SAVE ISSUE DETAILS" Click="SaveIssueDetails_Click" Height="35" FontSize="14"
                         Style="{StaticResource BaseButtonStyle}"/>
             </StackPanel>
         </StackPanel>
 
-        <!-- Distribution Header -->
-        <TextBlock Grid.Row="4" Text="DISTRIBUTION" FontWeight="Bold" FontSize="16" Margin="0,0,0,5"/>
-
-        <!-- Distribution Grid -->
-        <DataGrid x:Name="DistributionGrid" 
-                  Grid.Row="5"
-                  AutoGenerateColumns="False"
-                  Margin="0,0,0,10"
-                  AlternationCount="2"
-                  CanUserAddRows="True"
-                  Height="Auto"
-                  MinHeight="100"
-                  MaxHeight="200"
-                  BorderThickness="1"
-                  BorderBrush="#ddd"
-                  HorizontalScrollBarVisibility="Auto"
-                  VerticalScrollBarVisibility="Auto"
-                  ColumnWidth="Auto"
-                  AddingNewItem="DistributionGrid_AddingNewItem"
-                  FontSize="14">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="DESCRIPTION" 
-                                  Binding="{Binding Description}"
-                                  Width="*"
-                                  HeaderStyle="{StaticResource VisibleHeader}"
-                                  FontSize="14"/>
-                <DataGridTextColumn Header="NAME" 
-                                  Binding="{Binding ClientName}"
-                                  Width="*"
-                                  HeaderStyle="{StaticResource VisibleHeader}"
-                                  FontSize="14"/>
-                <!-- Revision columns will be added dynamically with hidden headers -->
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- Issue Information Section -->
+        <Border Grid.Row="4" BorderBrush="Black" BorderThickness="1" Margin="0,0,0,10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- Date of Issue Row -->
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <TextBlock Grid.Column="1" Text="Date of Issue" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,5,10,5" FontWeight="Bold"/>
+                    <Border Grid.Column="2" BorderBrush="Black" BorderThickness="1" Width="100" Height="25" Margin="0,5,10,5">
+                        <TextBlock x:Name="CurrentIssueDate" Text="{Binding ElementName=IssueDateFilter, Path=SelectedItem.Content}" 
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Border>
 
         <!-- Documents Grid -->
         <DataGrid x:Name="DocumentGrid" 
-                  Grid.Row="6" 
+                  Grid.Row="5" 
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
                   SelectionMode="Single"
@@ -407,7 +425,7 @@
         </DataGrid>
 
         <!-- Revision Timeline -->
-        <ScrollViewer Grid.Row="7" 
+        <ScrollViewer Grid.Row="6" 
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
                       Margin="0,10,0,0">
