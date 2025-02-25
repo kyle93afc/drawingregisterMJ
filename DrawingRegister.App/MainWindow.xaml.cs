@@ -254,6 +254,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void UpdateIssueIndicators(string purpose, string method)
     {
+        // Get current values if null is passed (to preserve existing values)
+        string currentPurpose = purpose ?? CurrentPurposeIndicator.Text;
+        string currentMethod = method ?? CurrentMethodIndicator.Text;
+        
         // Reset all purpose indicators
         ResetIndicator(PurposeA);
         ResetIndicator(PurposeC);
@@ -266,29 +270,38 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         ResetIndicator(MethodP);
         ResetIndicator(MethodH);
         
+        // Update the single-digit indicators
+        if (purpose != null)
+            CurrentPurposeIndicator.Text = !string.IsNullOrEmpty(purpose) && purpose.Length > 0 ? purpose.Substring(0, 1) : "";
+        
+        if (method != null)
+            CurrentMethodIndicator.Text = !string.IsNullOrEmpty(method) && method.Length > 0 ? method.Substring(0, 1) : "";
+        
+        CurrentIssuedByIndicator.Text = IssuedByFilter.Text.Length > 0 ? IssuedByFilter.Text.Substring(0, Math.Min(2, IssuedByFilter.Text.Length)) : "";
+        
         // Highlight the selected purpose
-        if (!string.IsNullOrEmpty(purpose))
+        if (!string.IsNullOrEmpty(currentPurpose))
         {
-            if (purpose.StartsWith("A"))
+            if (currentPurpose.StartsWith("A"))
                 HighlightIndicator(PurposeA);
-            else if (purpose.StartsWith("C"))
+            else if (currentPurpose.StartsWith("C"))
                 HighlightIndicator(PurposeC);
-            else if (purpose.StartsWith("I"))
+            else if (currentPurpose.StartsWith("I"))
                 HighlightIndicator(PurposeI);
-            else if (purpose.StartsWith("T"))
+            else if (currentPurpose.StartsWith("T"))
                 HighlightIndicator(PurposeT);
         }
         
         // Highlight the selected method
-        if (!string.IsNullOrEmpty(method))
+        if (!string.IsNullOrEmpty(currentMethod))
         {
-            if (method.StartsWith("E"))
+            if (currentMethod.StartsWith("E"))
                 HighlightIndicator(MethodE);
-            else if (method.StartsWith("S"))
+            else if (currentMethod.StartsWith("S"))
                 HighlightIndicator(MethodS);
-            else if (method.StartsWith("P"))
+            else if (currentMethod.StartsWith("P"))
                 HighlightIndicator(MethodP);
-            else if (method.StartsWith("H"))
+            else if (currentMethod.StartsWith("H"))
                 HighlightIndicator(MethodH);
         }
     }
@@ -315,9 +328,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         FilterDocuments();
         
-        if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() != "All")
+        if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem selectedItem)
         {
-            UpdateIssueIndicators(selectedItem.Content.ToString(), null);
+            string purpose = selectedItem.Content.ToString();
+            if (purpose != "All")
+            {
+                // Extract the first character for the indicator
+                string purposeChar = purpose.Substring(0, 1);
+                CurrentPurposeIndicator.Text = purposeChar;
+                
+                // Update the visual indicators
+                UpdateIssueIndicators(purpose, null);
+            }
+            else
+            {
+                // Clear the purpose indicator
+                CurrentPurposeIndicator.Text = "";
+                UpdateIssueIndicators("", null);
+            }
         }
     }
     
@@ -325,9 +353,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         FilterDocuments();
         
-        if (MethodOfIssueFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() != "All")
+        if (MethodOfIssueFilter.SelectedItem is ComboBoxItem selectedItem)
         {
-            UpdateIssueIndicators(null, selectedItem.Content.ToString());
+            string method = selectedItem.Content.ToString();
+            if (method != "All")
+            {
+                // Extract the first character for the indicator
+                string methodChar = method.Substring(0, 1);
+                CurrentMethodIndicator.Text = methodChar;
+                
+                // Update the visual indicators
+                UpdateIssueIndicators(null, method);
+            }
+            else
+            {
+                // Clear the method indicator
+                CurrentMethodIndicator.Text = "";
+                UpdateIssueIndicators(null, "");
+            }
         }
     }
 
@@ -1007,6 +1050,9 @@ private void AddProjectInfoCell(TableDescriptor table, string label, string valu
 private void IssuedByFilter_TextChanged(object sender, TextChangedEventArgs e)
 {
     FilterDocuments();
+    
+    // Update the issued by indicator
+    CurrentIssuedByIndicator.Text = IssuedByFilter.Text.Length > 0 ? IssuedByFilter.Text.Substring(0, Math.Min(2, IssuedByFilter.Text.Length)) : "";
 }
 
 protected virtual void Dispose(bool disposing)
