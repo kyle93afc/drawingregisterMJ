@@ -392,6 +392,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         FilterDocuments();
     }
 
+    private void SearchTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        FilterDocuments();
+    }
+
     private void FilterDocuments()
     {
         // Get the current filters
@@ -405,9 +410,42 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             methodFilter = methodItem.Content.ToString();
             
         string issuedByFilter = IssuedByFilter.Text.Trim();
+        string searchText = SearchBox.Text.Trim();
         
         // Start with all documents
         var filteredDocs = _project.Documents.ToList();
+        
+        // Apply search text filter if not empty
+        if (!string.IsNullOrEmpty(searchText))
+        {
+            string searchType = "Document No";
+            if (SearchTypeCombo.SelectedItem is ComboBoxItem selectedItem)
+                searchType = selectedItem.Content.ToString();
+                
+            switch (searchType)
+            {
+                case "Document No":
+                    filteredDocs = filteredDocs
+                        .Where(d => d.DocumentNumber.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    break;
+                case "Description":
+                    filteredDocs = filteredDocs
+                        .Where(d => d.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    break;
+                case "Package":
+                    filteredDocs = filteredDocs
+                        .Where(d => d.Package.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    break;
+                case "Type":
+                    filteredDocs = filteredDocs
+                        .Where(d => d.DocumentType.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    break;
+            }
+        }
         
         // Apply purpose filter
         if (purposeFilter != "All")
@@ -1057,19 +1095,34 @@ private void IssuedByFilter_TextChanged(object sender, TextChangedEventArgs e)
 
 private void ManageDistribution_Click(object sender, RoutedEventArgs e)
 {
-    if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
+    if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDocument)
     {
-        var dialog = new DistributionDialog(selectedDoc);
+        var dialog = new DistributionDialog(selectedDocument, _project);
         dialog.Owner = this;
         if (dialog.ShowDialog() == true)
         {
-            // Refresh the UI if needed
+            // Refresh the UI
             DocumentGrid.Items.Refresh();
         }
     }
     else
     {
-        MessageBox.Show("Please select a document first.", "Selection Required", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show("Please select a document to manage distribution.", "No Document Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+}
+
+private void BatchEdit_Click(object sender, RoutedEventArgs e)
+{
+    var dialog = new BatchEditDialog(_project);
+    dialog.Owner = this;
+    if (dialog.ShowDialog() == true)
+    {
+        // Refresh the UI
+        DocumentGrid.Items.Refresh();
+        RevisionTimeline.Items.Refresh();
+        
+        // Update issue date filter options
+        UpdateIssueDateFilterOptions();
     }
 }
 

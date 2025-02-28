@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using DrawingRegister.App.Models;
 
@@ -15,50 +18,45 @@ namespace DrawingRegister.App
     {
         private DocumentMetadata _document;
         private List<DateTime> _issueDates = new();
-        private Dictionary<string, StakeholderInfo> _stakeholders = new();
-        private Dictionary<string, StakeholderInfo> _originalStakeholders = new();
+        private ProjectManager _projectManager;
+        private ObservableCollection<DistributionCompany> _companies;
+        private Dictionary<DateTime, List<string>> _companyDistributions = new();
 
-        public DistributionDialog(DocumentMetadata document)
+        public DistributionDialog(DocumentMetadata document, ProjectManager projectManager)
         {
             InitializeComponent();
             _document = document;
+            _projectManager = projectManager;
             DataContext = _document;
-            
-            // Make a deep copy of the stakeholders to allow cancellation
-            foreach (var kvp in _document.Stakeholders)
-            {
-                _originalStakeholders[kvp.Key] = new StakeholderInfo
-                {
-                    Name = kvp.Value.Name,
-                    Company = kvp.Value.Company,
-                    DistributionDates = new List<DateTime>(kvp.Value.DistributionDates)
-                };
-                
-                _stakeholders[kvp.Key] = new StakeholderInfo
-                {
-                    Name = kvp.Value.Name,
-                    Company = kvp.Value.Company,
-                    DistributionDates = new List<DateTime>(kvp.Value.DistributionDates)
-                };
-            }
             
             // Get all issue dates from revision history
             _issueDates = _document.RevisionHistory.Keys.OrderBy(d => d).ToList();
             
-            // Populate the stakeholders list
-            RefreshStakeholdersList();
+            // Initialize company distributions from document
+            _companies = _projectManager.DistributionManager.Companies;
+            
+            // Make a copy of the distribution data to allow cancellation
+            foreach (var kvp in _document.DistributionCompanyIds)
+            {
+                _companyDistributions[kvp.Key] = new List<string>(kvp.Value);
+            }
+            
+            // Set up the companies list with grouping by category
+            SetupCompaniesList();
             
             // Build the distribution matrix
             BuildDistributionMatrix();
         }
         
-        private void RefreshStakeholdersList()
+        private void SetupCompaniesList()
         {
-            StakeholdersList.Items.Clear();
-            foreach (var stakeholder in _stakeholders.Values)
-            {
-                StakeholdersList.Items.Add(stakeholder);
-            }
+            // Create a CollectionViewSource for grouping
+            var cvs = new CollectionViewSource();
+            cvs.Source = _companies;
+            cvs.GroupDescriptions.Add(new PropertyGroupDescription("Category"));
+            
+            // Set the ListView's ItemsSource to the grouped view
+            CompaniesList.ItemsSource = cvs.View;
         }
         
         private void BuildDistributionMatrix()
@@ -72,7 +70,7 @@ namespace DrawingRegister.App
             DistributionGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             DistributionGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             
-            // Add the stakeholder header cell
+            // Add the company header cell
             var headerCell = new Border
             {
                 Background = new SolidColorBrush(System.Windows.Media.ColorConverter.ConvertFromString("#eb1845") as System.Windows.Media.Color? ?? Colors.Red),
@@ -80,7 +78,7 @@ namespace DrawingRegister.App
             };
             headerCell.Child = new TextBlock
             {
-                Text = "Stakeholder",
+                Text = "Company",
                 Foreground = System.Windows.Media.Brushes.White,
                 FontWeight = FontWeights.SemiBold
             };
@@ -130,59 +128,96 @@ namespace DrawingRegister.App
                 DistributionGrid.Children.Add(dateCell);
             }
             
-            // Add rows for each stakeholder
-            int rowIndex = 1;
-            foreach (var kvp in _stakeholders)
-            {
-                string stakeholderId = kvp.Key;
-                StakeholderInfo stakeholder = kvp.Value;
+            // Group companies by category
+            var companiesByCategory = _companies
+                .GroupBy(c => c.Category)
+                .OrderBy(g => g.Key)
+                .ToList();
                 
-                // Add row definition
+            // Add category headers and rows for each company
+            int rowIndex = 1;
+            
+            foreach (var categoryGroup in companiesByCategory)
+            {
+                // Add category header row
                 DistributionGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                 
-                // Add stakeholder name cell
-                var nameCell = new Border
+                var categoryCell = new Border
                 {
+                    Background = new SolidColorBrush(System.Windows.Media.ColorConverter.ConvertFromString("#f0f0f0") as System.Windows.Media.Color? ?? Colors.LightGray),
+                    Padding = new Thickness(10, 5, 10, 5),
                     BorderBrush = new SolidColorBrush(System.Windows.Media.ColorConverter.ConvertFromString("#DDDDDD") as System.Windows.Media.Color? ?? Colors.LightGray),
-                    BorderThickness = new Thickness(1),
-                    Padding = new Thickness(10, 5, 10, 5)
+                    BorderThickness = new Thickness(1)
                 };
-                nameCell.Child = new TextBlock
+                categoryCell.Child = new TextBlock
                 {
-                    Text = $"{stakeholder.Name} ({stakeholder.Company})",
-                    VerticalAlignment = VerticalAlignment.Center
+                    Text = categoryGroup.Key,
+                    FontWeight = FontWeights.Bold
                 };
-                Grid.SetRow(nameCell, rowIndex);
-                Grid.SetColumn(nameCell, 0);
-                DistributionGrid.Children.Add(nameCell);
+                Grid.SetRow(categoryCell, rowIndex);
+                Grid.SetColumn(categoryCell, 0);
+                Grid.SetColumnSpan(categoryCell, _issueDates.Count + 1);
+                DistributionGrid.Children.Add(categoryCell);
                 
-                // Add checkboxes for each issue date
-                for (int i = 0; i < _issueDates.Count; i++)
+                rowIndex++;
+                
+                // Add rows for each company in this category
+                foreach (var company in categoryGroup.OrderBy(c => c.Name))
                 {
-                    var checkboxCell = new Border
+                    // Add row definition
+                    DistributionGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                    
+                    // Add company name cell
+                    var nameCell = new Border
                     {
                         BorderBrush = new SolidColorBrush(System.Windows.Media.ColorConverter.ConvertFromString("#DDDDDD") as System.Windows.Media.Color? ?? Colors.LightGray),
                         BorderThickness = new Thickness(1),
-                        Padding = new Thickness(5)
+                        Padding = new Thickness(10, 5, 10, 5)
                     };
-                    
-                    var checkbox = new System.Windows.Controls.CheckBox
+                    nameCell.Child = new TextBlock
                     {
-                        IsChecked = stakeholder.DistributionDates.Contains(_issueDates[i]),
-                        HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        Tag = new Tuple<string, DateTime>(stakeholderId, _issueDates[i])
+                        Text = company.Name,
+                        VerticalAlignment = VerticalAlignment.Center
                     };
-                    checkbox.Checked += Distribution_CheckChanged;
-                    checkbox.Unchecked += Distribution_CheckChanged;
+                    Grid.SetRow(nameCell, rowIndex);
+                    Grid.SetColumn(nameCell, 0);
+                    DistributionGrid.Children.Add(nameCell);
                     
-                    checkboxCell.Child = checkbox;
-                    Grid.SetRow(checkboxCell, rowIndex);
-                    Grid.SetColumn(checkboxCell, i + 1);
-                    DistributionGrid.Children.Add(checkboxCell);
+                    // Add checkboxes for each issue date
+                    for (int i = 0; i < _issueDates.Count; i++)
+                    {
+                        var checkboxCell = new Border
+                        {
+                            BorderBrush = new SolidColorBrush(System.Windows.Media.ColorConverter.ConvertFromString("#DDDDDD") as System.Windows.Media.Color? ?? Colors.LightGray),
+                            BorderThickness = new Thickness(1),
+                            Padding = new Thickness(5)
+                        };
+                        
+                        bool isDistributed = false;
+                        DateTime issueDate = _issueDates[i];
+                        if (_companyDistributions.TryGetValue(issueDate, out var companyIds))
+                        {
+                            isDistributed = companyIds.Contains(company.Id);
+                        }
+                        
+                        var checkbox = new System.Windows.Controls.CheckBox
+                        {
+                            IsChecked = isDistributed,
+                            HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center,
+                            Tag = new Tuple<string, DateTime>(company.Id, _issueDates[i])
+                        };
+                        checkbox.Checked += Distribution_CheckChanged;
+                        checkbox.Unchecked += Distribution_CheckChanged;
+                        
+                        checkboxCell.Child = checkbox;
+                        Grid.SetRow(checkboxCell, rowIndex);
+                        Grid.SetColumn(checkboxCell, i + 1);
+                        DistributionGrid.Children.Add(checkboxCell);
+                    }
+                    
+                    rowIndex++;
                 }
-                
-                rowIndex++;
             }
         }
         
@@ -190,111 +225,104 @@ namespace DrawingRegister.App
         {
             if (sender is System.Windows.Controls.CheckBox checkbox && checkbox.Tag is Tuple<string, DateTime> tag)
             {
-                string stakeholderId = tag.Item1;
+                string companyId = tag.Item1;
                 DateTime issueDate = tag.Item2;
                 
-                if (_stakeholders.TryGetValue(stakeholderId, out var stakeholder))
+                if (!_companyDistributions.ContainsKey(issueDate))
                 {
-                    if (checkbox.IsChecked == true)
+                    _companyDistributions[issueDate] = new List<string>();
+                }
+                
+                var companyIds = _companyDistributions[issueDate];
+                
+                if (checkbox.IsChecked == true)
+                {
+                    if (!companyIds.Contains(companyId))
                     {
-                        if (!stakeholder.DistributionDates.Contains(issueDate))
-                        {
-                            stakeholder.DistributionDates.Add(issueDate);
-                        }
+                        companyIds.Add(companyId);
                     }
-                    else
-                    {
-                        stakeholder.DistributionDates.Remove(issueDate);
-                    }
+                }
+                else
+                {
+                    companyIds.Remove(companyId);
                 }
             }
         }
         
-        private void AddStakeholder_Click(object sender, RoutedEventArgs e)
+        private void AddCompany_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new StakeholderDialog();
+            var dialog = new CompanyDialog();
             if (dialog.ShowDialog() == true)
             {
-                // Generate a unique ID for the new stakeholder
-                string id = Guid.NewGuid().ToString();
-                
-                // Add the new stakeholder
-                _stakeholders[id] = new StakeholderInfo
-                {
-                    Name = dialog.Stakeholder.Name,
-                    Company = dialog.Stakeholder.Company,
-                    DistributionDates = new List<DateTime>()
-                };
+                // Add the new company
+                _projectManager.DistributionManager.AddCompany(dialog.Company);
                 
                 // Refresh the UI
-                RefreshStakeholdersList();
+                SetupCompaniesList();
                 BuildDistributionMatrix();
             }
         }
         
-        private void EditStakeholder_Click(object sender, RoutedEventArgs e)
+        private void EditCompany_Click(object sender, RoutedEventArgs e)
         {
-            if (StakeholdersList.SelectedItem is StakeholderInfo selectedStakeholder)
+            if (CompaniesList.SelectedItem is DistributionCompany selectedCompany)
             {
-                // Find the stakeholder ID
-                string? stakeholderId = _stakeholders.FirstOrDefault(s => s.Value == selectedStakeholder).Key;
-                if (stakeholderId == null) return;
-                
-                var dialog = new StakeholderDialog(selectedStakeholder);
+                var dialog = new CompanyDialog(selectedCompany);
                 if (dialog.ShowDialog() == true)
                 {
-                    // Update the stakeholder info
-                    _stakeholders[stakeholderId].Name = dialog.Stakeholder.Name;
-                    _stakeholders[stakeholderId].Company = dialog.Stakeholder.Company;
+                    // Update the company info
+                    _projectManager.DistributionManager.UpdateCompany(dialog.Company);
                     
                     // Refresh the UI
-                    RefreshStakeholdersList();
+                    SetupCompaniesList();
                     BuildDistributionMatrix();
                 }
             }
             else
             {
-                System.Windows.MessageBox.Show("Please select a stakeholder to edit.", "Selection Required", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                System.Windows.MessageBox.Show("Please select a company to edit.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         
-        private void RemoveStakeholder_Click(object sender, RoutedEventArgs e)
+        private void RemoveCompany_Click(object sender, RoutedEventArgs e)
         {
-            if (StakeholdersList.SelectedItem is StakeholderInfo selectedStakeholder)
+            if (CompaniesList.SelectedItem is DistributionCompany selectedCompany)
             {
-                // Find the stakeholder ID
-                string? stakeholderId = _stakeholders.FirstOrDefault(s => s.Value == selectedStakeholder).Key;
-                if (stakeholderId == null) return;
-                
-                // Confirm deletion
-                if (System.Windows.MessageBox.Show(
-                    $"Are you sure you want to remove {selectedStakeholder.Name} from the distribution list?", 
-                    "Confirm Removal", 
-                    System.Windows.MessageBoxButton.YesNo, 
-                    System.Windows.MessageBoxImage.Question) == System.Windows.MessageBoxResult.Yes)
+                var result = System.Windows.MessageBox.Show(
+                    $"Are you sure you want to remove '{selectedCompany.Name}'? This will remove it from all distributions.",
+                    "Confirm Removal",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+                    
+                if (result == MessageBoxResult.Yes)
                 {
-                    // Remove the stakeholder
-                    _stakeholders.Remove(stakeholderId);
+                    // Remove the company
+                    _projectManager.DistributionManager.RemoveCompany(selectedCompany);
+                    
+                    // Remove from all distributions
+                    foreach (var issueDate in _companyDistributions.Keys.ToList())
+                    {
+                        _companyDistributions[issueDate].Remove(selectedCompany.Id);
+                    }
                     
                     // Refresh the UI
-                    RefreshStakeholdersList();
+                    SetupCompaniesList();
                     BuildDistributionMatrix();
                 }
             }
             else
             {
-                System.Windows.MessageBox.Show("Please select a stakeholder to remove.", "Selection Required", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                System.Windows.MessageBox.Show("Please select a company to remove.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
         
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            // Update the document with the modified stakeholders
-            _document.Stakeholders.Clear();
-            foreach (var kvp in _stakeholders)
-            {
-                _document.Stakeholders[kvp.Key] = kvp.Value;
-            }
+            // Update the document with the new distribution data
+            _document.DistributionCompanyIds = new Dictionary<DateTime, List<string>>(_companyDistributions);
+            
+            // Save the project data
+            _projectManager.SaveProjectData();
             
             DialogResult = true;
             Close();
@@ -302,13 +330,6 @@ namespace DrawingRegister.App
         
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            // Restore original stakeholders
-            _document.Stakeholders.Clear();
-            foreach (var kvp in _originalStakeholders)
-            {
-                _document.Stakeholders[kvp.Key] = kvp.Value;
-            }
-            
             DialogResult = false;
             Close();
         }

@@ -67,6 +67,9 @@ namespace DrawingRegister.App.Models
 
         // Distribution Information
         public Dictionary<string, StakeholderInfo> Stakeholders { get; set; } = new();
+        
+        // New property for distribution companies
+        public Dictionary<DateTime, List<string>> DistributionCompanyIds { get; set; } = new();
 
         // Revision History - Dictionary of date to revision info
         public Dictionary<DateTime, RevisionInfo> RevisionHistory { get; set; } = new();
@@ -163,6 +166,39 @@ namespace DrawingRegister.App.Models
                 stakeholder.DistributionDates.Remove(issueDate);
             else
                 stakeholder.DistributionDates.Add(issueDate);
+        }
+        
+        // New helper methods for distribution companies
+        
+        // Check if a document was distributed to a company at a specific issue date
+        public bool WasDistributedToCompany(string companyId, DateTime issueDate)
+        {
+            if (!DistributionCompanyIds.TryGetValue(issueDate, out var companyIds))
+                return false;
+                
+            return companyIds.Contains(companyId);
+        }
+        
+        // Toggle distribution status for a company at a specific issue date
+        public void ToggleCompanyDistribution(string companyId, DateTime issueDate)
+        {
+            if (!DistributionCompanyIds.ContainsKey(issueDate))
+            {
+                DistributionCompanyIds[issueDate] = new List<string>();
+            }
+            
+            var companyIds = DistributionCompanyIds[issueDate];
+            
+            if (companyIds.Contains(companyId))
+                companyIds.Remove(companyId);
+            else
+                companyIds.Add(companyId);
+        }
+        
+        // Set distribution for multiple companies at once
+        public void SetCompanyDistributions(List<string> companyIds, DateTime issueDate)
+        {
+            DistributionCompanyIds[issueDate] = new List<string>(companyIds);
         }
     }
 

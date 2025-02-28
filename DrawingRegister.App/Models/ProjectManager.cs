@@ -26,6 +26,9 @@ public class ProjectManager : INotifyPropertyChanged
 
     public ProjectStorage? _currentStorage;
     public Action<string, string>? OnFolderStatusUpdated { get; set; }
+    
+    // Add DistributionManager property
+    public DistributionManager DistributionManager { get; private set; } = new DistributionManager(string.Empty);
 
     public string ProjectNumber
     {
@@ -90,6 +93,9 @@ public class ProjectManager : INotifyPropertyChanged
 
         _currentBasePath = folderPath;
         var storageFile = Path.Combine(folderPath, STORAGE_FILENAME);
+        
+        // Initialize the DistributionManager with the project path
+        DistributionManager = new DistributionManager(folderPath);
         
         // Try to load existing project data if it exists
         _currentStorage = ProjectStorage.Load(storageFile);
@@ -543,6 +549,9 @@ public class ProjectManager : INotifyPropertyChanged
         }).ToList();
 
         _currentStorage.Save(Path.Combine(_currentBasePath, STORAGE_FILENAME));
+        
+        // Save distribution data
+        DistributionManager?.SaveCompanies();
     }
 
     private string DeterminePurpose(string filePath)
