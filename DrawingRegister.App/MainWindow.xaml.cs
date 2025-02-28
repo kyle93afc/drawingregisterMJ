@@ -1095,19 +1095,13 @@ private void IssuedByFilter_TextChanged(object sender, TextChangedEventArgs e)
 
 private void ManageDistribution_Click(object sender, RoutedEventArgs e)
 {
-    if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDocument)
+    // No longer requiring document selection
+    var dialog = new DistributionDialog(_project);
+    dialog.Owner = this;
+    if (dialog.ShowDialog() == true)
     {
-        var dialog = new DistributionDialog(selectedDocument, _project);
-        dialog.Owner = this;
-        if (dialog.ShowDialog() == true)
-        {
-            // Refresh the UI
-            DocumentGrid.Items.Refresh();
-        }
-    }
-    else
-    {
-        MessageBox.Show("Please select a document to manage distribution.", "No Document Selected", MessageBoxButton.OK, MessageBoxImage.Information);
+        // Refresh the UI
+        DocumentGrid.Items.Refresh();
     }
 }
 

@@ -287,8 +287,8 @@ namespace DrawingRegister.App
                 }
                 
                 // Update selected issue date if date filter is active
-                if (FilterByDate.IsChecked == true && 
-                    IssueDateCombo.SelectedItem is ComboBoxItem selectedItem && 
+                if (FilterByDate != null && FilterByDate.IsChecked == true && 
+                    IssueDateCombo != null && IssueDateCombo.SelectedItem is ComboBoxItem selectedItem && 
                     selectedItem.Tag is DateTime selectedDate)
                 {
                     _selectedIssueDate = selectedDate;

@@ -6,7 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
-        Title="Distribution Management" Height="600" Width="800"
+        Title="Manage Distribution Companies" Height="500" Width="600"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <!-- Button Style -->
@@ -83,125 +83,64 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="DISTRIBUTION" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
+        <TextBlock Grid.Row="0" Text="DISTRIBUTION COMPANIES" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
         
-        <!-- Document Info -->
-        <Grid Grid.Row="1" Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- Companies List -->
+        <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Document Number:" FontWeight="SemiBold" Margin="0,0,10,5"/>
-            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DocumentNumber}" Margin="0,0,20,5"/>
+            <TextBlock Grid.Row="0" Text="Manage the list of companies that can receive document distributions" 
+                       Margin="0,0,0,10" TextWrapping="Wrap"/>
             
-            <TextBlock Grid.Row="0" Grid.Column="2" Text="Revision:" FontWeight="SemiBold" Margin="0,0,10,5"/>
-            <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding Revision}" Margin="0,0,0,5"/>
-            
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Description:" FontWeight="SemiBold" Margin="0,0,10,0"/>
-            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding Description}" TextWrapping="Wrap"/>
-        </Grid>
-        
-        <!-- Distribution Management -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            
-            <!-- Companies List -->
-            <Grid Grid.Column="0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" Text="Distribution Companies" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                
-                <ListView Grid.Row="1" x:Name="CompaniesList" SelectionMode="Single" Margin="0,0,0,10">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="150"/>
-                            <GridViewColumn Header="Category" DisplayMemberBinding="{Binding Category}" Width="150"/>
-                        </GridView>
-                    </ListView.View>
-                    <ListView.GroupStyle>
-                        <GroupStyle>
-                            <GroupStyle.HeaderTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" Margin="0,5,0,0"/>
-                                </DataTemplate>
-                            </GroupStyle.HeaderTemplate>
-                        </GroupStyle>
-                    </ListView.GroupStyle>
-                </ListView>
-                
-                <StackPanel Grid.Row="2" Orientation="Horizontal">
-                    <Button x:Name="AddCompanyButton" Content="Add" Style="{StaticResource SecondaryButtonStyle}" 
-                            Click="AddCompany_Click" Margin="0,0,10,0"/>
-                    <Button x:Name="EditCompanyButton" Content="Edit" Style="{StaticResource SecondaryButtonStyle}" 
-                            Click="EditCompany_Click" Margin="0,0,10,0"/>
-                    <Button x:Name="RemoveCompanyButton" Content="Remove" Style="{StaticResource SecondaryButtonStyle}" 
-                            Click="RemoveCompany_Click"/>
-                </StackPanel>
-            </Grid>
-            
-            <!-- Separator -->
-            <GridSplitter Grid.Column="1" Width="1" HorizontalAlignment="Center" VerticalAlignment="Stretch" 
-                          Background="#DDDDDD" Margin="10,0"/>
-            
-            <!-- Distribution Matrix -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" Text="Distribution by Issue Date" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                    <Grid x:Name="DistributionGrid">
-                        <!-- This grid will be populated dynamically -->
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <!-- Additional rows will be added dynamically -->
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <!-- Additional columns will be added dynamically -->
-                        </Grid.ColumnDefinitions>
-                        
-                        <!-- Header cell -->
-                        <Border Grid.Row="0" Grid.Column="0" Background="#eb1845" Padding="10,5">
-                            <TextBlock Text="Company" Foreground="White" FontWeight="SemiBold"/>
-                        </Border>
-                        
-                        <!-- Issue date headers and distribution checkboxes will be added dynamically -->
-                    </Grid>
-                </ScrollViewer>
-            </Grid>
+            <ListView Grid.Row="1" x:Name="CompaniesList" SelectionMode="Single" Margin="0,0,0,10">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250"/>
+                        <GridViewColumn Header="Category" DisplayMemberBinding="{Binding Category}" Width="250"/>
+                    </GridView>
+                </ListView.View>
+                <ListView.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Margin="0,5,0,0"/>
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListView.GroupStyle>
+            </ListView>
         </Grid>
         
         <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButtonStyle}" 
-                    Click="Save_Click" Margin="0,0,10,0"/>
-            <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource SecondaryButtonStyle}" 
-                    Click="Cancel_Click"/>
-        </StackPanel>
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Company Management Buttons -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button x:Name="AddCompanyButton" Content="Add Company" Style="{StaticResource SecondaryButtonStyle}" 
+                        Click="AddCompany_Click" Margin="0,0,10,0"/>
+                <Button x:Name="EditCompanyButton" Content="Edit Company" Style="{StaticResource SecondaryButtonStyle}" 
+                        Click="EditCompany_Click" Margin="0,0,10,0"/>
+                <Button x:Name="DeleteCompanyButton" Content="Delete Company" Style="{StaticResource SecondaryButtonStyle}" 
+                        Click="DeleteCompany_Click"/>
+            </StackPanel>
+            
+            <!-- Dialog Buttons -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="SaveButton" Content="Close" Style="{StaticResource PrimaryButtonStyle}" 
+                        Click="Save_Click"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window> 

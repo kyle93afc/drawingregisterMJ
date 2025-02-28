@@ -6,7 +6,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
-        Title="Company Details" Height="250" Width="400"
+        Title="Company Details" Height="300" Width="400"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <!-- Button Style -->
