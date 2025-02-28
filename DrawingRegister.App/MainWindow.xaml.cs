@@ -174,8 +174,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (selectedContent == "All Dates")
         {
             DocumentGrid.ItemsSource = _project.Documents;
+            
+            // Hide distribution summary and disable view button
+            DistributionSummaryBorder.Visibility = Visibility.Collapsed;
+            ViewDistributionButton.IsEnabled = false;
             return;
         }
+
+        // Enable the view distribution button when a specific date is selected
+        ViewDistributionButton.IsEnabled = true;
 
         // Parse date using the new format
         if (DateTime.TryParseExact(selectedContent, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
@@ -249,6 +256,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 // Clear the visual indicators
                 UpdateIssueIndicators(string.Empty, string.Empty);
             }
+            
+            // Show distribution summary
+            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDate);
+            DistributionSummaryText.Text = distributionSummary.GetFormattedSummary();
+            DistributionSummaryBorder.Visibility = distributionSummary.TotalRecipients > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 
@@ -1102,6 +1114,24 @@ private void ManageDistribution_Click(object sender, RoutedEventArgs e)
     {
         // Refresh the UI
         DocumentGrid.Items.Refresh();
+    }
+}
+
+private void ViewDistribution_Click(object sender, RoutedEventArgs e)
+{
+    if (IssueDateFilter.SelectedItem is not ComboBoxItem selectedItem || selectedItem.Content.ToString() == "All Dates")
+    {
+        MessageBox.Show("Please select a specific date to view distribution information.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+        return;
+    }
+
+    // Parse the selected date
+    if (DateTime.TryParseExact(selectedItem.Content.ToString(), "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
+    {
+        // Show the distribution information dialog
+        var dialog = new DistributionInfoDialog(_project, selectedDate);
+        dialog.Owner = this;
+        dialog.ShowDialog();
     }
 }
 

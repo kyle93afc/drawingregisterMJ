@@ -296,8 +296,22 @@
                 <ComboBox x:Name="IssueDateFilter" Width="200" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="IssueDateFilter_SelectionChanged">
                     <ComboBoxItem Content="All Dates" FontSize="14"/>
                 </ComboBox>
+                
+                <!-- New Distribution Button -->
+                <Button x:Name="ViewDistributionButton" Content="VIEW DISTRIBUTION" Click="ViewDistribution_Click" 
+                        Height="35" Margin="0,0,10,0" FontSize="14" FontWeight="Bold"
+                        Background="Red" Foreground="White" Visibility="Visible"/>
+                
+                <!-- Distribution Summary -->
+                <Border x:Name="DistributionSummaryBorder" BorderBrush="#ddd" BorderThickness="1" CornerRadius="4" Padding="10,5" 
+                        Margin="0,0,20,0" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Distribution: " FontWeight="SemiBold" FontSize="14"/>
+                        <TextBlock x:Name="DistributionSummaryText" Text="No recipients" FontSize="14"/>
+                    </StackPanel>
+                </Border>
 
-                <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
+                <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
                 <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
                     <ComboBoxItem Content="All" FontSize="14"/>
                     <ComboBoxItem Content="A - Approval" FontSize="14"/>
