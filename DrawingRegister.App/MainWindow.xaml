@@ -455,6 +455,7 @@
                   FontSize="14">
             <DataGrid.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Edit Document" Click="EditDocument_Click"/>
                     <MenuItem Header="Manage Distribution" Click="ManageDistribution_Click"/>
                 </ContextMenu>
             </DataGrid.ContextMenu>

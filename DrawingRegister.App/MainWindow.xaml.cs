@@ -25,6 +25,7 @@ using Colors = QuestPDF.Helpers.Colors;
 using QuestPDF.Elements.Table;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using System.Windows.Input;
 
 namespace DrawingRegister.App;
 
@@ -88,6 +89,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         PurposeOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
         MethodOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
         IssuedByFilter.TextChanged += (s, e) => FilterDocuments();
+        
+        // Add keyboard shortcut for editing documents
+        DocumentGrid.KeyDown += DocumentGrid_KeyDown;
     }
 
     private void Documents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -603,7 +607,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
         {
-            OpenDocument(selectedDoc.FilePath);
+            // Check if Ctrl key is pressed for editing instead of opening
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+            {
+                EditDocument(selectedDoc);
+            }
+            else
+            {
+                OpenDocument(selectedDoc.FilePath);
+            }
         }
     }
 
@@ -645,6 +657,69 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 DocumentGrid.Items.Refresh();
                 RevisionTimeline.Items.Refresh();
             }
+        }
+    }
+
+    private void EditDocument_Click(object sender, RoutedEventArgs e)
+    {
+        if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
+        {
+            EditDocument(selectedDoc);
+        }
+    }
+
+    private void EditDocument(Models.DocumentMetadata document)
+    {
+        var dialog = new DocumentEditDialog(document);
+        dialog.Owner = this;
+
+        if (dialog.ShowDialog() == true)
+        {
+            // Store original values for file renaming
+            string originalDocNumber = document.DocumentNumber;
+            string originalDescription = document.Description;
+            string originalFilePath = document.FilePath;
+
+            // Update document metadata
+            document.DocumentNumber = dialog.DocumentNumber;
+            document.Description = dialog.Description;
+            document.Package = dialog.Package;
+            document.DocumentType = dialog.DocumentType;
+            document.Size = dialog.Size;
+
+            // Rename the file if requested
+            if (dialog.UpdateFile && 
+                (originalDocNumber != document.DocumentNumber || originalDescription != document.Description))
+            {
+                // Attempt to rename the file
+                bool success = Helpers.FileOperations.RenameDocumentFile(
+                    document, 
+                    document.DocumentNumber, 
+                    document.Description);
+
+                if (!success)
+                {
+                    // If file rename failed, revert metadata changes
+                    document.DocumentNumber = originalDocNumber;
+                    document.Description = originalDescription;
+                    document.FilePath = originalFilePath;
+                    
+                    MessageBox.Show(
+                        "Failed to rename the file. The document metadata has not been updated.",
+                        "File Rename Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    
+                    return;
+                }
+            }
+
+            // Save changes to project data
+            _project.SaveProjectData();
+
+            // Refresh views
+            DocumentGrid.Items.Refresh();
+            RevisionTimeline.Items.Refresh();
         }
     }
 
@@ -1563,5 +1638,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
         
         return distributionText.Length > 0 ? distributionText.ToString() : "No recipients selected";
+    }
+
+    private void DocumentGrid_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.F2 && DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
+        {
+            EditDocument(selectedDoc);
+            e.Handled = true;
+        }
     }
 }
