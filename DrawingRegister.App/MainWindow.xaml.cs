@@ -1003,18 +1003,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 });
 
                 // Right side - Registration info
-                row.RelativeItem().Column(rightCol =>
+                row.RelativeItem(2).Column(rightCol =>
                 {
                     rightCol.Item().Row(r =>
                     {
                         r.RelativeItem().AlignLeft().Text("REG NO:").Bold();
-                        r.RelativeItem().AlignLeft().Text((_project.RegisterNumber ?? "").ToUpper());
+                        r.RelativeItem(3).AlignLeft().Text((_project.RegisterNumber ?? "").ToUpper());
                     });
 
                     rightCol.Item().Row(r =>
                     {
                         r.RelativeItem().AlignLeft().Text("CLIENT NO:").Bold();
-                        r.RelativeItem().AlignLeft().Text((_project.ClientNumber ?? "").ToUpper());
+                        r.RelativeItem(3).AlignLeft().Text((_project.ClientNumber ?? "").ToUpper());
                     });
                     
                     // Add transmittal number if this is a transmittal
@@ -1025,7 +1025,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             r.RelativeItem().AlignLeft().Text("TRANSMITTAL NO:").Bold();
                             // Generate a transmittal number based on register number and date
                             string transmittalNo = $"{_project.RegisterNumber}-T{DateTime.Now:yyMMdd}";
-                            r.RelativeItem().AlignLeft().Text(transmittalNo);
+                            r.RelativeItem(3).AlignLeft().Text(transmittalNo.ToUpper());
                         });
                     }
                 });
@@ -1101,7 +1101,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         c.Background("#ffffff")
                          .Padding(5)
                          .AlignLeft()
-                         .Text(x => x.Span("Distribution :").Bold());
+                         .Text(x => x.Span("DISTRIBUTION :").Bold());
                     });
                     
                     issueInfoTable.Cell().Element(c =>
@@ -1109,10 +1109,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         c.Background("#ffffff").Padding(5).Column(distributionColumn =>
                         {
                             // Get distribution text
-                            string distributionText = "No recipients selected";
+                            string distributionText = "NO RECIPIENTS SELECTED";
                             if (selectedDate.HasValue)
                             {
-                                distributionText = GetDistributionTextForPdf(selectedDate.Value);
+                                distributionText = GetDistributionTextForPdf(selectedDate.Value).ToUpper();
                             }
                             
                             // Split by lines and create a row for each category
@@ -1130,7 +1130,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         c.Background("#ffffff")
                          .Padding(5)
                          .AlignLeft()
-                         .Text(x => x.Span("Purpose of Issue :").Bold());
+                         .Text(x => x.Span("PURPOSE OF ISSUE :").Bold());
                     });
                     
                     issueInfoTable.Cell().Element(c =>
@@ -1143,11 +1143,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             });
                             
                             // Get the purpose from the UI
-                            string purpose = "Not specified";
+                            string purpose = "NOT SPECIFIED";
                             if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem && 
                                 purposeItem.Content.ToString() != "All")
                             {
-                                purpose = purposeItem.Content.ToString();
+                                purpose = purposeItem.Content.ToString().ToUpper();
                             }
                             
                             purposeTable.Cell().Element(c => c.Text(purpose));
@@ -1160,7 +1160,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         c.Background("#ffffff")
                          .Padding(5)
                          .AlignLeft()
-                         .Text(x => x.Span("Method of Issue :").Bold());
+                         .Text(x => x.Span("METHOD OF ISSUE :").Bold());
                     });
                     
                     issueInfoTable.Cell().Element(c =>
@@ -1173,11 +1173,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             });
                             
                             // Get the method from the UI
-                            string method = "Not specified";
+                            string method = "NOT SPECIFIED";
                             if (MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem && 
                                 methodItem.Content.ToString() != "All")
                             {
-                                method = methodItem.Content.ToString();
+                                method = methodItem.Content.ToString().ToUpper();
                             }
                             
                             methodTable.Cell().Element(c => c.Text(method));
@@ -1190,7 +1190,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         c.Background("#ffffff")
                          .Padding(5)
                          .AlignLeft()
-                         .Text(x => x.Span("Issued by :").Bold());
+                         .Text(x => x.Span("ISSUED BY :").Bold());
                     });
                     
                     issueInfoTable.Cell().Element(c =>
@@ -1203,7 +1203,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             });
                             
                             string issuedByText = IssuedByFilter?.Text ?? "";
-                            issuedByTable.Cell().Element(c => c.AlignLeft().Text(issuedByText));
+                            issuedByTable.Cell().Element(c => c.AlignLeft().Text(issuedByText.ToUpper()));
                         });
                     });
                 });
@@ -1343,7 +1343,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignLeft()
                          .AlignMiddle()
-                         .Text(doc.DocumentNumber);
+                         .Text(doc.DocumentNumber.ToUpper());
                     });
                     
                     table.Cell().Element(c =>
@@ -1352,7 +1352,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignLeft()
                          .AlignMiddle()
-                         .Text(doc.Description);
+                         .Text(doc.Description.ToUpper());
                     });
                     
                     table.Cell().Element(c =>
@@ -1361,7 +1361,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignLeft()
                          .AlignMiddle()
-                         .Text(doc.Package);
+                         .Text(doc.Package.ToUpper());
                     });
                     
                     table.Cell().Element(c =>
@@ -1370,7 +1370,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignLeft()
                          .AlignMiddle()
-                         .Text(doc.DocumentType);
+                         .Text(doc.DocumentType.ToUpper());
                     });
                     
                     table.Cell().Element(c =>
@@ -1379,7 +1379,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignLeft()
                          .AlignMiddle()
-                         .Text(doc.Size);
+                         .Text(doc.Size.ToUpper());
                     });
                     
                     table.Cell().Element(c =>
@@ -1388,7 +1388,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignLeft()
                          .AlignMiddle()
-                         .Text(latestRev.Value?.Revision ?? "");
+                         .Text((latestRev.Value?.Revision ?? "").ToUpper());
                     });
                     
                     table.Cell().Element(c =>
@@ -1415,7 +1415,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                                  .Padding(5)
                                  .AlignLeft()
                                  .AlignMiddle()
-                                 .Text(revision);
+                                 .Text(revision.ToUpper());
                             });
                         }
                     }

@@ -306,7 +306,7 @@
                 <Border x:Name="DistributionSummaryBorder" BorderBrush="#ddd" BorderThickness="1" CornerRadius="4" Padding="10,5" 
                         Margin="0,0,20,0" Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Distribution: " FontWeight="SemiBold" FontSize="14"/>
+                        <TextBlock Text="DISTRIBUTION: " FontWeight="SemiBold" FontSize="14"/>
                         <TextBlock x:Name="DistributionSummaryText" Text="No recipients" FontSize="14"/>
                     </StackPanel>
                 </Border>
@@ -385,7 +385,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     
-                    <TextBlock Grid.Column="0" Text="Distribution:" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="0" Text="DISTRIBUTION:" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
                     <TextBlock x:Name="DistributionInfoText" Grid.Column="1" Text="No recipients selected" 
                                HorizontalAlignment="Left" VerticalAlignment="Center" 
                                Margin="0,5,10,5" TextWrapping="Wrap"/>
@@ -404,19 +404,19 @@
                     </Grid.ColumnDefinitions>
                     
                     <!-- Purpose of Issue -->
-                    <TextBlock Grid.Column="0" Text="Purpose of Issue" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="0" Text="PURPOSE OF ISSUE" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
                     <Border Grid.Column="1" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
                         <TextBlock x:Name="CurrentPurposeIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
                     </Border>
                     
                     <!-- Method of Issue -->
-                    <TextBlock Grid.Column="2" Text="Method of Issue" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="2" Text="METHOD OF ISSUE" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
                     <Border Grid.Column="3" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
                         <TextBlock x:Name="CurrentMethodIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
                     </Border>
                     
                     <!-- Issued By -->
-                    <TextBlock Grid.Column="4" Text="Issued By" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="4" Text="ISSUED BY" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
                     <Border Grid.Column="5" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
                         <TextBlock x:Name="CurrentIssuedByIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
                     </Border>
@@ -430,7 +430,7 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     
-                    <TextBlock Grid.Column="0" Text="Date of Issue" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
+                    <TextBlock Grid.Column="0" Text="DATE OF ISSUE" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
                     <Border Grid.Column="1" BorderBrush="Black" BorderThickness="1" Width="100" Height="25" Margin="0,5,10,5">
                         <TextBlock x:Name="CurrentIssueDate" Text="{Binding ElementName=IssueDateFilter, Path=SelectedItem.Content}" 
                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
