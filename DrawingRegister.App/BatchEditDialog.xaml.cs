@@ -16,6 +16,7 @@ namespace DrawingRegister.App
         private readonly ProjectManager _project;
         private List<DocumentMetadata> _filteredDocuments = new();
         private Dictionary<string, List<DocumentMetadata>> _folderDocuments = new();
+        private Dictionary<DateTime, Dictionary<string, List<DocumentMetadata>>> _dateAndFolderDocuments = new();
         private ObservableCollection<DistributionCompanyViewModel> _distributionCompanies = new();
         private DateTime _selectedIssueDate;
 
@@ -32,6 +33,9 @@ namespace DrawingRegister.App
                 // Initialize folder combo
                 PopulateSubfolders();
                 
+                // Initialize date and folder combo
+                PopulateDateAndFolderCombos();
+                
                 // Set initial filtered documents
                 UpdateFilteredDocuments();
                 
@@ -45,6 +49,7 @@ namespace DrawingRegister.App
                 // Set default visibility
                 DateSelectionPanel.Visibility = Visibility.Visible;
                 FolderSelectionPanel.Visibility = Visibility.Collapsed;
+                DateAndFolderSelectionPanel.Visibility = Visibility.Collapsed;
             }
             catch (Exception ex)
             {
@@ -266,11 +271,176 @@ namespace DrawingRegister.App
             DistributionList.ItemsSource = cvs.View;
         }
         
+        private void PopulateDateAndFolderCombos()
+        {
+            try
+            {
+                DateAndFolderDateCombo.Items.Clear();
+                _dateAndFolderDocuments.Clear();
+
+                var issueDates = _project.Documents
+                    .SelectMany(d => d.RevisionHistory.Keys)
+                    .Select(d => d.Date)
+                    .Distinct()
+                    .OrderByDescending(d => d)
+                    .ToList();
+
+                foreach (var date in issueDates)
+                {
+                    var item = new ComboBoxItem { Content = date.ToString("dd/MM/yyyy"), Tag = date };
+                    DateAndFolderDateCombo.Items.Add(item);
+
+                    _dateAndFolderDocuments[date] = new Dictionary<string, List<DocumentMetadata>>();
+
+                    string basePath = @"W:\02-PROJECTS\17700 - FILES\17749\02 - ENG\02 - DRAWINGS\02 - OUTGOING\01 - PDF\01-DRAWING ISSUES";
+                    var subfolders = Directory.GetDirectories(basePath, $"{date:yyyyMMdd}*");
+
+                    foreach (var folder in subfolders)
+                    {
+                        if (!_dateAndFolderDocuments[date].ContainsKey(folder))
+                            _dateAndFolderDocuments[date][folder] = new List<DocumentMetadata>();
+
+                        var docsInFolder = _project.Documents.Where(d => d.FilePath.StartsWith(folder)).ToList();
+                        _dateAndFolderDocuments[date][folder].AddRange(docsInFolder);
+                    }
+                }
+
+                if (DateAndFolderDateCombo.Items.Count > 0)
+                {
+                    DateAndFolderDateCombo.SelectedIndex = 0;
+                    if (DateAndFolderDateCombo.SelectedItem is ComboBoxItem selectedItem && selectedItem.Tag is DateTime selectedDate)
+                        PopulateDateAndFolderSubfolderCombo(selectedDate);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in PopulateDateAndFolderCombos: {ex.Message}");
+            }
+        }
+        
+        private void PopulateDateAndFolderSubfolderCombo(DateTime selectedDate)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"==== POPULATING DATE AND FOLDER SUBFOLDER COMBO FOR {selectedDate.ToString("dd/MM/yyyy")} ====");
+                
+                if (DateAndFolderSubfolderCombo != null)
+                {
+                    DateAndFolderSubfolderCombo.Items.Clear();
+                    
+                    if (_dateAndFolderDocuments.TryGetValue(selectedDate, out var foldersForDate))
+                    {
+                        // Debug output to verify folder grouping
+                        System.Diagnostics.Debug.WriteLine($"Found {foldersForDate.Count} folders for date {selectedDate.ToString("dd/MM/yyyy")}");
+                        
+                        // Add folders to combo box
+                        foreach (var folder in foldersForDate.Keys.OrderByDescending(f => 
+                        {
+                            try { return new DirectoryInfo(f).Name; }
+                            catch { return string.Empty; }
+                        }))
+                        {
+                            try
+                            {
+                                string folderName = new DirectoryInfo(folder).Name;
+                                
+                                // Try to extract date and description
+                                var match = System.Text.RegularExpressions.Regex.Match(folderName, @"^(\d{8})(.*)");
+                                string displayName = folderName;
+                                
+                                if (match.Success)
+                                {
+                                    string dateStr = match.Groups[1].Value;
+                                    string description = match.Groups[2].Value.Trim('-', '_', ' ');
+                                    
+                                    // Format as "YYYYMMDD - Description" if there is a description
+                                    if (!string.IsNullOrWhiteSpace(description))
+                                    {
+                                        displayName = $"{dateStr} - {description}";
+                                    }
+                                    else
+                                    {
+                                        displayName = dateStr;
+                                    }
+                                }
+                                
+                                // Add to combo box with full folder path as Tag
+                                var item = new ComboBoxItem { Content = displayName, Tag = folder };
+                                DateAndFolderSubfolderCombo.Items.Add(item);
+                                
+                                // Debug output to verify folder paths and document counts
+                                int docCount = foldersForDate[folder].Count;
+                                System.Diagnostics.Debug.WriteLine($"Added folder: {displayName} with path {folder} containing {docCount} documents");
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Error adding folder to combo box: {ex.Message}");
+                                // Continue with next folder
+                            }
+                        }
+                        
+                        if (DateAndFolderSubfolderCombo.Items.Count > 0)
+                        {
+                            DateAndFolderSubfolderCombo.SelectedIndex = 0;
+                            System.Diagnostics.Debug.WriteLine($"Set DateAndFolderSubfolderCombo.SelectedIndex to 0");
+                            
+                            if (DateAndFolderSubfolderCombo.SelectedItem is ComboBoxItem selectedItem)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Selected folder item: Content={selectedItem.Content}, Tag={selectedItem.Tag}");
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("No subfolders found for the selected date");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"No folders found for date {selectedDate.ToString("dd/MM/yyyy")}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("DateAndFolderSubfolderCombo is null");
+                }
+                
+                System.Diagnostics.Debug.WriteLine("==== DATE AND FOLDER SUBFOLDER COMBO POPULATED ====");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in PopulateDateAndFolderSubfolderCombo: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            }
+        }
+        
+        private void DateAndFolderDate_Changed(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                if (DateAndFolderDateCombo != null && DateAndFolderDateCombo.SelectedItem is ComboBoxItem selectedItem && 
+                    selectedItem.Tag is DateTime selectedDate)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Date and folder date changed to {selectedDate.ToString("dd/MM/yyyy")}");
+                    
+                    // Update the subfolder combo for the selected date
+                    PopulateDateAndFolderSubfolderCombo(selectedDate);
+                    
+                    // Update filtered documents
+                    UpdateFilteredDocuments();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in DateAndFolderDate_Changed: {ex.Message}");
+                System.Windows.MessageBox.Show($"Error in DateAndFolderDate_Changed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        
         private void FilterOption_Changed(object sender, RoutedEventArgs e)
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"Filter option changed: Date={FilterByDate?.IsChecked}, Folder={FilterByFolder?.IsChecked}");
+                System.Diagnostics.Debug.WriteLine($"Filter option changed: Date={FilterByDate?.IsChecked}, Folder={FilterByFolder?.IsChecked}, DateAndFolder={FilterByDateAndFolder?.IsChecked}");
                 
                 // Show/hide appropriate selection panels
                 if (DateSelectionPanel != null && FilterByDate != null)
@@ -278,6 +448,9 @@ namespace DrawingRegister.App
                 
                 if (FolderSelectionPanel != null && FilterByFolder != null)
                     FolderSelectionPanel.Visibility = FilterByFolder.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+                
+                if (DateAndFolderSelectionPanel != null && FilterByDateAndFolder != null)
+                    DateAndFolderSelectionPanel.Visibility = FilterByDateAndFolder.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
                 
                 // Clear the preview grid first
                 if (PreviewGrid != null)
@@ -350,11 +523,14 @@ namespace DrawingRegister.App
                 System.Diagnostics.Debug.WriteLine("==== FILTER STATE ====");
                 System.Diagnostics.Debug.WriteLine($"FilterByDate: {FilterByDate?.IsChecked}");
                 System.Diagnostics.Debug.WriteLine($"FilterByFolder: {FilterByFolder?.IsChecked}");
+                System.Diagnostics.Debug.WriteLine($"FilterByDateAndFolder: {FilterByDateAndFolder?.IsChecked}");
                 System.Diagnostics.Debug.WriteLine($"IssueDateCombo selected index: {IssueDateCombo?.SelectedIndex}");
                 System.Diagnostics.Debug.WriteLine($"SubfolderCombo selected index: {SubfolderCombo?.SelectedIndex}");
+                System.Diagnostics.Debug.WriteLine($"DateAndFolderDateCombo selected index: {DateAndFolderDateCombo?.SelectedIndex}");
+                System.Diagnostics.Debug.WriteLine($"DateAndFolderSubfolderCombo selected index: {DateAndFolderSubfolderCombo?.SelectedIndex}");
                 System.Diagnostics.Debug.WriteLine("=====================");
                 
-                if (FilterByDate != null && FilterByDate.IsChecked == true)
+                if (FilterByDate?.IsChecked == true)
                 {
                     // Filter by date
                     if (IssueDateCombo != null && IssueDateCombo.SelectedItem is ComboBoxItem selectedDateItem && selectedDateItem.Tag != null)
@@ -435,15 +611,20 @@ namespace DrawingRegister.App
                             System.Diagnostics.Debug.WriteLine($"IssueDateCombo.SelectedItem: {IssueDateCombo.SelectedItem}");
                     }
                 }
-                else if (FilterByFolder != null && FilterByFolder.IsChecked == true)
+                else if (FilterByFolder?.IsChecked == true)
                 {
                     // Filter by folder
-                    if (SubfolderCombo != null && SubfolderCombo.SelectedItem is ComboBoxItem selectedFolderItem)
+                    if (SubfolderCombo?.SelectedItem is ComboBoxItem selectedFolderItem)
                     {
                         string folderPath = selectedFolderItem.Tag as string;
+                        System.Diagnostics.Debug.WriteLine($"Filtering by folder path: {folderPath}");
                         
                         if (!string.IsNullOrEmpty(folderPath))
                         {
+                            // Normalize the selected folder path
+                            folderPath = Path.GetFullPath(folderPath).TrimEnd('\\', '/');
+                            System.Diagnostics.Debug.WriteLine($"Normalized folder path: {folderPath}");
+                            
                             // Try to find the folder in the dictionary (case-sensitive)
                             if (_folderDocuments.TryGetValue(folderPath, out var docsInFolder))
                             {
@@ -451,7 +632,101 @@ namespace DrawingRegister.App
                                 
                                 foreach (var doc in docsInFolder)
                                 {
-                                    System.Diagnostics.Debug.WriteLine($"Adding document {doc.DocumentNumber} from folder {folderPath}");
+                                    try
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"Processing document {doc.DocumentNumber} from folder {folderPath}");
+                                        
+                                        // Normalize document path for comparison
+                                        string docPath = !string.IsNullOrEmpty(doc.FilePath) 
+                                            ? Path.GetDirectoryName(Path.GetFullPath(doc.FilePath))?.TrimEnd('\\', '/') 
+                                            : null;
+                                            
+                                        System.Diagnostics.Debug.WriteLine($"Document path: {docPath}");
+                                        
+                                        if (string.Equals(docPath, folderPath, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            // Make sure the document has the current values from the latest revision
+                                            var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+                                            if (latestRevision.Value != null)
+                                            {
+                                                doc.PurposeOfIssue = latestRevision.Value.Purpose;
+                                                doc.MethodOfIssue = latestRevision.Value.Method;
+                                                doc.IssuedBy = latestRevision.Value.IssuedBy;
+                                            }
+                                            
+                                            _filteredDocuments.Add(doc);
+                                            System.Diagnostics.Debug.WriteLine($"Added document {doc.DocumentNumber} to filtered list");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"Error processing document {doc.DocumentNumber}: {ex.Message}");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"No documents found in folder dictionary for path: {folderPath}");
+                                
+                                // Fallback: Search through all documents for matching paths
+                                foreach (var doc in _project.Documents)
+                                {
+                                    try
+                                    {
+                                        if (string.IsNullOrEmpty(doc.FilePath))
+                                            continue;
+                                            
+                                        string docPath = Path.GetDirectoryName(Path.GetFullPath(doc.FilePath))?.TrimEnd('\\', '/');
+                                        
+                                        if (string.Equals(docPath, folderPath, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+                                            if (latestRevision.Value != null)
+                                            {
+                                                doc.PurposeOfIssue = latestRevision.Value.Purpose;
+                                                doc.MethodOfIssue = latestRevision.Value.Method;
+                                                doc.IssuedBy = latestRevision.Value.IssuedBy;
+                                            }
+                                            
+                                            _filteredDocuments.Add(doc);
+                                            System.Diagnostics.Debug.WriteLine($"Added document {doc.DocumentNumber} to filtered list (from fallback search)");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"Error in fallback search for document {doc.DocumentNumber}: {ex.Message}");
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("Selected folder path is null or empty");
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("No folder selected in SubfolderCombo");
+                    }
+                }
+                else if (FilterByDateAndFolder?.IsChecked == true)
+                {
+                    // Filter by date and folder
+                    if (DateAndFolderDateCombo != null && DateAndFolderDateCombo.SelectedItem is ComboBoxItem selectedDateItem && 
+                        DateAndFolderSubfolderCombo != null && DateAndFolderSubfolderCombo.SelectedItem is ComboBoxItem selectedFolderItem)
+                    {
+                        if (selectedDateItem.Tag is DateTime selectedDate && selectedFolderItem.Tag is string folderPath)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Filtering by date {selectedDate.ToString("dd/MM/yyyy")} and folder {folderPath}");
+                            
+                            if (_dateAndFolderDocuments.TryGetValue(selectedDate, out var foldersForDate) && 
+                                foldersForDate.TryGetValue(folderPath, out var docsInFolder))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"Found {docsInFolder.Count} documents in folder {folderPath} for date {selectedDate.ToString("dd/MM/yyyy")}");
+                                
+                                foreach (var doc in docsInFolder)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Adding document {doc.DocumentNumber} from folder {folderPath} for date {selectedDate.ToString("dd/MM/yyyy")}");
                                     
                                     // Make sure the document has the current values from the latest revision
                                     var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
@@ -464,42 +739,19 @@ namespace DrawingRegister.App
                                     
                                     _filteredDocuments.Add(doc);
                                 }
+                                
+                                // Set the selected issue date for distribution
+                                _selectedIssueDate = selectedDate;
                             }
                             else
                             {
-                                // Try case-insensitive match as fallback
-                                var matchingKey = _folderDocuments.Keys.FirstOrDefault(k => 
-                                    string.Equals(k, folderPath, StringComparison.OrdinalIgnoreCase));
-                                    
-                                if (matchingKey != null && _folderDocuments.TryGetValue(matchingKey, out var docsInMatchingFolder))
-                                {
-                                    System.Diagnostics.Debug.WriteLine($"Found case-insensitive match: {matchingKey}");
-                                    
-                                    foreach (var doc in docsInMatchingFolder)
-                                    {
-                                        System.Diagnostics.Debug.WriteLine($"Adding document {doc.DocumentNumber} from folder {matchingKey}");
-                                        
-                                        // Make sure the document has the current values from the latest revision
-                                        var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                                        if (latestRevision.Value != null)
-                                        {
-                                            doc.PurposeOfIssue = latestRevision.Value.Purpose;
-                                            doc.MethodOfIssue = latestRevision.Value.Method;
-                                            doc.IssuedBy = latestRevision.Value.IssuedBy;
-                                        }
-                                        
-                                        _filteredDocuments.Add(doc);
-                                    }
-                                }
+                                System.Diagnostics.Debug.WriteLine($"No documents found for date {selectedDate.ToString("dd/MM/yyyy")} and folder {folderPath}");
                             }
                         }
                     }
                     else
                     {
-                        // No folder selected, show a message
-                        System.Diagnostics.Debug.WriteLine("No folder selected or invalid folder selection");
-                        if (SubfolderCombo != null)
-                            System.Diagnostics.Debug.WriteLine($"SubfolderCombo.SelectedItem: {SubfolderCombo.SelectedItem}");
+                        System.Diagnostics.Debug.WriteLine("No date or folder selected for date and folder filter");
                     }
                 }
                 else
@@ -526,6 +778,16 @@ namespace DrawingRegister.App
                     PreviewGrid.ItemsSource = null; // Clear first to force refresh
                     PreviewGrid.ItemsSource = _filteredDocuments;
                     System.Diagnostics.Debug.WriteLine($"Updated preview grid with {_filteredDocuments.Count} documents");
+                    
+                    // Force the grid to refresh its view
+                    if (PreviewGrid.Items != null)
+                    {
+                        System.Windows.Data.CollectionViewSource.GetDefaultView(PreviewGrid.ItemsSource)?.Refresh();
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("PreviewGrid is null");
                 }
                 
                 // Try to detect common values

@@ -26,6 +26,7 @@
             <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                 <RadioButton x:Name="FilterByDate" Content="Issue Date" IsChecked="True" Margin="0,0,15,0" Checked="FilterOption_Changed"/>
                 <RadioButton x:Name="FilterByFolder" Content="Subfolder" Margin="0,0,15,0" Checked="FilterOption_Changed"/>
+                <RadioButton x:Name="FilterByDateAndFolder" Content="Date and Subfolder" Margin="0,0,15,0" Checked="FilterOption_Changed"/>
             </StackPanel>
 
             <!-- Date Selection -->
@@ -42,6 +43,22 @@
                           ToolTipService.ShowDuration="5000">
                     <!-- The items will be populated programmatically -->
                 </ComboBox>
+            </StackPanel>
+            
+            <!-- Date and Folder Selection -->
+            <StackPanel x:Name="DateAndFolderSelectionPanel" Orientation="Vertical" Margin="0,0,0,10" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <TextBlock Text="Select Issue Date:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="DateAndFolderDateCombo" Width="200" SelectionChanged="DateAndFolderDate_Changed"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Select Subfolder:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="DateAndFolderSubfolderCombo" Width="450" SelectionChanged="FilterCriteria_Changed"
+                              ToolTip="Select a subfolder for the selected date"
+                              ToolTipService.ShowDuration="5000">
+                        <!-- The items will be populated programmatically -->
+                    </ComboBox>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
 

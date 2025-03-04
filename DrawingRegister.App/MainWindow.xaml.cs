@@ -177,7 +177,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         
         if (selectedContent == "All Dates")
         {
-            DocumentGrid.ItemsSource = _project.Documents;
+            DocumentGrid.ItemsSource = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
             
             // Hide distribution summary and disable view button
             DistributionSummaryBorder.Visibility = Visibility.Collapsed;
@@ -194,9 +194,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Parse date using the new format
         if (DateTime.TryParseExact(selectedContent, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
         {
-            // Get all documents for this date
+            // Get all documents for this EXACT date only
             var docsForDate = _project.Documents
-                .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Date))
+                .Where(d => d.RevisionHistory.Keys.Any(date => date.Date == selectedDate.Date))
                 .OrderBy(d => d.DocumentNumber)
                 .ToList();
 
@@ -467,6 +467,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         .ToList();
                     break;
             }
+        }
+        
+        // Check if we have a date filter from IssueDateFilter
+        DateTime? selectedDate = null;
+        if (IssueDateFilter.SelectedItem is ComboBoxItem dateItem && dateItem.Content.ToString() != "All Dates")
+        {
+            if (DateTime.TryParseExact(dateItem.Content.ToString(), "dd/MM/yyyy", null, 
+                System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                selectedDate = parsedDate.Date;
+            }
+        }
+        
+        // Apply date filter if selected
+        if (selectedDate.HasValue)
+        {
+            filteredDocs = filteredDocs
+                .Where(d => d.RevisionHistory.Keys.Any(date => date.Date == selectedDate.Value.Date))
+                .ToList();
         }
         
         // Apply purpose filter
@@ -765,12 +784,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            DocumentGrid.ItemsSource = _project.Documents
-                .Where(d => d.RevisionHistory.Any(r => 
-                    r.Key.Date >= startDate && 
-                    r.Key.Date <= endDate))
+            // Filter documents that have revisions with exact issue dates in the range
+            var filteredDocuments = _project.Documents
+                .Where(d => d.RevisionHistory.Keys
+                    .Any(issueDate => issueDate.Date >= startDate && issueDate.Date <= endDate))
                 .OrderBy(d => d.DocumentNumber)
                 .ToList();
+
+            DocumentGrid.ItemsSource = filteredDocuments;
+            
+            // Show a message with the filter results
+            MessageBox.Show($"Showing {filteredDocuments.Count} documents issued between {startDate:dd/MM/yyyy} and {endDate:dd/MM/yyyy}", 
+                "Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -782,7 +807,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         StartDatePicker.SelectedDate = null;
         EndDatePicker.SelectedDate = null;
-        DocumentGrid.ItemsSource = _project.Documents;
+        
+        // Reset to show all documents
+        DocumentGrid.ItemsSource = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
+        
+        // Inform the user
+        MessageBox.Show("Date filter cleared. Showing all documents.", 
+            "Filter Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void SaveIssueDetails_Click(object sender, RoutedEventArgs e)
