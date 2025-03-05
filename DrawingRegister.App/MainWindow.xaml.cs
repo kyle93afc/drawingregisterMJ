@@ -284,7 +284,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         ResetIndicator(PurposeA);
         ResetIndicator(PurposeC);
         ResetIndicator(PurposeI);
+        ResetIndicator(PurposeP);
         ResetIndicator(PurposeT);
+        ResetIndicator(PurposeW);
         
         // Reset all method indicators
         ResetIndicator(MethodE);
@@ -310,8 +312,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 HighlightIndicator(PurposeC);
             else if (currentPurpose.StartsWith("I"))
                 HighlightIndicator(PurposeI);
+            else if (currentPurpose.StartsWith("P"))
+                HighlightIndicator(PurposeP);
             else if (currentPurpose.StartsWith("T"))
                 HighlightIndicator(PurposeT);
+            else if (currentPurpose.StartsWith("W"))
+                HighlightIndicator(PurposeW);
         }
         
         // Highlight the selected method
