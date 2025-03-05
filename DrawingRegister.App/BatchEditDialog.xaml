@@ -74,6 +74,8 @@
                     <ComboBoxItem Content="C - Construction"/>
                     <ComboBoxItem Content="I - Information"/>
                     <ComboBoxItem Content="T - Tender"/>
+                    <ComboBoxItem Content="W - Warrant"/>
+                    <ComboBoxItem Content="P - Planning"/>
                 </ComboBox>
                 <CheckBox x:Name="UpdatePurposeCheck" Content="Update Purpose" IsChecked="True"/>
             </StackPanel>

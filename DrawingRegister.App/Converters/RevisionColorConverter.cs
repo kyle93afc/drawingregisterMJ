@@ -15,6 +15,8 @@ namespace DrawingRegister.App.Converters
                 "APPROVAL" => System.Windows.Media.Brushes.LightGreen,
                 "CONSTRUCTION" => System.Windows.Media.Brushes.Gold,
                 "TENDER" => System.Windows.Media.Brushes.Violet,
+                "WARRANT" => System.Windows.Media.Brushes.Orange,
+                "PLANNING" => System.Windows.Media.Brushes.LightCoral,
                 _ => System.Windows.Media.Brushes.WhiteSmoke
             };
         }
