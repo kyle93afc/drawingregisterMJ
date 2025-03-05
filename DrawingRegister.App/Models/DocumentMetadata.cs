@@ -91,6 +91,7 @@ namespace DrawingRegister.App.Models
                 "TENDER" => "T",
                 "PLANNING" => "P",
                 "INFORMATION" => "I",
+                "WARRANT" => "W",
                 _ => null
             };
 
