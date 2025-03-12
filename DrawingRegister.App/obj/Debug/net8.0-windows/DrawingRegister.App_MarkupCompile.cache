@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET8_0;NETCOREAPP
 C:\temp\drawingregisterMJ\DrawingRegister.App\App.xaml
-22016470225
-
-141533465818
-212-2060532510
-MainWindow.xaml;RevisionEditDialog.xaml;
+10217141956
+11208194685
+28-1510543965
+211-1566272324
+BatchEditDialog.xaml;CompanyDialog.xaml;Dictionary1.xaml;DistributionDialog.xaml;DistributionInfoDialog.xaml;DocumentEditDialog.xaml;FolderProgressWindow.xaml;MainWindow.xaml;RevisionEditDialog.xaml;StakeholderDialog.xaml;
 
 False
 

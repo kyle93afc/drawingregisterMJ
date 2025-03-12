@@ -937,6 +937,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             page.Header().Element(header => ComposeHeader(header, isTransmittal));
                             page.Content().Element(content => ComposeContent(content, isTransmittal));
                             
+                            // Only add page numbers in the footer, no transmittal confirmation here
                             page.Footer().AlignCenter().Text(text =>
                             {
                                 text.CurrentPageNumber();
@@ -1250,7 +1251,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 });
             }
 
-            // Add document table
+            // Add the main document table
             column.Item().Table(table =>
             {
                 // Define columns with better proportions
@@ -1455,9 +1456,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 }
             });
             
-            // Add transmittal footer if this is a transmittal
+            // Add transmittal footer if this is a transmittal, but only on the last page
             if (isTransmittal)
             {
+                column.Item().PageBreak();  // Force a page break before the confirmation
                 column.Item().PaddingTop(20).Row(row =>
                 {
                     row.RelativeItem().Column(col =>
