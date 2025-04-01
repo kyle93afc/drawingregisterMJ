@@ -290,18 +290,58 @@ namespace DrawingRegister.App
                     var item = new ComboBoxItem { Content = date.ToString("dd/MM/yyyy"), Tag = date };
                     DateAndFolderDateCombo.Items.Add(item);
 
-                    _dateAndFolderDocuments[date] = new Dictionary<string, List<DocumentMetadata>>();
+                    // Store the physical folders found for this date, but DON'T link documents yet.
+                    _dateAndFolderDocuments[date] = new Dictionary<string, List<DocumentMetadata>>(); 
 
-                    string basePath = @"W:\02-PROJECTS\17700 - FILES\17749\02 - ENG\02 - DRAWINGS\02 - OUTGOING\01 - PDF\01-DRAWING ISSUES";
-                    var subfolders = Directory.GetDirectories(basePath, $"{date:yyyyMMdd}*");
+                    string basePath = _project._currentBasePath;
+                    System.Diagnostics.Debug.WriteLine($"PopulateDateAndFolderCombos: Using base path: {basePath}");
 
-                    foreach (var folder in subfolders)
+                    // Log existing FilePaths (can be removed later if desired)
+                    System.Diagnostics.Debug.WriteLine("PopulateDateAndFolderCombos: Document FilePaths before processing date {date:dd/MM/yyyy}:");
+                    foreach(var doc in _project.Documents)
                     {
-                        if (!_dateAndFolderDocuments[date].ContainsKey(folder))
-                            _dateAndFolderDocuments[date][folder] = new List<DocumentMetadata>();
+                        System.Diagnostics.Debug.WriteLine($"  - Doc: {doc.DocumentNumber}, FilePath: {(string.IsNullOrEmpty(doc.FilePath) ? "<NULL_OR_EMPTY>" : doc.FilePath)}");
+                    }
+                    System.Diagnostics.Debug.WriteLine("---- END Document FilePaths Logging ----");
+                    
+                    if (!string.IsNullOrEmpty(basePath) && Directory.Exists(basePath))
+                    {
+                        var subfolders = Directory.GetDirectories(basePath, $"{date:yyyyMMdd}*");
+                        System.Diagnostics.Debug.WriteLine($"PopulateDateAndFolderCombos: Found {subfolders.Length} physical subfolders for date {date:dd/MM/yyyy} pattern {date:yyyyMMdd}*");
 
-                        var docsInFolder = _project.Documents.Where(d => d.FilePath.StartsWith(folder)).ToList();
-                        _dateAndFolderDocuments[date][folder].AddRange(docsInFolder);
+                        foreach (var folder in subfolders)
+                        {
+                            // Check if any document revision for this date actually exists in this physical folder
+                            bool folderHasRelevantRevisions = false;
+                            foreach (var doc in _project.Documents)
+                            {
+                                if (doc.RevisionHistory.Any(r => r.Key.Date == date && 
+                                                              !string.IsNullOrEmpty(r.Value.FilePath) && 
+                                                              r.Value.FilePath.StartsWith(folder, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    folderHasRelevantRevisions = true;
+                                    break; // Found one, no need to check other docs for this folder
+                                }
+                            }
+
+                            if (folderHasRelevantRevisions)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"PopulateDateAndFolderCombos: Adding relevant folder key: {folder}");
+                                // Add the folder path as a key only if it contains relevant revisions
+                                if (!_dateAndFolderDocuments[date].ContainsKey(folder))
+                                { 
+                                    _dateAndFolderDocuments[date][folder] = new List<DocumentMetadata>(); // Initialize with empty list
+                                }
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"PopulateDateAndFolderCombos: Skipping folder (no relevant revisions found): {folder}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Base path is invalid or does not exist: {basePath}");
                     }
                 }
 
@@ -719,34 +759,64 @@ namespace DrawingRegister.App
                         {
                             System.Diagnostics.Debug.WriteLine($"Filtering by date {selectedDate.ToString("dd/MM/yyyy")} and folder {folderPath}");
                             
-                            if (_dateAndFolderDocuments.TryGetValue(selectedDate, out var foldersForDate) && 
-                                foldersForDate.TryGetValue(folderPath, out var docsInFolder))
+                            if (_dateAndFolderDocuments.TryGetValue(selectedDate, out var foldersForDate))
                             {
-                                System.Diagnostics.Debug.WriteLine($"Found {docsInFolder.Count} documents in folder {folderPath} for date {selectedDate.ToString("dd/MM/yyyy")}");
-                                
-                                foreach (var doc in docsInFolder)
+                                // ---- START NEW LOGGING ----
+                                System.Diagnostics.Debug.WriteLine($"UpdateFilteredDocuments: Keys available in foldersForDate for {selectedDate:dd/MM/yyyy}:");
+                                foreach (var key in foldersForDate.Keys)
                                 {
-                                    System.Diagnostics.Debug.WriteLine($"Adding document {doc.DocumentNumber} from folder {folderPath} for date {selectedDate.ToString("dd/MM/yyyy")}");
-                                    
-                                    // Make sure the document has the current values from the latest revision
-                                    var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                                    if (latestRevision.Value != null)
-                                    {
-                                        doc.PurposeOfIssue = latestRevision.Value.Purpose;
-                                        doc.MethodOfIssue = latestRevision.Value.Method;
-                                        doc.IssuedBy = latestRevision.Value.IssuedBy;
-                                    }
-                                    
-                                    _filteredDocuments.Add(doc);
+                                    System.Diagnostics.Debug.WriteLine($"  - Key: {key} (Has {foldersForDate[key].Count} docs)");
                                 }
-                                
-                                // Set the selected issue date for distribution
-                                _selectedIssueDate = selectedDate;
+                                System.Diagnostics.Debug.WriteLine("---- END NEW LOGGING ----");
+                                // ---- END NEW LOGGING ----
+
+                                if (foldersForDate.TryGetValue(folderPath, out var docsInFolder))
+                                {
+                                    // Replace dictionary lookup with direct iteration and filtering logic:
+                                    System.Diagnostics.Debug.WriteLine($"UpdateFilteredDocuments: Dictionary key found. Iterating documents for {selectedDate:dd/MM/yyyy} and folder {folderPath}");
+                                    foreach (var doc in _project.Documents)
+                                    {
+                                        var revisionOnDate = doc.RevisionHistory
+                                            .FirstOrDefault(r => r.Key.Date == selectedDate.Date);
+
+                                        if (revisionOnDate.Value != null && !string.IsNullOrEmpty(revisionOnDate.Value.FilePath))
+                                        {
+                                            try
+                                            {
+                                                string revisionFolderPath = Path.GetDirectoryName(revisionOnDate.Value.FilePath);
+                                                if (string.Equals(revisionFolderPath, folderPath, StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    System.Diagnostics.Debug.WriteLine($"  -> Match found: Doc {doc.DocumentNumber}, RevDate {revisionOnDate.Key}, RevPath {revisionOnDate.Value.FilePath}");
+                                                    var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).First();
+                                                    doc.PurposeOfIssue = latestRevision.Value.Purpose;
+                                                    doc.MethodOfIssue = latestRevision.Value.Method;
+                                                    doc.IssuedBy = latestRevision.Value.IssuedBy;
+                                                    _filteredDocuments.Add(doc);
+                                                }
+                                            }
+                                            catch (Exception pathEx)
+                                            {
+                                                System.Diagnostics.Debug.WriteLine($"Error getting directory for {revisionOnDate.Value.FilePath}: {pathEx.Message}");
+                                            }
+                                        }
+                                    }
+                                    _selectedIssueDate = selectedDate; 
+                                    System.Diagnostics.Debug.WriteLine($"UpdateFilteredDocuments: Iteration complete. Found {_filteredDocuments.Count} documents.");
+                                }
+                                else
+                                {
+                                     // This case should ideally not happen if PopulateDateAndFolderCombos added the physical folder key
+                                    System.Diagnostics.Debug.WriteLine($"Dictionary key {folderPath} NOT found for date {selectedDate.ToString("dd/MM/yyyy")}. This indicates an issue in PopulateDateAndFolderCombos.");
+                                }
                             }
                             else
-                            {
-                                System.Diagnostics.Debug.WriteLine($"No documents found for date {selectedDate.ToString("dd/MM/yyyy")} and folder {folderPath}");
+                            { 
+                                System.Diagnostics.Debug.WriteLine($"No folders found in dictionary for date {selectedDate.ToString("dd/MM/yyyy")}. Check PopulateDateAndFolderCombos.");
                             }
+                        }
+                        else
+                        { 
+                            System.Diagnostics.Debug.WriteLine("Selected date or folder path is invalid.");
                         }
                     }
                     else

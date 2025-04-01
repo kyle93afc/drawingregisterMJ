@@ -145,6 +145,13 @@ public class ProjectManager : INotifyPropertyChanged
                 }
 
                 Documents.Add(metadata);
+
+                // Ensure FilePath is set from the *absolute* latest revision after loading
+                if (metadata.RevisionHistory.Any())
+                {
+                    var latestRevisionEntry = metadata.RevisionHistory.OrderByDescending(kv => kv.Key).First();
+                    metadata.FilePath = latestRevisionEntry.Value.FilePath;
+                }
             }
 
             // Track which folders we've already processed
@@ -459,34 +466,32 @@ public class ProjectManager : INotifyPropertyChanged
             var existingDoc = Documents.FirstOrDefault(d => d.DocumentNumber == metadata.DocumentNumber);
             if (existingDoc != null)
             {
-                // Always add new revision regardless of purpose
+                // Always add new revision
                 if (!existingDoc.RevisionHistory.ContainsKey(revisionKey))
                 {
                     existingDoc.RevisionHistory[revisionKey] = revInfo;
-                    
-                    // Only update the file path if this is a newer revision
-                    if (revision != "-")
-                    {
-                        existingDoc.FilePath = filePath;
-                    }
                 }
-                // If same date exists, only update if this is a newer revision
+                // If same date/key exists, only update if this new one has a non-'-' revision 
+                // (assuming '-' is placeholder for initial/undetermined revision)
                 else if (revision != "-" && existingDoc.RevisionHistory[revisionKey].Revision == "-")
                 {
-                    existingDoc.RevisionHistory[revisionKey] = revInfo;
-                    existingDoc.FilePath = filePath;
-                    existingDoc.Description = description;
-                    existingDoc.Package = metadata.Package;
-                    existingDoc.DocumentType = metadata.DocumentType;
-                    existingDoc.Size = metadata.Size;
-                    existingDoc.PurposeOfIssue = purpose;
-                    existingDoc.MethodOfIssue = metadata.MethodOfIssue;
-                    existingDoc.IssuedBy = metadata.IssuedBy;
+                     existingDoc.RevisionHistory[revisionKey] = revInfo;
                 }
+                
+                // After potentially adding/updating a revision, always ensure the 
+                // document's main FilePath points to the one from the *latest* revision overall.
+                var latestOverallRevision = existingDoc.RevisionHistory.OrderByDescending(kv => kv.Key).First();
+                existingDoc.FilePath = latestOverallRevision.Value.FilePath;
+                
+                // Also update other metadata fields from the latest revision if needed
+                existingDoc.PurposeOfIssue = latestOverallRevision.Value.Purpose;
+                existingDoc.MethodOfIssue = latestOverallRevision.Value.Method;
+                existingDoc.IssuedBy = latestOverallRevision.Value.IssuedBy;
             }
             else
             {
                 metadata.RevisionHistory[revisionKey] = revInfo;
+                metadata.FilePath = filePath; // Set initial FilePath
                 Documents.Add(metadata);
             }
         }
@@ -535,6 +540,8 @@ public class ProjectManager : INotifyPropertyChanged
             Package = d.Package,
             DocumentType = d.DocumentType,
             Size = d.Size,
+            // Ensure FilePath on the main DocumentStorageInfo is also the latest
+            FilePath = d.RevisionHistory.Any() ? d.RevisionHistory.OrderByDescending(kv => kv.Key).First().Value.FilePath : string.Empty,
             RevisionHistory = d.RevisionHistory.ToDictionary(
                 kv => kv.Key,
                 kv => new RevisionStorageInfo
