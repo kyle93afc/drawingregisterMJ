@@ -300,7 +300,7 @@
                 <!-- New Distribution Button -->
                 <Button x:Name="ViewDistributionButton" Content="VIEW DISTRIBUTION" Click="ViewDistribution_Click" 
                         Height="35" Margin="0,0,10,0" FontSize="14" FontWeight="Bold"
-                        Background="Red" Foreground="White" Visibility="Visible"/>
+                        Background="#eb1845" Foreground="White" Visibility="Visible"/>
                 
                 <!-- Distribution Summary -->
                 <Border x:Name="DistributionSummaryBorder" BorderBrush="#ddd" BorderThickness="1" CornerRadius="4" Padding="10,5" 

@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "tJSUkvb0eSo=",
+  "dgSpecHash": "kwJvb90QtNo=",
   "success": true,
-  "projectFilePath": "C:\\temp\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
+  "projectFilePath": "C:\\Cursor_Files\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\k.greig\\.nuget\\packages\\harfbuzzsharp\\7.3.0\\harfbuzzsharp.7.3.0.nupkg.sha512",
     "C:\\Users\\k.greig\\.nuget\\packages\\harfbuzzsharp.nativeassets.macos\\7.3.0\\harfbuzzsharp.nativeassets.macos.7.3.0.nupkg.sha512",

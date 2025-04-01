@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\temp\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj": {}
+    "C:\\Cursor_Files\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj": {}
   },
   "projects": {
-    "C:\\temp\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj": {
+    "C:\\Cursor_Files\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\temp\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
+        "projectUniqueName": "C:\\Cursor_Files\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
         "projectName": "DrawingRegister.App",
-        "projectPath": "C:\\temp\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
+        "projectPath": "C:\\Cursor_Files\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
         "packagesPath": "C:\\Users\\k.greig\\.nuget\\packages\\",
-        "outputPath": "C:\\temp\\drawingregisterMJ\\DrawingRegister.App\\obj\\",
+        "outputPath": "C:\\Cursor_Files\\drawingregisterMJ\\DrawingRegister.App\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -80,7 +80,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.200/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.201/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
