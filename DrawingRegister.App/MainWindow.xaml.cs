@@ -105,28 +105,43 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         var currentSelection = IssueDateFilter.SelectedItem;
         IssueDateFilter.Items.Clear();
-        IssueDateFilter.Items.Add(new ComboBoxItem { Content = "All Dates" });
+        IssueDateFilter.Items.Add(new ComboBoxItem { Content = "All Issues" });
 
-        // Get all unique issue dates from documents
-        var issueDates = _project.Documents
+        // Get all unique issue DateTime keys from documents' revision history
+        var issueDateTimes = _project.Documents
             .SelectMany(d => d.RevisionHistory.Keys)
-            .Distinct()  // Remove duplicates before sorting
-            .OrderByDescending(d => d)  // Sort newest to oldest
-            .Select(d => new ComboBoxItem { Content = d.ToString("dd/MM/yyyy") });
+            .Distinct()  // Get unique DateTime keys
+            .OrderByDescending(dt => dt) // Sort newest to oldest
+            .ToList();
 
-        foreach (var date in issueDates)
+        foreach (var dateTime in issueDateTimes)
         {
-            IssueDateFilter.Items.Add(date);
+            // Display date and time, store the full DateTime in Tag
+            var item = new ComboBoxItem 
+            { 
+                Content = dateTime.ToString("dd/MM/yyyy HH:mm:ss"), 
+                Tag = dateTime // Store the exact DateTime
+            };
+            IssueDateFilter.Items.Add(item);
         }
 
-        // Restore previous selection or default to "All Dates"
-        if (currentSelection != null && IssueDateFilter.Items.Cast<ComboBoxItem>().Any(i => i.Content.Equals(((ComboBoxItem)currentSelection).Content)))
+        // Restore previous selection based on Tag (exact DateTime) or default to "All Issues"
+        if (currentSelection is ComboBoxItem currentItem && currentItem.Tag is DateTime currentDateTime)
         {
-            IssueDateFilter.SelectedItem = IssueDateFilter.Items.Cast<ComboBoxItem>().First(i => i.Content.Equals(((ComboBoxItem)currentSelection).Content));
+            var itemToRestore = IssueDateFilter.Items.Cast<ComboBoxItem>()
+                                .FirstOrDefault(i => i.Tag is DateTime tagDateTime && tagDateTime.Equals(currentDateTime));
+            if (itemToRestore != null)
+            {
+                IssueDateFilter.SelectedItem = itemToRestore;
+            }
+            else
+            {
+                IssueDateFilter.SelectedIndex = 0; // Default to "All Issues"
+            }
         }
         else
         {
-            IssueDateFilter.SelectedIndex = 0;
+            IssueDateFilter.SelectedIndex = 0; // Default to "All Issues"
         }
     }
 
@@ -171,11 +186,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private void IssueDateFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (IssueDateFilter.SelectedItem is not ComboBoxItem selectedItem)
+        {
+            CurrentIssueDate.Text = ""; // Clear date text
             return;
+        }
 
         var selectedContent = selectedItem.Content.ToString();
         
-        if (selectedContent == "All Dates")
+        // Updated check for the default item
+        if (selectedContent == "All Issues") // Corrected string check
         {
             DocumentGrid.ItemsSource = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
             
@@ -185,54 +204,45 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             
             // Reset the distribution information display
             DistributionInfoText.Text = "No recipients selected";
+            CurrentIssueDate.Text = ""; // Clear date text
             return;
         }
 
-        // Enable the view distribution button when a specific date is selected
+        // Enable the view distribution button when a specific issue is selected
         ViewDistributionButton.IsEnabled = true;
 
-        // Parse date using the new format
-        if (DateTime.TryParseExact(selectedContent, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
+        // Get the exact DateTime from the Tag
+        if (selectedItem.Tag is DateTime selectedDateTime)
         {
-            // Get all documents for this EXACT date only
-            var docsForDate = _project.Documents
-                .Where(d => d.RevisionHistory.Keys.Any(date => date.Date == selectedDate.Date))
+            CurrentIssueDate.Text = selectedDateTime.ToString("dd/MM/yyyy"); // Set date text
+
+            // Get all documents that have a revision with this EXACT DateTime
+            var docsForIssue = _project.Documents
+                .Where(d => d.RevisionHistory.ContainsKey(selectedDateTime))
                 .OrderBy(d => d.DocumentNumber)
                 .ToList();
 
-            DocumentGrid.ItemsSource = docsForDate;
+            DocumentGrid.ItemsSource = docsForIssue;
 
-            // Try to detect purpose, method, and issuer from the documents
-            var revisions = docsForDate
-                .SelectMany(d => d.RevisionHistory)
-                .Where(r => r.Key.Date == selectedDate.Date)
-                .Select(r => r.Value)
+            // Try to detect purpose, method, and issuer from the specific revision
+            // Since we are filtering by a specific issue (DateTime), there should be only one
+            // revision per document matching this key.
+            var revisions = docsForIssue
+                .Select(d => d.RevisionHistory[selectedDateTime]) // Directly access the revision
                 .ToList();
 
             if (revisions.Any())
             {
-                // Get the most common purpose
-                var commonPurpose = revisions
-                    .GroupBy(r => r.Purpose)
-                    .OrderByDescending(g => g.Count())
-                    .First().Key;
-
-                // Get the most common method
-                var commonMethod = revisions
-                    .GroupBy(r => r.Method)
-                    .OrderByDescending(g => g.Count())
-                    .First().Key;
-
-                // Get the most common issuer
-                var commonIssuer = revisions
-                    .GroupBy(r => r.IssuedBy)
-                    .OrderByDescending(g => g.Count())
-                    .First().Key;
+                // Assuming details are consistent for a single issue (or take the first)
+                var firstRevision = revisions.First(); 
+                var commonPurpose = firstRevision.Purpose;
+                var commonMethod = firstRevision.Method;
+                var commonIssuer = firstRevision.IssuedBy;
 
                 // Set the values in the UI
                 foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
                 {
-                    if (item.Content.ToString().Contains(commonPurpose.Substring(0, 1)))
+                    if (item.Content.ToString().StartsWith(commonPurpose.Substring(0, 1)))
                     {
                         PurposeOfIssueFilter.SelectedItem = item;
                         break;
@@ -241,7 +251,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
                 foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
                 {
-                    if (item.Content.ToString().Contains(commonMethod.Substring(0, 1)))
+                    if (item.Content.ToString().StartsWith(commonMethod.Substring(0, 1)))
                     {
                         MethodOfIssueFilter.SelectedItem = item;
                         break;
@@ -255,7 +265,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
             else
             {
-                // Reset the filters if no data found
+                // Reset the filters if somehow no data found (should not happen)
                 PurposeOfIssueFilter.SelectedIndex = 0;
                 MethodOfIssueFilter.SelectedIndex = 0;
                 IssuedByFilter.Text = string.Empty;
@@ -264,13 +274,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 UpdateIssueIndicators(string.Empty, string.Empty);
             }
             
-            // Show distribution summary
-            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDate);
+            // Show distribution summary for the specific issue date
+            // NOTE: DistributionSummary.GenerateForDate might need adjustment if it strictly uses Date part
+            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDateTime); 
             DistributionSummaryText.Text = distributionSummary.GetFormattedSummary();
             DistributionSummaryBorder.Visibility = distributionSummary.TotalRecipients > 0 ? Visibility.Visible : Visibility.Collapsed;
             
-            // Update the distribution information display in the Issue Information section
-            UpdateDistributionInfoDisplay(selectedDate);
+            // Update the distribution information display for the specific issue date
+            // NOTE: UpdateDistributionInfoDisplay might need adjustment if it strictly uses Date part
+            UpdateDistributionInfoDisplay(selectedDateTime);
+        }
+        else 
+        {
+             CurrentIssueDate.Text = ""; // Clear if Tag is not DateTime
         }
     }
 
@@ -469,49 +485,51 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
         }
         
-        // Check if we have a date filter from IssueDateFilter
-        DateTime? selectedDate = null;
-        if (IssueDateFilter.SelectedItem is ComboBoxItem dateItem && dateItem.Content.ToString() != "All Dates")
+        // Check if we have an issue filter from IssueDateFilter
+        DateTime? selectedIssueDateTime = null;
+        bool filterByIssue = false;
+        if (IssueDateFilter.SelectedItem is ComboBoxItem issueItem && issueItem.Tag is DateTime dt)
         {
-            if (DateTime.TryParseExact(dateItem.Content.ToString(), "dd/MM/yyyy", null, 
-                System.Globalization.DateTimeStyles.None, out var parsedDate))
-            {
-                selectedDate = parsedDate.Date;
-            }
+            selectedIssueDateTime = dt;
+            filterByIssue = true;
+        }
+        // Handle the "All Issues" case explicitly
+        else if (IssueDateFilter.SelectedItem is ComboBoxItem defaultItem && defaultItem.Content.ToString() == "All Issues")
+        {
+             filterByIssue = false; // Don't filter by issue if "All Issues" is selected
         }
         
-        // Apply date filter if selected
-        if (selectedDate.HasValue)
+        // Apply issue filter if a specific issue is selected
+        if (filterByIssue && selectedIssueDateTime.HasValue)
         {
             filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Keys.Any(date => date.Date == selectedDate.Value.Date))
+                .Where(d => d.RevisionHistory.ContainsKey(selectedIssueDateTime.Value))
                 .ToList();
         }
         
-        // Apply purpose filter
+        // Apply purpose filter (using latest revision's purpose for simplicity in general filtering)
         if (purposeFilter != "All")
         {
-            string purpose = purposeFilter.Split('-')[0].Trim();
+            string purposeCode = purposeFilter.Substring(0, 1);
             filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Any(r => r.Value.Purpose.StartsWith(purpose)))
+                .Where(d => d.PurposeOfIssue?.StartsWith(purposeCode) == true)
                 .ToList();
         }
         
-        // Apply method filter
+        // Apply method filter (using latest revision's method)
         if (methodFilter != "All")
         {
-            string method = methodFilter.Split('-')[0].Trim();
+             string methodCode = methodFilter.Substring(0, 1);
             filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Any(r => r.Value.Method.StartsWith(method)))
+                .Where(d => d.MethodOfIssue?.StartsWith(methodCode) == true)
                 .ToList();
         }
         
-        // Apply issued by filter
+        // Apply issued by filter (using latest revision's issuer)
         if (!string.IsNullOrEmpty(issuedByFilter))
         {
             filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Any(r => 
-                    r.Value.IssuedBy.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase)))
+                .Where(d => d.IssuedBy?.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase) == true)
                 .ToList();
         }
         
@@ -818,21 +836,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void SaveIssueDetails_Click(object sender, RoutedEventArgs e)
     {
-        // Get the selected date
-        if (IssueDateFilter.SelectedItem is not ComboBoxItem selectedItem)
+        // Get the selected issue DateTime
+        if (IssueDateFilter.SelectedItem is not ComboBoxItem selectedItem || selectedItem.Tag is not DateTime selectedDateTime)
         {
-            MessageBox.Show("Please select a date of issue first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Please select a specific issue (date and time) first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var selectedContent = selectedItem.Content.ToString();
-        if (selectedContent == "All Dates")
+        // Check for 'All Issues' explicitly by content if needed, although Tag check mostly covers it
+        if (selectedItem.Content.ToString() == "All Issues")
         {
-            MessageBox.Show("Please select a specific date of issue.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Cannot save details for 'All Issues'. Please select a specific issue.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        // Get the selected values
+        // Get the selected values from the UI
         var purpose = PurposeOfIssueFilter.SelectedIndex > 0 
             ? ((ComboBoxItem)PurposeOfIssueFilter.SelectedItem).Content.ToString()
             : null;
@@ -841,57 +859,59 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             : null;
         var issuedBy = IssuedByFilter.Text.Trim().ToUpper();
 
+        // Validate input
         if (string.IsNullOrEmpty(purpose))
         {
             MessageBox.Show("Please select a purpose of issue.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-
         if (string.IsNullOrEmpty(method))
         {
             MessageBox.Show("Please select a method of issue.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-
         if (string.IsNullOrEmpty(issuedBy))
         {
             MessageBox.Show("Please enter initials for issued by.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        if (DateTime.TryParseExact(selectedContent, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var selectedDate))
+        // Update the specific revision for documents visible in the grid (already filtered)
+        var updatedCount = 0;
+        foreach (var doc in DocumentGrid.ItemsSource.OfType<Models.DocumentMetadata>())
         {
-            // Update all documents that have a revision on this date
-            var updatedCount = 0;
-            foreach (var doc in _project.Documents)
+            if (doc.RevisionHistory.TryGetValue(selectedDateTime, out var revInfo))
             {
-                var matchingRevisions = doc.RevisionHistory
-                    .Where(r => r.Key.Date == selectedDate.Date)
-                    .ToList();
+                // Update the specific revision details
+                revInfo.Purpose = purpose; 
+                revInfo.Method = method;
+                revInfo.IssuedBy = issuedBy;
 
-                foreach (var revision in matchingRevisions)
+                // Update document's current values if this is the latest revision
+                if (doc.RevisionHistory.Keys.Max() == selectedDateTime)
                 {
-                    var revInfo = revision.Value;
-                    // Only update the IssuedBy field
-                    revInfo.IssuedBy = issuedBy;
-
-                    // Update document's current values if this is the latest revision
-                    if (doc.RevisionHistory.Max(r => r.Key) == revision.Key)
-                    {
-                        doc.IssuedBy = issuedBy;
-                    }
-                    updatedCount++;
+                    doc.PurposeOfIssue = purpose;
+                    doc.MethodOfIssue = method;
+                    doc.IssuedBy = issuedBy;
                 }
+                updatedCount++;
             }
+        }
 
+        if (updatedCount > 0)
+        {
             // Save changes
             _project.SaveProjectData();
 
             // Refresh views
-            DocumentGrid.Items.Refresh();
-            RevisionTimeline.Items.Refresh();
+            DocumentGrid.Items.Refresh(); // Refresh grid to show potentially updated doc properties
+            RevisionTimeline.Items.Refresh(); // Refresh timeline
 
-            MessageBox.Show($"Successfully updated {updatedCount} documents.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"Successfully updated details for {updatedCount} document revisions.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else
+        {
+             MessageBox.Show("No matching document revisions found to update.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
@@ -905,12 +925,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Enable QuestPDF debugging to get more detailed error information
             QuestPDF.Settings.EnableDebugging = true;
 
-            // Determine if we're generating a transmittal (specific date) or full register
-            bool isTransmittal = IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && 
-                                selectedItem.Content.ToString() != "All Dates";
+            // Determine if we're generating a transmittal (specific issue DateTime)
+            DateTime? selectedIssueDateTime = null;
+            if (IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Tag is DateTime dt)
+            {
+                selectedIssueDateTime = dt;
+            }
+            bool isTransmittal = selectedIssueDateTime.HasValue;
             
             string fileNamePrefix = isTransmittal 
-                ? $"Transmittal_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}" 
+                ? $"Transmittal_{_project.RegisterNumber}_{selectedIssueDateTime.Value:yyyyMMddHHmmss}" // Use precise time in filename
                 : $"Register_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}";
 
             var saveDialog = new SaveFileDialog
@@ -1072,32 +1096,31 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         container.Column(column =>
         {
-            // Get documents to display - either all or filtered by date
+            // Get documents to display - either all or filtered by the specific issue DateTime
             var documentsToDisplay = _project.Documents.ToList();
-            DateTime? selectedDate = null;
+            DateTime? selectedIssueDateTime = null; // Use the same variable name for clarity
             
-            if (isTransmittal && IssueDateFilter.SelectedItem is ComboBoxItem selectedItem)
+            if (isTransmittal && IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Tag is DateTime dt)
             {
-                if (DateTime.TryParseExact(selectedItem.Content.ToString(), "dd/MM/yyyy", null, 
-                    System.Globalization.DateTimeStyles.None, out var parsedDate))
-                {
-                    selectedDate = parsedDate;
-                    documentsToDisplay = _project.Documents
-                        .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Value.Date))
-                        .OrderBy(d => d.DocumentNumber)
-                        .ToList();
-                }
+                selectedIssueDateTime = dt;
+                documentsToDisplay = _project.Documents
+                    .Where(d => d.RevisionHistory.ContainsKey(selectedIssueDateTime.Value)) // Filter by exact DateTime key
+                    .OrderBy(d => d.DocumentNumber)
+                    .ToList();
             }
             
-            // Get last 3 issue dates in descending order (newest first)
+            // Get last 3 issue dates (still useful for the revision columns in the full register)
             var lastThreeDates = _project.IssueDates
                 .OrderByDescending(d => d)
                 .Take(3)
                 .ToList();
 
             // Add transmittal-specific information section if this is a transmittal
-            if (isTransmittal && selectedDate.HasValue)
+            if (isTransmittal && selectedIssueDateTime.HasValue)
             {
+                // Pass the selectedIssueDateTime to the GetDistributionTextForPdf method
+                string distributionList = GetDistributionTextForPdf(selectedIssueDateTime.Value); 
+
                 column.Item().PaddingBottom(10).Table(issueInfoTable =>
                 {
                     // Define columns
@@ -1124,7 +1147,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .AlignCenter()
                          .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
                          .AlignRight()
-                         .Text("DATE OF ISSUE: " + selectedDate.Value.ToString("dd/MM/yyyy"));
+                         .Text($"Date of Issue: {selectedIssueDateTime.Value:dd/MM/yyyy}");
                     });
                     
                     // Distribution row
@@ -1142,9 +1165,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         {
                             // Get distribution text
                             string distributionText = "NO RECIPIENTS SELECTED";
-                            if (selectedDate.HasValue)
+                            if (selectedIssueDateTime.HasValue)
                             {
-                                distributionText = GetDistributionTextForPdf(selectedDate.Value).ToUpper();
+                                distributionText = distributionList.ToUpper();
                             }
                             
                             // Split by lines and create a row for each category
@@ -1239,6 +1262,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         });
                     });
                 });
+                
+                // Add Distribution List Section if available
+                if (!string.IsNullOrWhiteSpace(distributionList))
+                {
+                    column.Item().PaddingBottom(10).Text(txt =>
+                    {
+                        txt.Span("DISTRIBUTION:").Bold();
+                        txt.Line(""); // Use .Line() for line break
+                        txt.Span(distributionList);
+                    });
+                }
             }
             else if (!isTransmittal)
             {
@@ -1629,48 +1663,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private string GetDistributionTextForPdf(DateTime selectedDate)
     {
-        // Get all documents distributed on this date
-        var docsForDate = _project.Documents
-            .Where(d => d.DistributionCompanyIds.ContainsKey(selectedDate))
-            .ToList();
-        
-        if (!docsForDate.Any())
+        if (_project == null || _project.DistributionManager == null) // Added null check for DistributionManager
         {
-            return "No recipients selected";
+            return "Distribution data not available.";
         }
-        
-        // Get all company IDs that received documents on this date
-        var allCompanyIds = docsForDate
-            .SelectMany(d => d.DistributionCompanyIds.TryGetValue(selectedDate, out var ids) ? ids : new List<string>())
-            .Distinct()
+
+        // Get all company IDs distributed on the selected date from all relevant documents
+        var allDistributedCompanyIds = _project.Documents
+            .Where(doc => doc.DistributionCompanyIds.ContainsKey(selectedDate)) // Check if the document was distributed on this date
+            .SelectMany(doc => doc.DistributionCompanyIds[selectedDate]) // Get the list of company IDs for this date
+            .Distinct() // Ensure unique IDs
             .ToList();
-        
-        // Get the actual company objects
-        var companies = allCompanyIds
-            .Select(id => _project.DistributionManager.Companies.FirstOrDefault(c => c.Id == id))
-            .Where(c => c != null)
+
+        if (!allDistributedCompanyIds.Any())
+        {
+            return "No distribution recorded for this issue.";
+        }
+
+        // Look up company names using the DistributionManager
+        var companyNames = _project.DistributionManager.Companies
+            .Where(c => allDistributedCompanyIds.Contains(c.Id)) // Filter companies by the collected IDs
+            .Select(c => c.Name)
+            .OrderBy(name => name) // Sort company names alphabetically
             .ToList();
-        
-        // Group companies by category
-        var companiesByCategory = companies
-            .GroupBy(c => c.Category)
+
+        // Group companies by category for better formatting
+        var companiesByCategory = _project.DistributionManager.Companies
+            .Where(c => allDistributedCompanyIds.Contains(c.Id))
+            .GroupBy(c => c.Category ?? "Uncategorized") // Group by category
             .OrderBy(g => g.Key)
+            .Select(g => $"{g.Key.ToUpper()}: {string.Join(", ", g.Select(c => c.Name).OrderBy(n => n))}") // Format: CATEGORY: Company1, Company2
             .ToList();
-        
-        // Format the distribution information text with better structure
-        var distributionText = new System.Text.StringBuilder();
-        
-        foreach (var categoryGroup in companiesByCategory)
-        {
-            if (distributionText.Length > 0)
-            {
-                distributionText.AppendLine();
-            }
-            distributionText.Append($"{categoryGroup.Key}: ");
-            distributionText.Append(string.Join(", ", categoryGroup.Select(c => c.Name)));
-        }
-        
-        return distributionText.Length > 0 ? distributionText.ToString() : "No recipients selected";
+
+        return string.Join("\\n", companiesByCategory); // Join categories/names with newline
     }
 
     private void DocumentGrid_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)

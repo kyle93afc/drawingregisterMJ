@@ -195,13 +195,6 @@
             <Setter Property="WindowStyle" Value="ToolWindow"/>
             <Setter Property="ResizeMode" Value="NoResize"/>
         </Style>
-
-        <!-- Add global style at top -->
-        <Style TargetType="ComboBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="8,2"/>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -292,9 +285,9 @@
             </StackPanel>
             
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="FILTER BY DATE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
+                <TextBlock Text="FILTER BY ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
                 <ComboBox x:Name="IssueDateFilter" Width="200" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="IssueDateFilter_SelectionChanged">
-                    <ComboBoxItem Content="All Dates" FontSize="14"/>
+                    <ComboBoxItem Content="All Issues" FontSize="14"/>
                 </ComboBox>
                 
                 <!-- New Distribution Button -->
@@ -440,8 +433,7 @@
                     
                     <TextBlock Grid.Column="0" Text="DATE OF ISSUE" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
                     <Border Grid.Column="1" BorderBrush="Black" BorderThickness="1" Width="100" Height="25" Margin="0,5,10,5">
-                        <TextBlock x:Name="CurrentIssueDate" Text="{Binding ElementName=IssueDateFilter, Path=SelectedItem.Content}" 
-                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CurrentIssueDate" Text="" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                 </Grid>
             </Grid>
