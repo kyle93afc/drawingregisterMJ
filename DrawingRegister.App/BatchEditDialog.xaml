@@ -99,6 +99,9 @@
                 <CheckBox x:Name="UpdateIssuedByCheck" Content="Update Issued By" IsChecked="True"/>
             </StackPanel>
             
+            <!-- Add CheckBox for Distribution Update -->
+            <CheckBox x:Name="UpdateDistributionCheck" Content="Update Distribution" IsChecked="True" Margin="0,5,0,5"/>
+
             <!-- Distribution Section -->
             <Expander Header="Distribution" Margin="0,10,0,0">
                 <Grid Margin="0,10,0,0">

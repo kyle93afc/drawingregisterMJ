@@ -1628,16 +1628,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void BatchEdit_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new BatchEditDialog(_project);
+        // Get the selected issue date from the main window filter
+        DateTime mainWindowIssueDate;
+        if (IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Tag is DateTime dt)
+        {
+            mainWindowIssueDate = dt;
+        }
+        else
+        {
+            // If no specific issue date is selected (e.g., "All Issues"),
+            // we might need a default or ask the user. For now, let's use today's date.
+            // Consider adding a dedicated date picker in MainWindow for the batch edit action.
+            mainWindowIssueDate = DateTime.Today;
+            MessageBox.Show("No specific issue date selected in the main filter. Using today's date for potential distribution updates. Consider selecting a specific issue first.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            // Alternatively, prevent opening the batch edit dialog if no date is selected:
+            // MessageBox.Show("Please select a specific issue date in the 'FILTER BY ISSUE' dropdown before using Batch Edit.", "Select Issue Date", MessageBoxButton.OK, MessageBoxImage.Warning);
+            // return;
+        }
+
+        var dialog = new BatchEditDialog(_project, mainWindowIssueDate); // Pass the date
         dialog.Owner = this;
         if (dialog.ShowDialog() == true)
         {
             // Refresh the UI
             DocumentGrid.Items.Refresh();
             RevisionTimeline.Items.Refresh();
-            
-            // Update issue date filter options
+
+            // Update issue date filter options & distribution display for the selected date
             UpdateIssueDateFilterOptions();
+            UpdateDistributionInfoDisplay(mainWindowIssueDate);
         }
     }
 

@@ -19,13 +19,15 @@ namespace DrawingRegister.App
         private Dictionary<DateTime, Dictionary<string, List<DocumentMetadata>>> _dateAndFolderDocuments = new();
         private ObservableCollection<DistributionCompanyViewModel> _distributionCompanies = new();
         private DateTime _selectedIssueDate;
+        private readonly DateTime _mainWindowIssueDate;
 
-        public BatchEditDialog(ProjectManager project)
+        public BatchEditDialog(ProjectManager project, DateTime mainWindowIssueDate)
         {
             try
             {
                 InitializeComponent();
                 _project = project;
+                _mainWindowIssueDate = mainWindowIssueDate;
                 
                 // Initialize date combo
                 PopulateIssueDates();
@@ -972,90 +974,100 @@ namespace DrawingRegister.App
                     issuedBy = IssuedByTextBox.Text.Trim().ToUpper();
                 }
                 
-                if (purpose == null && method == null && issuedBy == null)
+                // Check if distribution update is selected
+                bool updateDistribution = UpdateDistributionCheck.IsChecked == true;
+                var selectedCompanyIds = _distributionCompanies
+                    .Where(c => c.IsSelected)
+                    .Select(c => c.Id)
+                    .ToList();
+
+                if (purpose == null && method == null && issuedBy == null && !updateDistribution)
                 {
-                    System.Windows.MessageBox.Show("Please select at least one property to update.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    System.Windows.MessageBox.Show("Please select at least one property or distribution to update.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (updateDistribution && !selectedCompanyIds.Any())
+                {
+                    System.Windows.MessageBox.Show("Please select at least one company to distribute to, or uncheck the 'Update Distribution' box.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
                 
                 // Apply changes
                 int updatedCount = 0;
-                DateTime? selectedDate = null;
-                
-                // If filtering by date, get the selected date
-                if (FilterByDate != null && FilterByDate.IsChecked == true && 
+                DateTime? filterDate = null; // Date used for filtering revisions if 'Filter By Date' is selected
+
+                // If filtering by date, get the selected date for filtering revisions
+                if (FilterByDate != null && FilterByDate.IsChecked == true &&
                     IssueDateCombo != null && IssueDateCombo.SelectedItem is ComboBoxItem selectedDateItem)
                 {
-                    string selectedDateStr = selectedDateItem.Content?.ToString() ?? string.Empty;
-                    if (!string.IsNullOrEmpty(selectedDateStr) &&
-                        DateTime.TryParseExact(selectedDateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                    // Get the selected date from the filter combo
+                    if (selectedDateItem.Tag is DateTime tagDate)
                     {
-                        selectedDate = parsedDate.Date;
+                        filterDate = tagDate.Date; // Use only the date part for filtering revisions
+                    }
+                    else if (selectedDateItem.Content is string selectedDateStr &&
+                             DateTime.TryParseExact(selectedDateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                    {
+                        filterDate = parsedDate.Date; // Use only the date part for filtering revisions
                     }
                 }
-                
-                // Get selected companies
-                var selectedCompanyIds = _distributionCompanies
-                    .Where(c => c.IsSelected)
-                    .Select(c => c.Id)
-                    .ToList();
                 
                 foreach (var doc in _filteredDocuments)
                 {
                     bool docUpdated = false;
-                    
-                    // If filtering by date, update only revisions on that date
-                    if (selectedDate.HasValue)
+
+                    // If filtering by date, update only revisions on that filterDate
+                    if (filterDate.HasValue)
                     {
                         var matchingRevisions = doc.RevisionHistory
-                            .Where(r => r.Key.Date == selectedDate.Value)
+                            .Where(r => r.Key.Date == filterDate.Value)
                             .ToList();
-                            
+
                         foreach (var revision in matchingRevisions)
                         {
                             var revInfo = revision.Value;
                             if (revInfo == null) continue;
-                            
+
                             bool revUpdated = false;
-                            
+
                             // Update revision properties
                             if (purpose != null)
                             {
                                 revInfo.Purpose = purpose;
                                 revUpdated = true;
                             }
-                            
+
                             if (method != null)
                             {
                                 revInfo.Method = method;
                                 revUpdated = true;
                             }
-                            
+
                             if (issuedBy != null)
                             {
                                 revInfo.IssuedBy = issuedBy;
                                 revUpdated = true;
                             }
-                            
+
                             // Update document's current values if this is the latest revision
                             if (revUpdated && doc.RevisionHistory.Max(r => r.Key) == revision.Key)
                             {
                                 if (purpose != null)
                                     doc.PurposeOfIssue = purpose;
-                                    
+
                                 if (method != null)
                                     doc.MethodOfIssue = method;
-                                    
+
                                 if (issuedBy != null)
                                     doc.IssuedBy = issuedBy;
-                                    
+
                                 docUpdated = true;
                             }
                         }
                     }
-                    else
+                    else // Not filtering by date, update the latest revision and document properties
                     {
-                        // Update the latest revision and document properties
                         var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
                         if (latestRevision.Value != null)
                         {
@@ -1065,14 +1077,14 @@ namespace DrawingRegister.App
                                 doc.PurposeOfIssue = purpose;
                                 docUpdated = true;
                             }
-                            
+
                             if (method != null)
                             {
                                 latestRevision.Value.Method = method;
                                 doc.MethodOfIssue = method;
                                 docUpdated = true;
                             }
-                            
+
                             if (issuedBy != null)
                             {
                                 latestRevision.Value.IssuedBy = issuedBy;
@@ -1081,15 +1093,18 @@ namespace DrawingRegister.App
                             }
                         }
                     }
-                    
-                    // Update distribution if any companies are selected
-                    if (selectedCompanyIds.Any())
+
+                    // Update distribution if requested
+                    if (updateDistribution)
                     {
-                        doc.SetCompanyDistributions(selectedCompanyIds, _selectedIssueDate);
-                    }
-                    
-                    if (docUpdated)
+                        // Use the date passed from the main window for distribution
+                        doc.SetCompanyDistributions(selectedCompanyIds, _mainWindowIssueDate);
+                        // If properties weren't updated but distribution was, count it as an update
+                        if (!docUpdated) updatedCount++;
+                    } else if (docUpdated) {
+                        // Increment count only if properties were updated and distribution wasn't
                         updatedCount++;
+                    }
                 }
                 
                 // Save changes
