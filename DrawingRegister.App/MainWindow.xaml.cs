@@ -1700,10 +1700,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             .Where(c => allDistributedCompanyIds.Contains(c.Id))
             .GroupBy(c => c.Category ?? "Uncategorized") // Group by category
             .OrderBy(g => g.Key)
-            .Select(g => $"{g.Key.ToUpper()}: {string.Join(", ", g.Select(c => c.Name).OrderBy(n => n))}") // Format: CATEGORY: Company1, Company2
+            .Select(g => $"{g.Key.ToUpper()}:\n  {string.Join("\n  ", g.Select(c => c.Name).OrderBy(n => n))}") // Format: CATEGORY: Company1
             .ToList();
 
-        return string.Join("\\n", companiesByCategory); // Join categories/names with newline
+        return string.Join("\n\n", companiesByCategory); // Join categories with a double newline for spacing
     }
 
     private void DocumentGrid_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
