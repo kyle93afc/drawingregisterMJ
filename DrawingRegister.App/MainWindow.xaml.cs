@@ -1262,17 +1262,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         });
                     });
                 });
-                
-                // Add Distribution List Section if available
-                if (!string.IsNullOrWhiteSpace(distributionList))
-                {
-                    column.Item().PaddingBottom(10).Text(txt =>
-                    {
-                        txt.Span("DISTRIBUTION:").Bold();
-                        txt.Line(""); // Use .Line() for line break
-                        txt.Span(distributionList);
-                    });
-                }
             }
             else if (!isTransmittal)
             {
