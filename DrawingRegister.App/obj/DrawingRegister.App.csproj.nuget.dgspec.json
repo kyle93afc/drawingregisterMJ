@@ -52,7 +52,7 @@
           "dependencies": {
             "QuestPDF": {
               "target": "Package",
-              "version": "[2023.12.1, )"
+              "version": "[2024.10.4, )"
             }
           },
           "imports": [
