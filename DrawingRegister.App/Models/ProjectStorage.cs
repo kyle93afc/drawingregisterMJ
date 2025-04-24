@@ -32,7 +32,12 @@ public class ProjectStorage
     public void Save(string filePath)
     {
         LastProcessedDate = DateTime.Now;
-        var json = JsonSerializer.Serialize(this);
+        var options = new JsonSerializerOptions { 
+            WriteIndented = true,
+            // Ensure proper DateTime serialization
+            Converters = { new JsonStringEnumConverter() }
+        };
+        var json = JsonSerializer.Serialize(this, options);
         File.WriteAllText(filePath, json);
     }
 }
@@ -46,6 +51,7 @@ public class DocumentStorageInfo
     public string Size { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
     public Dictionary<DateTime, RevisionStorageInfo> RevisionHistory { get; set; } = new();
+    public Dictionary<DateTime, List<string>> DistributionCompanyIds { get; set; } = new();
 }
 
 public class RevisionStorageInfo

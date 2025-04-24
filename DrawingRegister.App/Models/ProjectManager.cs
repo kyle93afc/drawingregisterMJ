@@ -144,6 +144,15 @@ public class ProjectManager : INotifyPropertyChanged
                     };
                 }
 
+                // Load distribution company IDs if available
+                if (doc.DistributionCompanyIds != null)
+                {
+                    foreach (var dist in doc.DistributionCompanyIds)
+                    {
+                        metadata.DistributionCompanyIds[dist.Key] = new List<string>(dist.Value);
+                    }
+                }
+
                 Documents.Add(metadata);
 
                 // Ensure FilePath is set from the *absolute* latest revision after loading
@@ -174,6 +183,11 @@ public class ProjectManager : INotifyPropertyChanged
         var subDirectories = Directory.GetDirectories(folderPath);
         Console.WriteLine($"\n=== Starting Directory Scan ===");
         
+        // Exclude the SS (Superseded) folder from scanning
+        subDirectories = subDirectories
+            .Where(dir => Path.GetFileName(dir).ToUpper() != "SS")
+            .ToArray();
+
         // Filter directories that need processing - only process unprocessed folders
         var dateDirectories = subDirectories
             .Where(dir => 
@@ -552,7 +566,9 @@ public class ProjectManager : INotifyPropertyChanged
                     IssuedBy = kv.Value.IssuedBy,
                     IsDistributed = kv.Value.IsDistributed,
                     FilePath = kv.Value.FilePath
-                })
+                }),
+            // Include distribution company IDs in storage
+            DistributionCompanyIds = d.DistributionCompanyIds
         }).ToList();
 
         _currentStorage.Save(Path.Combine(_currentBasePath, STORAGE_FILENAME));
@@ -717,7 +733,12 @@ public class ProjectManager : INotifyPropertyChanged
     {
         var storage = ProjectStorage.Load(Path.Combine(directoryPath, "project_data.json"));
         
-        foreach (var folder in Directory.GetDirectories(directoryPath))
+        // Get directories and exclude the SS (Superseded) folder
+        var directories = Directory.GetDirectories(directoryPath)
+            .Where(dir => Path.GetFileName(dir).ToUpper() != "SS")
+            .ToArray();
+        
+        foreach (var folder in directories)
         {
             var dirInfo = new DirectoryInfo(folder);
             
