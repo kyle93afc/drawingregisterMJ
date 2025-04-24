@@ -38,6 +38,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private string _searchText = string.Empty;
     private Models.DocumentMetadata? _selectedDocument;
+    private ICollectionView? _documentsView;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -74,8 +75,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         RegNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.RegisterNumber)) { Source = _project });
         ClientNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ClientNumber)) { Source = _project });
 
-        // Bind grid to ProjectManager collections
-        DocumentGrid.ItemsSource = _project.Documents;
+        // Initialize the CollectionView for documents
+        _documentsView = CollectionViewSource.GetDefaultView(_project.Documents);
+        _documentsView.Filter = DocumentFilter;
+        DocumentGrid.ItemsSource = _documentsView;
 
         // Initialize search type combo
         SearchTypeCombo.SelectedIndex = 0;
@@ -86,9 +89,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         _project.Documents.CollectionChanged += Documents_CollectionChanged;
 
         // Add event handlers for new filters
-        PurposeOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
-        MethodOfIssueFilter.SelectionChanged += (s, e) => FilterDocuments();
-        IssuedByFilter.TextChanged += (s, e) => FilterDocuments();
+        PurposeOfIssueFilter.SelectionChanged += (s, e) => RefreshFilter();
+        MethodOfIssueFilter.SelectionChanged += (s, e) => RefreshFilter();
+        IssuedByFilter.TextChanged += (s, e) => RefreshFilter();
         
         // Add keyboard shortcut for editing documents
         DocumentGrid.KeyDown += DocumentGrid_KeyDown;
@@ -188,105 +191,66 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (IssueDateFilter.SelectedItem is not ComboBoxItem selectedItem)
         {
             CurrentIssueDate.Text = ""; // Clear date text
-            return;
-        }
-
-        var selectedContent = selectedItem.Content.ToString();
-        
-        // Updated check for the default item
-        if (selectedContent == "All Issues") // Corrected string check
-        {
-            DocumentGrid.ItemsSource = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
-            
-            // Hide distribution summary and disable view button
+            ViewDistributionButton.Visibility = Visibility.Collapsed;
             DistributionSummaryBorder.Visibility = Visibility.Collapsed;
-            ViewDistributionButton.IsEnabled = false;
-            
-            // Reset the distribution information display
-            DistributionInfoText.Text = "No recipients selected";
-            CurrentIssueDate.Text = ""; // Clear date text
             return;
         }
 
-        // Enable the view distribution button when a specific issue is selected
-        ViewDistributionButton.IsEnabled = true;
-
-        // Get the exact DateTime from the Tag
-        if (selectedItem.Tag is DateTime selectedDateTime)
+        try
         {
-            CurrentIssueDate.Text = selectedDateTime.ToString("dd/MM/yyyy"); // Set date text
-
-            // Get all documents that have a revision with this EXACT DateTime
-            var docsForIssue = _project.Documents
-                .Where(d => d.RevisionHistory.ContainsKey(selectedDateTime))
-                .OrderBy(d => d.DocumentNumber)
-                .ToList();
-
-            DocumentGrid.ItemsSource = docsForIssue;
-
-            // Try to detect purpose, method, and issuer from the specific revision
-            // Since we are filtering by a specific issue (DateTime), there should be only one
-            // revision per document matching this key.
-            var revisions = docsForIssue
-                .Select(d => d.RevisionHistory[selectedDateTime]) // Directly access the revision
-                .ToList();
-
-            if (revisions.Any())
+            var selectedContent = selectedItem.Content.ToString();
+            
+            if (selectedContent == "All Issues")
             {
-                // Assuming details are consistent for a single issue (or take the first)
-                var firstRevision = revisions.First(); 
-                var commonPurpose = firstRevision.Purpose;
-                var commonMethod = firstRevision.Method;
-                var commonIssuer = firstRevision.IssuedBy;
+                // Reset distribution info for "All Issues"
+                ViewDistributionButton.Visibility = Visibility.Collapsed;
+                DistributionSummaryBorder.Visibility = Visibility.Collapsed;
+                CurrentIssueDate.Text = "";
+            }
+            else if (selectedItem.Tag is DateTime selectedDate)
+            {
+                // Update distribution info for the selected date
+                UpdateDistributionInfoDisplay(selectedDate);
+                ViewDistributionButton.Visibility = Visibility.Visible;
+                CurrentIssueDate.Text = selectedDate.ToString("dd/MM/yyyy HH:mm:ss");
+            }
 
-                // Set the values in the UI
-                foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
+            // Refresh the filter to update the grid
+            RefreshFilter();
+
+            // Update purpose and method indicators based on the selected issue
+            if (selectedItem.Tag is DateTime dt)
+            {
+                // Get all documents for this issue date
+                var docsAtDate = _project.Documents
+                    .Where(d => d.RevisionHistory.ContainsKey(dt))
+                    .Select(d => d.RevisionHistory[dt])
+                    .ToList();
+
+                if (docsAtDate.Any())
                 {
-                    if (item.Content.ToString().StartsWith(commonPurpose.Substring(0, 1)))
-                    {
-                        PurposeOfIssueFilter.SelectedItem = item;
-                        break;
-                    }
-                }
+                    // Get unique purposes and methods from the documents at this date
+                    var purposes = docsAtDate.Select(r => r.PurposeOfIssue?.FirstOrDefault().ToString() ?? "").Distinct();
+                    var methods = docsAtDate.Select(r => r.MethodOfIssue?.FirstOrDefault().ToString() ?? "").Distinct();
 
-                foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
+                    // Update indicators
+                    UpdateIssueIndicators(string.Join("", purposes), string.Join("", methods));
+                }
+                else
                 {
-                    if (item.Content.ToString().StartsWith(commonMethod.Substring(0, 1)))
-                    {
-                        MethodOfIssueFilter.SelectedItem = item;
-                        break;
-                    }
+                    // Reset indicators if no documents found
+                    UpdateIssueIndicators("", "");
                 }
-
-                IssuedByFilter.Text = commonIssuer;
-                
-                // Update the visual indicators
-                UpdateIssueIndicators(commonPurpose, commonMethod);
             }
             else
             {
-                // Reset the filters if somehow no data found (should not happen)
-                PurposeOfIssueFilter.SelectedIndex = 0;
-                MethodOfIssueFilter.SelectedIndex = 0;
-                IssuedByFilter.Text = string.Empty;
-                
-                // Clear the visual indicators
-                UpdateIssueIndicators(string.Empty, string.Empty);
+                // Reset indicators for "All Issues"
+                UpdateIssueIndicators("", "");
             }
-            
-            // Show distribution summary for the specific issue date
-            // NOTE: DistributionSummary.GenerateForDate might need adjustment if it strictly uses Date part
-            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDateTime); 
-            DistributionSummaryText.Text = distributionSummary.GetFormattedSummary();
-            DistributionSummaryBorder.Visibility = distributionSummary.TotalRecipients > 0 ? Visibility.Visible : Visibility.Collapsed;
-            
-            // Update the distribution information display for the specific issue date
-            // NOTE: UpdateDistributionInfoDisplay might need adjustment if it strictly uses Date part
-            UpdateDistributionInfoDisplay(selectedDateTime);
         }
-        else 
+        catch (Exception ex)
         {
-             CurrentIssueDate.Text = ""; // Clear if Tag is not DateTime
+            MessageBox.Show($"Error updating issue filter: {ex.Message}", "Filter Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -427,114 +391,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        FilterDocuments();
+        RefreshFilter();
     }
 
     private void SearchTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        FilterDocuments();
+        RefreshFilter();
     }
 
     private void FilterDocuments()
     {
-        // Get the current filters
-        string purposeFilter = "All";
-        string methodFilter = "All";
-        
-        if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem)
-            purposeFilter = purposeItem.Content.ToString();
-            
-        if (MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem)
-            methodFilter = methodItem.Content.ToString();
-            
-        string issuedByFilter = IssuedByFilter.Text.Trim();
-        string searchText = SearchBox.Text.Trim();
-        
-        // Start with all documents
-        var filteredDocs = _project.Documents.ToList();
-        
-        // Apply search text filter if not empty
-        if (!string.IsNullOrEmpty(searchText))
-        {
-            string searchType = "Document No";
-            if (SearchTypeCombo.SelectedItem is ComboBoxItem selectedItem)
-                searchType = selectedItem.Content.ToString();
-                
-            switch (searchType)
-            {
-                case "Document No":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.DocumentNumber.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    break;
-                case "Description":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    break;
-                case "Package":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.Package.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    break;
-                case "Type":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.DocumentType.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    break;
-            }
-        }
-        
-        // Check if we have an issue filter from IssueDateFilter
-        DateTime? selectedIssueDateTime = null;
-        bool filterByIssue = false;
-        if (IssueDateFilter.SelectedItem is ComboBoxItem issueItem && issueItem.Tag is DateTime dt)
-        {
-            selectedIssueDateTime = dt;
-            filterByIssue = true;
-        }
-        // Handle the "All Issues" case explicitly
-        else if (IssueDateFilter.SelectedItem is ComboBoxItem defaultItem && defaultItem.Content.ToString() == "All Issues")
-        {
-             filterByIssue = false; // Don't filter by issue if "All Issues" is selected
-        }
-        
-        // Apply issue filter if a specific issue is selected
-        if (filterByIssue && selectedIssueDateTime.HasValue)
-        {
-            filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.ContainsKey(selectedIssueDateTime.Value))
-                .ToList();
-        }
-        
-        // Apply purpose filter (using latest revision's purpose for simplicity in general filtering)
-        if (purposeFilter != "All")
-        {
-            string purposeCode = purposeFilter.Substring(0, 1);
-            filteredDocs = filteredDocs
-                .Where(d => d.PurposeOfIssue?.StartsWith(purposeCode) == true)
-                .ToList();
-        }
-        
-        // Apply method filter (using latest revision's method)
-        if (methodFilter != "All")
-        {
-             string methodCode = methodFilter.Substring(0, 1);
-            filteredDocs = filteredDocs
-                .Where(d => d.MethodOfIssue?.StartsWith(methodCode) == true)
-                .ToList();
-        }
-        
-        // Apply issued by filter (using latest revision's issuer)
-        if (!string.IsNullOrEmpty(issuedByFilter))
-        {
-            filteredDocs = filteredDocs
-                .Where(d => d.IssuedBy?.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase) == true)
-                .ToList();
-        }
-        
-        // Update the grid
-        DocumentGrid.ItemsSource = filteredDocs.OrderBy(d => d.DocumentNumber).ToList();
+        RefreshFilter();
     }
 
     private void ImportDocuments_Click(object sender, RoutedEventArgs e)
@@ -1576,48 +1443,75 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void UpdateDistributionInfoDisplay(DateTime selectedDate)
     {
-        // Get all documents distributed on this date
-        var docsForDate = _project.Documents
-            .Where(d => d.DistributionCompanyIds.ContainsKey(selectedDate))
-            .ToList();
-        
-        if (!docsForDate.Any())
+        try
         {
-            DistributionInfoText.Text = "No recipients selected";
-            return;
+            // Get all documents that have a revision at the selected date
+            var docsForIssue = _project.Documents
+                .Where(d => d.RevisionHistory.ContainsKey(selectedDate))
+                .ToList();
+
+            if (!docsForIssue.Any())
+            {
+                DistributionInfoText.Text = "No documents found for this issue date";
+                DistributionSummaryBorder.Visibility = Visibility.Collapsed;
+                ViewDistributionButton.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Get all unique recipients for this issue date
+            var recipients = docsForIssue
+                .SelectMany(d => d.RevisionHistory[selectedDate].Recipients ?? new List<string>())
+                .Distinct()
+                .OrderBy(r => r)
+                .ToList();
+
+            if (!recipients.Any())
+            {
+                DistributionInfoText.Text = "No recipients for this issue";
+                DistributionSummaryBorder.Visibility = Visibility.Collapsed;
+                ViewDistributionButton.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // Format the recipient list
+            var recipientText = string.Join(", ", recipients);
+            DistributionInfoText.Text = recipientText;
+
+            // Show the distribution summary
+            DistributionSummaryText.Text = $"{recipients.Count} recipient{(recipients.Count != 1 ? "s" : "")}";
+            DistributionSummaryBorder.Visibility = Visibility.Visible;
+            ViewDistributionButton.Visibility = Visibility.Visible;
+
+            // Cache the current distribution info for the PDF report
+            _currentDistributionInfo = new DistributionInfo
+            {
+                IssueDate = selectedDate,
+                Recipients = recipients,
+                Documents = docsForIssue
+            };
         }
-        
-        // Get all company IDs that received documents on this date
-        var allCompanyIds = docsForDate
-            .SelectMany(d => d.DistributionCompanyIds.TryGetValue(selectedDate, out var ids) ? ids : new List<string>())
-            .Distinct()
-            .ToList();
-        
-        // Get the actual company objects
-        var companies = allCompanyIds
-            .Select(id => _project.DistributionManager.Companies.FirstOrDefault(c => c.Id == id))
-            .Where(c => c != null)
-            .ToList();
-        
-        // Group companies by category
-        var companiesByCategory = companies
-            .GroupBy(c => c.Category)
-            .OrderBy(g => g.Key)
-            .ToList();
-        
-        // Format the distribution information text with each category on its own line
-        var distributionText = new System.Text.StringBuilder();
-        
-        foreach (var categoryGroup in companiesByCategory)
+        catch (Exception ex)
         {
-            // Add each category on a new line with proper alignment
-            distributionText.AppendLine($"{categoryGroup.Key}:       {string.Join(", ", categoryGroup.Select(c => c.Name))}");
+            MessageBox.Show($"Error updating distribution information: {ex.Message}", 
+                "Distribution Update Error", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Error);
+            
+            // Reset UI elements in case of error
+            DistributionInfoText.Text = "Error loading distribution information";
+            DistributionSummaryBorder.Visibility = Visibility.Collapsed;
+            ViewDistributionButton.Visibility = Visibility.Collapsed;
         }
-        
-        // Remove the last newline if present
-        var formattedText = distributionText.ToString().TrimEnd();
-        DistributionInfoText.Text = formattedText;
     }
+
+    private class DistributionInfo
+    {
+        public DateTime IssueDate { get; set; }
+        public List<string> Recipients { get; set; } = new();
+        public List<Models.DocumentMetadata> Documents { get; set; } = new();
+    }
+
+    private DistributionInfo? _currentDistributionInfo;
 
     private void BatchEdit_Click(object sender, RoutedEventArgs e)
     {
@@ -1716,6 +1610,131 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             EditDocument(selectedDoc);
             e.Handled = true;
+        }
+    }
+
+    private void RefreshFilter()
+    {
+        try
+        {
+            if (_documentsView != null)
+            {
+                _documentsView.Refresh();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error refreshing filter: {ex.Message}", "Filter Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private bool DocumentFilter(object item)
+    {
+        if (item is not Models.DocumentMetadata doc)
+            return false;
+
+        try
+        {
+            // Get the current filters
+            string purposeFilter = PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem 
+                ? purposeItem.Content.ToString() ?? "All" 
+                : "All";
+                
+            string methodFilter = MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem 
+                ? methodItem.Content.ToString() ?? "All" 
+                : "All";
+                
+            string issuedByFilter = IssuedByFilter.Text.Trim();
+            string searchText = SearchBox.Text.Trim();
+
+            // Apply search text filter if not empty
+            if (!string.IsNullOrEmpty(searchText))
+            {
+                string searchType = SearchTypeCombo.SelectedItem is ComboBoxItem selectedItem 
+                    ? selectedItem.Content.ToString() ?? "Document No"
+                    : "Document No";
+
+                bool matchesSearch = searchType switch
+                {
+                    "Document No" => doc.DocumentNumber.Contains(searchText, StringComparison.OrdinalIgnoreCase),
+                    "Description" => doc.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase),
+                    "Package" => doc.Package.Contains(searchText, StringComparison.OrdinalIgnoreCase),
+                    "Type" => doc.DocumentType.Contains(searchText, StringComparison.OrdinalIgnoreCase),
+                    _ => true
+                };
+
+                if (!matchesSearch)
+                    return false;
+            }
+
+            // Check if we have an issue filter
+            if (IssueDateFilter.SelectedItem is ComboBoxItem issueItem)
+            {
+                if (issueItem.Tag is DateTime selectedDate)
+                {
+                    // If a specific issue date is selected, check if the document has a revision for that date
+                    if (!doc.RevisionHistory.ContainsKey(selectedDate))
+                        return false;
+
+                    // When filtering by issue date, use the purpose and method from that specific revision
+                    var revisionAtDate = doc.RevisionHistory[selectedDate];
+
+                    // Apply purpose filter for the specific revision
+                    if (purposeFilter != "All")
+                    {
+                        string purposeCode = purposeFilter.Substring(0, 1);
+                        if (!revisionAtDate.PurposeOfIssue?.StartsWith(purposeCode) == true)
+                            return false;
+                    }
+
+                    // Apply method filter for the specific revision
+                    if (methodFilter != "All")
+                    {
+                        string methodCode = methodFilter.Substring(0, 1);
+                        if (!revisionAtDate.MethodOfIssue?.StartsWith(methodCode) == true)
+                            return false;
+                    }
+
+                    // Apply issued by filter for the specific revision
+                    if (!string.IsNullOrEmpty(issuedByFilter) && 
+                        !revisionAtDate.IssuedBy?.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase) == true)
+                        return false;
+                }
+                else if (issueItem.Content.ToString() != "All Issues")
+                {
+                    // Invalid state - neither a date nor "All Issues"
+                    return false;
+                }
+            }
+            else
+            {
+                // No issue filter selected, use latest revision for filtering
+                if (purposeFilter != "All")
+                {
+                    string purposeCode = purposeFilter.Substring(0, 1);
+                    if (!doc.PurposeOfIssue?.StartsWith(purposeCode) == true)
+                        return false;
+                }
+
+                if (methodFilter != "All")
+                {
+                    string methodCode = methodFilter.Substring(0, 1);
+                    if (!doc.MethodOfIssue?.StartsWith(methodCode) == true)
+                        return false;
+                }
+
+                if (!string.IsNullOrEmpty(issuedByFilter) && 
+                    !doc.IssuedBy?.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase) == true)
+                    return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't break the filtering
+            System.Diagnostics.Debug.WriteLine($"Error filtering document: {ex.Message}");
+            return false;
         }
     }
 }
