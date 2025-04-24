@@ -46,4 +46,37 @@ dotnet run --project DrawingRegister.App
 
 ## License
 
-[Your License Here] 
+[Your License Here]
+
+# DrawingRegister Application
+
+## Installation Instructions
+
+1. Extract all contents of this zip file to a folder on your computer.
+2. Ensure you keep all files and folders together in the same directory structure.
+3. No installation is required - this is a self-contained application.
+
+## Running the Application
+
+1. Double-click on `DrawingRegister.App.exe` to launch the application.
+2. The application will start immediately without requiring any additional software.
+
+## System Requirements
+
+- Windows 10 or Windows 11 (64-bit)
+- At least 200MB of free disk space
+- 4GB RAM recommended
+
+## Troubleshooting
+
+If the application doesn't start:
+
+1. Make sure you've extracted all files from the zip archive
+2. Verify that you're running on a 64-bit Windows system
+3. Try running the application as administrator by right-clicking and selecting "Run as administrator"
+
+## Support
+
+For support or questions, please contact the application provider.
+
+Created with .NET 8.0 

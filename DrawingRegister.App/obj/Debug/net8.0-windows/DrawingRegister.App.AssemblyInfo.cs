@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DrawingRegister.App")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3c223dead14babcc24bf8039e2094ff62fc3ddd4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0efa86d0bf8c397e7ab22979fcca77d63d9d4613")]
 [assembly: System.Reflection.AssemblyProductAttribute("DrawingRegister.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DrawingRegister.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

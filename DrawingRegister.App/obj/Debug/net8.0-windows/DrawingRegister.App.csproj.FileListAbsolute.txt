@@ -89,13 +89,7 @@ C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\D
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App_MarkupCompile.cache
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App_MarkupCompile.lref
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\BatchEditDialog.baml
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\CompanyDialog.baml
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DistributionDialog.baml
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DistributionInfoDialog.baml
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DocumentEditDialog.baml
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\MainWindow.baml
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\StakeholderDialog.baml
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App.g.resources
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App.GeneratedMSBuildEditorConfig.editorconfig
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App.AssemblyInfoInputs.cache
@@ -108,3 +102,4 @@ C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\r
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App.pdb
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App.genruntimeconfig.cache
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\ref\DrawingRegister.App.dll
+C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\Resources\company-logo.png

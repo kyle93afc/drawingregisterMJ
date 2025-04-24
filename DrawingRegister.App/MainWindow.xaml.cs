@@ -1014,14 +1014,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 // Logo with proper image handling and error checking
                 try
                 {
-                    var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    var exeDir = Path.GetDirectoryName(exePath);
-                    var logoPath = Path.Combine(exeDir!, "Resources", "WHITE LOGO RED BACKGROUND.jpg");
+                    // Fix for single-file apps: use AppContext.BaseDirectory instead of Assembly.Location
+                    var exeDir = System.AppContext.BaseDirectory;
+                    var logoPath = Path.Combine(exeDir, "Resources", "company-logo.png");
                     
                     if (File.Exists(logoPath))
                     {
                         // Use a single method chain for the container
                         row.RelativeItem().AlignRight().Height(35).Image(logoPath).FitHeight();
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Logo file not found at: {logoPath}");
                     }
                 }
                 catch (Exception ex)
