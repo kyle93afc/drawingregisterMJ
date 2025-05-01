@@ -1,2 +1,6 @@
 # Project notes and templates
 xnotes/
+
+# Build output directories
+bin/
+obj/

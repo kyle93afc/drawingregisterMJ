@@ -1,2 +1,6 @@
 # Templates - accessible but not indexed
 .cursor/templates/
+
+# Build output directories
+bin/
+obj/
