@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Drawing Register Application Overview
+
+This is a Windows desktop application built with .NET for managing and tracking drawing registers. The application is structured as follows:
+
+## Main Components
+- [DrawingRegister.App/MainWindow.xaml.cs](mdc:DrawingRegister.App/MainWindow.xaml.cs) - Main application window and core functionality
+- [DrawingRegister.App/BatchEditDialog.xaml.cs](mdc:DrawingRegister.App/BatchEditDialog.xaml.cs) - Batch editing functionality
+- [DrawingRegister.App/DistributionInfoDialog.xaml.cs](mdc:DrawingRegister.App/DistributionInfoDialog.xaml.cs) - Distribution information handling
+
+## Project Structure
+- `Models/` - Contains data models and business logic
+- `Data/` - Data access and persistence
+- `Helpers/` - Utility classes and helper functions
+- `Converters/` - Data conversion and transformation logic
+- `Resources/` - Application resources and assets
+

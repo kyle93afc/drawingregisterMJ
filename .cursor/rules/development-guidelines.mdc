@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Development Guidelines
+
+## Code Organization
+- Business logic should be placed in the `Models/` directory
+- UI-related code should be kept in XAML files and their code-behind
+- Utility functions should go in the `Helpers/` directory
+- Data access code should be in the `Data/` directory
+
+## Coding Standards
+- Use C# nullable reference types to prevent null reference exceptions
+- Follow MVVM pattern where applicable
+- Use async/await for I/O operations
+- Document public APIs with XML comments
+- Handle exceptions appropriately and provide user-friendly error messages
+
+## Building and Testing
+- Always build and test in Debug configuration during development
+- Use Release configuration for performance testing
+- Test on Windows 11 target environment before distribution
+- Address all compiler warnings before publishing
+
+## Version Control
+- Keep the `.gitignore` file updated
+- Don't commit build artifacts in `bin/` and `obj/` directories
+- Document significant changes in commit messages
+

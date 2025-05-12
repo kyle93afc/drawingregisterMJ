@@ -4,3 +4,6 @@ xnotes/
 # Build output directories
 bin/
 obj/
+
+# Documentation folder
+Documentation/
