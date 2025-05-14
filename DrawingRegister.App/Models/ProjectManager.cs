@@ -128,7 +128,8 @@ public class ProjectManager : INotifyPropertyChanged
                     ProjectName = ProjectName,
                     Discipline = Discipline,
                     RegisterNumber = RegisterNumber,
-                    ClientNumber = ClientNumber
+                    ClientNumber = ClientNumber,
+                    DistributionCompanyIds = doc.DistributionCompanyIds
                 };
 
                 foreach (var rev in doc.RevisionHistory)
@@ -552,7 +553,8 @@ public class ProjectManager : INotifyPropertyChanged
                     IssuedBy = kv.Value.IssuedBy,
                     IsDistributed = kv.Value.IsDistributed,
                     FilePath = kv.Value.FilePath
-                })
+                }),
+            DistributionCompanyIds = d.DistributionCompanyIds
         }).ToList();
 
         _currentStorage.Save(Path.Combine(_currentBasePath, STORAGE_FILENAME));
