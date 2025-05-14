@@ -1457,6 +1457,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             });
             
             // Add transmittal footer if this is a transmittal, but only on the last page
+            /*
             if (isTransmittal)
             {
                 column.Item().PageBreak();  // Force a page break before the confirmation
@@ -1479,6 +1480,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     });
                 });
             }
+            */
         });
     }
 
@@ -1679,6 +1681,44 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             EditDocument(selectedDoc);
             e.Handled = true;
+        }
+    }
+
+    private void RemoveDocumentButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Assuming your DataGrid is named DocumentGrid
+        if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDocument)
+        {
+            var result = MessageBox.Show(
+                $"Are you sure you want to remove the entry for '{selectedDocument.DocumentNumber} - {selectedDocument.Description}'?\nThis will remove its record from the register and project data file.\nThe physical file will NOT be deleted from your computer.",
+                "Confirm Removal",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    _project.Documents.Remove(selectedDocument);
+                    _project.SaveProjectData(); // Save changes to project_data.json
+
+                    // Refresh the grid by re-applying filters and sorting
+                    FilterDocuments(); // Corrected: Call FilterDocuments()
+
+                    // The DocumentGrid_SelectionChanged event will handle updating SelectedDocument,
+                    // which in turn should update the RevisionTimeline via its binding.
+
+                    MessageBox.Show("Document entry removed successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error removing document entry: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+        else
+        {
+            MessageBox.Show("Please select a document from the grid to remove.", "No Document Selected", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 }
