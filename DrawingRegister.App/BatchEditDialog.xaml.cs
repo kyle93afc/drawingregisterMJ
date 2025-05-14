@@ -1085,7 +1085,36 @@ namespace DrawingRegister.App
                     // Update distribution if any companies are selected
                     if (selectedCompanyIds.Any())
                     {
-                        doc.SetCompanyDistributions(selectedCompanyIds, _selectedIssueDate);
+                        DateTime distributionTargetDate;
+
+                        if (selectedDate.HasValue)
+                        {
+                            // When filtering by a specific issue date (selectedDate.Value),
+                            // use that date for the distribution update, as it corresponds
+                            // to the specific revision(s) being modified.
+                            distributionTargetDate = selectedDate.Value;
+                        }
+                        else
+                        {
+                            // When not filtering by a specific issue date (e.g., filtering by folder or no filter),
+                            // the property updates (Purpose, Method, IssuedBy) target the latest revision.
+                            // Therefore, the distribution should also apply to the date of that latest revision.
+                            var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+                            if (latestRevision.Key != default(DateTime)) // Check if a valid revision date exists
+                            {
+                                distributionTargetDate = latestRevision.Key;
+                            }
+                            else
+                            {
+                                // This document has no revisions. If "updating a previous issue", this is an edge case.
+                                // Fallback to _selectedIssueDate (the general batch context date from UI).
+                                // This might occur if batch editing is used to add initial issue information (including distribution)
+                                // to documents that previously had no issue records.
+                                System.Diagnostics.Debug.WriteLine($"Warning: Document {doc.DocumentNumber} has no revisions. Distribution will use batch context date: {_selectedIssueDate.ToShortDateString()}");
+                                distributionTargetDate = _selectedIssueDate;
+                            }
+                        }
+                        doc.SetCompanyDistributions(selectedCompanyIds, distributionTargetDate);
                     }
                     
                     if (docUpdated)
