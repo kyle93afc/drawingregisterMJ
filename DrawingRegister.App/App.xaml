@@ -3,6 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <!-- Set the application icon -->
+        <DrawingImage x:Key="AppIcon">
+            <DrawingImage.Drawing>
+                <ImageDrawing ImageSource="/Resources/company-logo.png" 
+                            Rect="0,0,16,16"/>
+            </DrawingImage.Drawing>
+        </DrawingImage>
     </Application.Resources>
 </Application>
