@@ -16,14 +16,11 @@
 
   <ItemGroup>
     <None Remove="**/*.pdf" />
-    <None Remove="Resources/company-logo.png" />
-    <None Remove="Resources/WHITE LOGO RED BACKGROUND.jpg" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Resources/WHITE LOGO RED BACKGROUND.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="Resources/company-logo.png" />
+    <EmbeddedResource Include="Resources/WHITE LOGO RED BACKGROUND.jpg" />
   </ItemGroup>
 
   <ItemGroup>

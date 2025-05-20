@@ -987,22 +987,37 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     .Bold()
                     .FontColor("#000000");
 
-                // Logo with proper image handling and error checking
+                // Load logo with improved path resolution and error handling
                 try
                 {
-                    var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-                    var exeDir = Path.GetDirectoryName(exePath);
-                    var logoPath = Path.Combine(exeDir!, "Resources", "WHITE LOGO RED BACKGROUND.jpg");
-                    
-                    if (File.Exists(logoPath))
+                    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                    using (var stream = assembly.GetManifestResourceStream("DrawingRegister.App.Resources.company-logo.png"))
                     {
-                        // Use a single method chain for the container
-                        row.RelativeItem().AlignRight().Height(35).Image(logoPath).FitHeight();
+                        if (stream != null)
+                        {
+                            row.RelativeItem().AlignRight().Height(35).Image(stream).FitHeight();
+                        }
+                        else
+                        {
+                            // Try alternate logo
+                            using (var altStream = assembly.GetManifestResourceStream("DrawingRegister.App.Resources.WHITE LOGO RED BACKGROUND.jpg"))
+                            {
+                                if (altStream != null)
+                                {
+                                    row.RelativeItem().AlignRight().Height(35).Image(altStream).FitHeight();
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine("Could not load either logo resource");
+                                }
+                            }
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Error loading logo: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
                 }
             });
 

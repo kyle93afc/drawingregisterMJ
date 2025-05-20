@@ -232,7 +232,7 @@
 
             <!-- Logo -->
             <Image Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
-                   Source="/Resources/company-logo.png" 
+                   Source="pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png" 
                    Height="50" 
                    HorizontalAlignment="Left" 
                    Margin="0,0,0,10"/>
