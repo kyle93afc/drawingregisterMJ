@@ -174,12 +174,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             return;
 
         var selectedContent = selectedItem.Content.ToString();
+
+        SubfolderFilterLabel.Visibility = Visibility.Collapsed;
+        SubfolderFilterCombo.Visibility = Visibility.Collapsed;
+        SubfolderFilterCombo.ItemsSource = null; // Clear previous items
         
         if (selectedContent == "All Dates")
         {
             DocumentGrid.ItemsSource = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
             
             // Hide distribution summary and disable view button
+            // Also hide subfolder filter
             DistributionSummaryBorder.Visibility = Visibility.Collapsed;
             ViewDistributionButton.IsEnabled = false;
             
@@ -187,6 +192,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             DistributionInfoText.Text = "No recipients selected";
             return;
         }
+        FilterDocuments(); // Call filter documents after handling UI for "All Dates"
 
         // Enable the view distribution button when a specific date is selected
         ViewDistributionButton.IsEnabled = true;
@@ -265,12 +271,73 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
             
             // Show distribution summary
-            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDate);
+            string? currentSubfolderFilterPath = null;
+            if (SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
+            {
+                currentSubfolderFilterPath = folderPathTag;
+            }
+            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDate, currentSubfolderFilterPath);
             DistributionSummaryText.Text = distributionSummary.GetFormattedSummary();
             DistributionSummaryBorder.Visibility = distributionSummary.TotalRecipients > 0 ? Visibility.Visible : Visibility.Collapsed;
             
             // Update the distribution information display in the Issue Information section
             UpdateDistributionInfoDisplay(selectedDate);
+
+            // Populate subfolder filter and make it visible
+            PopulateSubfolderFilterForDate(selectedDate.Date);
+            SubfolderFilterLabel.Visibility = Visibility.Visible;
+            SubfolderFilterCombo.Visibility = Visibility.Visible;
+
+            FilterDocuments(); // Call filter documents after populating subfolder combo
+        }
+    }
+
+    private void PopulateSubfolderFilterForDate(DateTime selectedDate)
+    {
+        var subfolderItems = new ObservableCollection<ComboBoxItem>();
+        subfolderItems.Add(new ComboBoxItem { Content = "All Subfolders", Tag = "ALL" });
+
+        var uniqueSubfolderPaths = new HashSet<string>();
+
+        foreach (var doc in _project.Documents)
+        {
+            foreach (var revEntry in doc.RevisionHistory)
+            {
+                if (revEntry.Key.Date == selectedDate) // Compare only Date part
+                {
+                    if (!string.IsNullOrEmpty(revEntry.Value.FilePath))
+                    {
+                        try
+                        {
+                            string? directoryPath = Path.GetDirectoryName(revEntry.Value.FilePath);
+                            if (!string.IsNullOrEmpty(directoryPath))
+                            {
+                                uniqueSubfolderPaths.Add(directoryPath);
+                            }
+                        }
+                        catch (ArgumentException) { /* Ignore invalid paths */ }
+                    }
+                }
+            }
+        }
+
+        foreach (var fullPath in uniqueSubfolderPaths.OrderBy(p => new DirectoryInfo(p).Name))
+        {
+            string displayName = new DirectoryInfo(fullPath).Name;
+            var match = System.Text.RegularExpressions.Regex.Match(displayName, @"^(\d{8})(.*)");
+            if (match.Success)
+            {
+                string dateStr = match.Groups[1].Value;
+                string description = match.Groups[2].Value.Trim('-', '_', ' ');
+                displayName = !string.IsNullOrWhiteSpace(description) ? $"{dateStr} - {description}" : dateStr;
+            }
+            subfolderItems.Add(new ComboBoxItem { Content = displayName, Tag = fullPath });
+        }
+
+        SubfolderFilterCombo.ItemsSource = subfolderItems;
+        if (SubfolderFilterCombo.Items.Count > 0)
+        {
+            SubfolderFilterCombo.SelectedIndex = 0; // Default to "All Subfolders"
         }
     }
 
@@ -396,6 +463,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void SubfolderFilterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        FilterDocuments();
+    }
+
     private void SaveProject_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -437,6 +509,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Start with all documents
         var filteredDocs = _project.Documents.ToList();
         
+        // Date and Subfolder filter logic
+        DateTime? selectedFilterDate = null;
+        string? selectedSubfolderPath = null;
+
+        if (IssueDateFilter.SelectedItem is ComboBoxItem dateItem && dateItem.Content.ToString() != "All Dates")
+        {
+            if (DateTime.TryParseExact(dateItem.Content.ToString(), "dd/MM/yyyy", null, 
+                System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                selectedFilterDate = parsedDate.Date;
+            }
+        }
+
+        if (selectedFilterDate.HasValue && SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag)
+        {
+            if (folderPathTag != "ALL")
+            {
+                selectedSubfolderPath = folderPathTag;
+            }
+        }
+        
         // Apply search text filter if not empty
         if (!string.IsNullOrEmpty(searchText))
         {
@@ -447,72 +540,105 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             switch (searchType)
             {
                 case "Document No":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.DocumentNumber.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+                    filteredDocs = filteredDocs.Where(d => d.DocumentNumber.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
                     break;
                 case "Description":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+                    filteredDocs = filteredDocs.Where(d => d.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
                     break;
                 case "Package":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.Package.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+                    filteredDocs = filteredDocs.Where(d => d.Package.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
                     break;
                 case "Type":
-                    filteredDocs = filteredDocs
-                        .Where(d => d.DocumentType.Contains(searchText, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
+                    filteredDocs = filteredDocs.Where(d => d.DocumentType.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
                     break;
-            }
-        }
-        
-        // Check if we have a date filter from IssueDateFilter
-        DateTime? selectedDate = null;
-        if (IssueDateFilter.SelectedItem is ComboBoxItem dateItem && dateItem.Content.ToString() != "All Dates")
-        {
-            if (DateTime.TryParseExact(dateItem.Content.ToString(), "dd/MM/yyyy", null, 
-                System.Globalization.DateTimeStyles.None, out var parsedDate))
-            {
-                selectedDate = parsedDate.Date;
             }
         }
         
         // Apply date filter if selected
-        if (selectedDate.HasValue)
+        if (selectedFilterDate.HasValue)
         {
-            filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Keys.Any(date => date.Date == selectedDate.Value.Date))
-                .ToList();
+            // First, filter by date
+            filteredDocs = filteredDocs.Where(doc => 
+                doc.RevisionHistory.Any(revEntry => revEntry.Key.Date == selectedFilterDate.Value)
+            ).ToList();
+
+            // Then, if a specific subfolder is selected, filter by subfolder
+            if (!string.IsNullOrEmpty(selectedSubfolderPath))
+            {
+                filteredDocs = filteredDocs.Where(doc => 
+                    doc.RevisionHistory.Any(revEntry => 
+                        revEntry.Key.Date == selectedFilterDate.Value &&
+                        !string.IsNullOrEmpty(revEntry.Value.FilePath) &&
+                        string.Equals(Path.GetDirectoryName(revEntry.Value.FilePath), selectedSubfolderPath, StringComparison.OrdinalIgnoreCase)
+                    )
+                ).ToList();
+            }
         }
         
         // Apply purpose filter
         if (purposeFilter != "All")
         {
-            string purpose = purposeFilter.Split('-')[0].Trim();
-            filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Any(r => r.Value.Purpose.StartsWith(purpose)))
-                .ToList();
+            string purposeCode = purposeFilter.Split('-')[0].Trim();
+            if (selectedFilterDate.HasValue)
+            {
+                filteredDocs = filteredDocs.Where(d => 
+                    d.RevisionHistory.Any(r => 
+                        r.Key.Date == selectedFilterDate.Value && 
+                        r.Value.Purpose.StartsWith(purposeCode, StringComparison.OrdinalIgnoreCase)
+                    )
+                ).ToList();
+            }
+            else
+            {
+                filteredDocs = filteredDocs.Where(d => 
+                    d.RevisionHistory.Any(r => 
+                        r.Value.Purpose.StartsWith(purposeCode, StringComparison.OrdinalIgnoreCase)
+                    )
+                ).ToList();
+            }
         }
         
         // Apply method filter
         if (methodFilter != "All")
         {
-            string method = methodFilter.Split('-')[0].Trim();
-            filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Any(r => r.Value.Method.StartsWith(method)))
-                .ToList();
+            string methodCode = methodFilter.Split('-')[0].Trim();
+            if (selectedFilterDate.HasValue)
+            {
+                filteredDocs = filteredDocs.Where(d => 
+                    d.RevisionHistory.Any(r => 
+                        r.Key.Date == selectedFilterDate.Value && 
+                        r.Value.Method.StartsWith(methodCode, StringComparison.OrdinalIgnoreCase)
+                    )
+                ).ToList();
+            }
+            else
+            {
+                filteredDocs = filteredDocs.Where(d => 
+                    d.RevisionHistory.Any(r => r.Value.Method.StartsWith(methodCode, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
+            }
         }
         
         // Apply issued by filter
         if (!string.IsNullOrEmpty(issuedByFilter))
         {
-            filteredDocs = filteredDocs
-                .Where(d => d.RevisionHistory.Any(r => 
-                    r.Value.IssuedBy.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
+            if (selectedFilterDate.HasValue)
+            {
+                filteredDocs = filteredDocs
+                    .Where(d => d.RevisionHistory.Any(r => 
+                            r.Key.Date == selectedFilterDate.Value && 
+                            r.Value.IssuedBy.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase)
+                        )
+                    ).ToList();
+            }
+            else
+            {
+                filteredDocs = filteredDocs.Where(d => 
+                    d.RevisionHistory.Any(r => 
+                        r.Value.IssuedBy.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase)
+                    )
+                ).ToList();
+            }
         }
         
         // Update the grid
@@ -908,10 +1034,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Determine if we're generating a transmittal (specific date) or full register
             bool isTransmittal = IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && 
                                 selectedItem.Content.ToString() != "All Dates";
-            
+
+            string selectedSubfolderPathForReport = null;
+            if (isTransmittal && SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
+            {
+                selectedSubfolderPathForReport = folderPathTag;
+            }
+
             string fileNamePrefix = isTransmittal 
                 ? $"Transmittal_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}" 
                 : $"Register_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}";
+            if (isTransmittal && !string.IsNullOrEmpty(selectedSubfolderPathForReport))
+                fileNamePrefix += $"_{new DirectoryInfo(selectedSubfolderPathForReport).Name.Replace(" ", "_")}";
 
             var saveDialog = new SaveFileDialog
             {
@@ -935,7 +1069,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
                             // Use a single Element call for each section
                             page.Header().Element(header => ComposeHeader(header, isTransmittal));
-                            page.Content().Element(content => ComposeContent(content, isTransmittal));
+                            page.Content().Element(content => ComposeContent(content, isTransmittal, selectedSubfolderPathForReport));
                             
                             // Only add page numbers in the footer, no transmittal confirmation here
                             page.Footer().AlignCenter().Text(text =>
@@ -1083,12 +1217,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         });
     }
 
-    private void ComposeContent(IContainer container, bool isTransmittal = false)
+    private void ComposeContent(IContainer container, bool isTransmittal = false, string selectedSubfolderPathForReport = null)
     {
         container.Column(column =>
         {
             // Get documents to display - either all or filtered by date
-            var documentsToDisplay = _project.Documents.ToList();
+            List<Models.DocumentMetadata> documentsToDisplay;
             DateTime? selectedDate = null;
             
             if (isTransmittal && IssueDateFilter.SelectedItem is ComboBoxItem selectedItem)
@@ -1099,9 +1233,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     selectedDate = parsedDate;
                     documentsToDisplay = _project.Documents
                         .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Value.Date))
-                        .OrderBy(d => d.DocumentNumber)
                         .ToList();
+
+                    if (!string.IsNullOrEmpty(selectedSubfolderPathForReport))
+                    {
+                        documentsToDisplay = documentsToDisplay
+                            .Where(d => d.RevisionHistory.Any(r => 
+                                r.Key.Date == selectedDate.Value.Date &&
+                                !string.IsNullOrEmpty(r.Value.FilePath) &&
+                                string.Equals(Path.GetDirectoryName(r.Value.FilePath), selectedSubfolderPathForReport, StringComparison.OrdinalIgnoreCase)
+                            ))
+                            .ToList();
+                    }
+                    documentsToDisplay = documentsToDisplay.OrderBy(d => d.DocumentNumber).ToList();
                 }
+                else { documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList(); } // Fallback
+            }
+            else
+            {
+                documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
             }
             
             // Get last 3 issue dates in descending order (newest first)
@@ -1159,7 +1309,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             string distributionText = "NO RECIPIENTS SELECTED";
                             if (selectedDate.HasValue)
                             {
-                                distributionText = GetDistributionTextForPdf(selectedDate.Value).ToUpper();
+                                distributionText = GetDistributionTextForPdf(selectedDate.Value, selectedSubfolderPathForReport).ToUpper();
                             }
                             
                             // Split by lines and create a row for each category
@@ -1566,6 +1716,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void UpdateDistributionInfoDisplay(DateTime selectedDate)
     {
+        string? currentSubfolderFilterPath = null;
+        if (SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
+        {
+            currentSubfolderFilterPath = folderPathTag;
+        }
+
         // Get all documents distributed on this date
         var docsForDate = _project.Documents
             .Where(d => d.DistributionCompanyIds.ContainsKey(selectedDate))
@@ -1573,6 +1729,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         
         if (!docsForDate.Any())
         {
+            DistributionInfoText.Text = "No recipients selected";
+            return;
+        }
+
+        // Further filter by subfolder if applicable
+        if (!string.IsNullOrEmpty(currentSubfolderFilterPath))
+        {
+            docsForDate = docsForDate.Where(d => d.RevisionHistory.Any(r => 
+                r.Key.Date == selectedDate.Date && 
+                !string.IsNullOrEmpty(r.Value.FilePath) && 
+                string.Equals(Path.GetDirectoryName(r.Value.FilePath), currentSubfolderFilterPath, StringComparison.OrdinalIgnoreCase)
+            )).ToList();
+        }
+
+        if (!docsForDate.Any()) {
             DistributionInfoText.Text = "No recipients selected";
             return;
         }
@@ -1644,16 +1815,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         Dispose();
     }
 
-    private string GetDistributionTextForPdf(DateTime selectedDate)
+    private string GetDistributionTextForPdf(DateTime selectedDate, string? selectedSubfolderPath)
     {
         // Get all documents distributed on this date
         var docsForDate = _project.Documents
             .Where(d => d.DistributionCompanyIds.ContainsKey(selectedDate))
             .ToList();
         
+        // Further filter by subfolder if applicable
+        if (!string.IsNullOrEmpty(selectedSubfolderPath))
+        {
+            docsForDate = docsForDate.Where(d => d.RevisionHistory.Any(r => 
+                r.Key.Date == selectedDate.Date &&
+                !string.IsNullOrEmpty(r.Value.FilePath) && 
+                string.Equals(Path.GetDirectoryName(r.Value.FilePath), selectedSubfolderPath, StringComparison.OrdinalIgnoreCase)
+            )).ToList();
+        }
+        
         if (!docsForDate.Any())
         {
-            return "No recipients selected";
+            return "No recipients selected for this specific issue/subfolder";
         }
         
         // Get all company IDs that received documents on this date
@@ -1674,20 +1855,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             .OrderBy(g => g.Key)
             .ToList();
         
-        // Format the distribution information text with better structure
+        // Format the distribution information text
         var distributionText = new System.Text.StringBuilder();
         
         foreach (var categoryGroup in companiesByCategory)
         {
-            if (distributionText.Length > 0)
-            {
-                distributionText.AppendLine();
-            }
-            distributionText.Append($"{categoryGroup.Key}: ");
-            distributionText.Append(string.Join(", ", categoryGroup.Select(c => c.Name)));
+            distributionText.AppendLine($"{categoryGroup.Key}: {string.Join(", ", categoryGroup.Select(c => c.Name))}");
         }
         
-        return distributionText.Length > 0 ? distributionText.ToString() : "No recipients selected";
+        return distributionText.ToString().TrimEnd();
     }
 
     private void DocumentGrid_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)

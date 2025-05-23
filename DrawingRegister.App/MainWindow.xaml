@@ -7,8 +7,7 @@
         xmlns:local="clr-namespace:DrawingRegister.App"
         xmlns:converters="clr-namespace:DrawingRegister.App.Converters"
         mc:Ignorable="d"
-        Title="DOCUMENT AND DRAWING REGISTER" Height="800" Width="1200"
-        Icon="/Resources/company-logo.png">
+        Title="DOCUMENT AND DRAWING REGISTER" Height="800" Width="1200">
     <Window.Resources>
         <converters:DateToColumnConverter x:Key="DateToColumnConverter"/>
         <converters:LatestRevisionConverter x:Key="LatestRevisionConverter"/>
@@ -296,13 +295,19 @@
             
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="FILTER BY DATE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="IssueDateFilter" Width="200" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="IssueDateFilter_SelectionChanged">
+                <ComboBox x:Name="IssueDateFilter" Width="150" Height="35" Margin="0,0,5,0" FontSize="14" SelectionChanged="IssueDateFilter_SelectionChanged">
                     <ComboBoxItem Content="All Dates" FontSize="14"/>
                 </ComboBox>
                 
+                <!-- NEW: Subfolder filter -->
+                <TextBlock x:Name="SubfolderFilterLabel" Text="AND SUBFOLDER:" VerticalAlignment="Center" Margin="5,0,5,0" FontSize="14" Visibility="Collapsed"/>
+                <ComboBox x:Name="SubfolderFilterCombo" Width="220" Height="35" Margin="0,0,5,0" FontSize="14" SelectionChanged="SubfolderFilterCombo_SelectionChanged" Visibility="Collapsed">
+                    <!-- Items will be populated programmatically -->
+                </ComboBox>
+
                 <!-- New Distribution Button -->
                 <Button x:Name="ViewDistributionButton" Content="VIEW DISTRIBUTION" Click="ViewDistribution_Click" 
-                        Height="35" Margin="0,0,10,0" FontSize="14" FontWeight="Bold"
+                        Height="35" Margin="0,0,5,0" FontSize="14" FontWeight="Bold"
                         Background="#eb1845" Foreground="White" Visibility="Visible"/>
                 
                 <!-- Distribution Summary -->
@@ -314,8 +319,8 @@
                     </StackPanel>
                 </Border>
 
-                <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
+                <TextBlock Text="PURPOSE:" VerticalAlignment="Center" Margin="5,0,5,0" FontSize="14"/>
+                <ComboBox x:Name="PurposeOfIssueFilter" Width="100" Height="35" Margin="0,0,5,0" FontSize="14" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
                     <ComboBoxItem Content="All" FontSize="14"/>
                     <ComboBoxItem Content="A - Approval" FontSize="14"/>
                     <ComboBoxItem Content="C - Construction" FontSize="14"/>
@@ -347,8 +352,8 @@
                     </Border>
                 </StackPanel>
 
-                <TextBlock Text="METHOD OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="MethodOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="MethodOfIssueFilter_SelectionChanged">
+                <TextBlock Text="METHOD:" VerticalAlignment="Center" Margin="5,0,5,0" FontSize="14"/>
+                <ComboBox x:Name="MethodOfIssueFilter" Width="100" Height="35" Margin="0,0,5,0" FontSize="14" SelectionChanged="MethodOfIssueFilter_SelectionChanged">
                     <ComboBoxItem Content="All" FontSize="14"/>
                     <ComboBoxItem Content="E - Email" FontSize="14"/>
                     <ComboBoxItem Content="S - SharePoint" FontSize="14"/>
@@ -372,8 +377,8 @@
                     </Border>
                 </StackPanel>
 
-                <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
-                <TextBox x:Name="IssuedByFilter" Width="60" Height="35" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper" FontSize="14" TextChanged="IssuedByFilter_TextChanged"/>
+                <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="5,0,5,0" FontSize="14"/>
+                <TextBox x:Name="IssuedByFilter" Width="40" Height="35" Margin="0,0,5,0" MaxLength="2" CharacterCasing="Upper" FontSize="14" TextChanged="IssuedByFilter_TextChanged"/>
 
                 <Button Content="SAVE ISSUE DETAILS" Click="SaveIssueDetails_Click" Height="35" FontSize="14"
                         Style="{StaticResource BaseButtonStyle}"/>

@@ -53,7 +53,6 @@ C:\temp\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\Distribut
 C:\temp\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DistributionInfoDialog.baml
 C:\temp\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DocumentEditDialog.baml
 C:\temp\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\StakeholderDialog.baml
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\Resources\WHITE LOGO RED BACKGROUND.jpg
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\DrawingRegister.App.exe
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\DrawingRegister.App.deps.json
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\DrawingRegister.App.runtimeconfig.json
@@ -75,6 +74,7 @@ C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\D
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\Dictionary1.baml
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\FolderProgressWindow.baml
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\RevisionEditDialog.baml
+C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\App.baml
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\BatchEditDialog.g.cs
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\CompanyDialog.g.cs
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DistributionDialog.g.cs
@@ -85,7 +85,6 @@ C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\M
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\RevisionEditDialog.g.cs
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\StakeholderDialog.g.cs
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\App.g.cs
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App_Content.g.cs
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App_MarkupCompile.cache
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App_MarkupCompile.lref
@@ -108,4 +107,3 @@ C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\r
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App.pdb
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\DrawingRegister.App.genruntimeconfig.cache
 C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\obj\Debug\net8.0-windows\ref\DrawingRegister.App.dll
-C:\Cursor_Files\drawingregisterMJ\DrawingRegister.App\bin\Debug\net8.0-windows\Resources\company-logo.png

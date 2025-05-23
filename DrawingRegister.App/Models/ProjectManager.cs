@@ -80,31 +80,53 @@ public class ProjectManager : INotifyPropertyChanged
         }
     }
 
-    public void ImportDocuments(string folderPath)
+    public void ImportDocuments(string folderPath, string? specificFolderToRescanFullPath = null)
     {
-        // Clear all existing data when starting a new import
-        Documents.Clear();
-        IssueDates.Clear();
-        ProjectNumber = string.Empty;
-        ProjectName = string.Empty;
-        Discipline = string.Empty;
-        RegisterNumber = string.Empty;
-        ClientNumber = string.Empty;
+        bool isSpecificRescan = !string.IsNullOrEmpty(specificFolderToRescanFullPath);
+
+        if (!isSpecificRescan) // Full import/refresh
+        {
+            Documents.Clear();
+            // IssueDates will be rebuilt at the end from all documents.
+            ProjectNumber = string.Empty;
+            ProjectName = string.Empty;
+            Discipline = string.Empty;
+            RegisterNumber = string.Empty;
+            ClientNumber = string.Empty;
+        }
 
         _currentBasePath = folderPath;
         var storageFile = Path.Combine(folderPath, STORAGE_FILENAME);
         
         // Initialize the DistributionManager with the project path
         DistributionManager = new DistributionManager(folderPath);
-        
+
         // Try to load existing project data if it exists
         _currentStorage = ProjectStorage.Load(storageFile);
         var processedFolders = new HashSet<string>();
-        
-        if (_currentStorage != null)
+
+        if (_currentStorage == null)
+        {
+            _currentStorage = new ProjectStorage { BaseFolderPath = folderPath, Projects = new List<DrawingProject>() };
+        }
+
+        if (isSpecificRescan)
+        {
+            Console.WriteLine($"\n=== Preparing to rescan: {Path.GetFileName(specificFolderToRescanFullPath)} ===");
+            var docsToRemove = Documents.Where(doc =>
+                doc.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true) ||
+                (!string.IsNullOrEmpty(doc.FilePath) && Path.GetDirectoryName(doc.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true)
+            ).ToList();
+            foreach (var doc in docsToRemove) { Documents.Remove(doc); }
+
+            _currentStorage.Documents.RemoveAll(docInfo =>
+                 docInfo.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true) ||
+                (!string.IsNullOrEmpty(docInfo.FilePath) && Path.GetDirectoryName(docInfo.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true));
+            _currentStorage.Projects.RemoveAll(p => p.FolderPath.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase));
+        }
+        else if (_currentStorage != null) // Full scan and storage exists
         {
             Console.WriteLine("\n=== Loading Existing Project Data ===");
-            
             // Restore project metadata from storage first
             ProjectNumber = _currentStorage.ProjectNumber;
             ProjectName = _currentStorage.ProjectName;
@@ -113,76 +135,87 @@ public class ProjectManager : INotifyPropertyChanged
             ClientNumber = _currentStorage.ClientNumber;
             
             Console.WriteLine($"Restored project metadata: {ProjectNumber} - {ProjectName} - {Discipline}");
-            
-            // Load existing documents
-            foreach (var doc in _currentStorage.Documents)
+        }
+
+        // Populate Documents from _currentStorage (which might have been modified if isSpecificRescan)
+        if (_currentStorage != null && _currentStorage.Documents != null)
+        {
+            Console.WriteLine($"\n=== Loading Documents From Storage (Count: {_currentStorage.Documents.Count}) ===");
+            foreach (var docStorageInfo in _currentStorage.Documents)
             {
-                var metadata = new DocumentMetadata
+                // Avoid re-adding if it's somehow still in Documents (should only happen if logic elsewhere is flawed)
+                if (!Documents.Any(d => d.DocumentNumber == docStorageInfo.DocumentNumber))
                 {
-                    DocumentNumber = doc.DocumentNumber,
-                    Description = doc.Description,
-                    Package = doc.Package,
-                    DocumentType = doc.DocumentType,
-                    Size = doc.Size,
-                    ProjectNumber = ProjectNumber,  // Use the restored project metadata
-                    ProjectName = ProjectName,
-                    Discipline = Discipline,
-                    RegisterNumber = RegisterNumber,
-                    ClientNumber = ClientNumber,
-                    DistributionCompanyIds = doc.DistributionCompanyIds
-                };
-
-                foreach (var rev in doc.RevisionHistory)
-                {
-                    metadata.RevisionHistory[rev.Key] = new RevisionInfo
+                    var metadata = new DocumentMetadata
                     {
-                        Revision = rev.Value.Revision,
-                        Purpose = rev.Value.Purpose,
-                        Method = rev.Value.Method,
-                        IssuedBy = rev.Value.IssuedBy,
-                        IsDistributed = rev.Value.IsDistributed,
-                        FilePath = rev.Value.FilePath
+                        DocumentNumber = docStorageInfo.DocumentNumber,
+                        Description = docStorageInfo.Description,
+                        Package = docStorageInfo.Package,
+                        DocumentType = docStorageInfo.DocumentType,
+                        Size = docStorageInfo.Size,
+                        ProjectNumber = this.ProjectNumber, // Use current ProjectManager's properties
+                        ProjectName = this.ProjectName,
+                        Discipline = this.Discipline,
+                        RegisterNumber = this.RegisterNumber,
+                        ClientNumber = this.ClientNumber,
+                        DistributionCompanyIds = docStorageInfo.DistributionCompanyIds
                     };
-                }
 
-                Documents.Add(metadata);
+                    foreach (var rev in docStorageInfo.RevisionHistory)
+                    {
+                        metadata.RevisionHistory[rev.Key] = new RevisionInfo
+                        {
+                            Revision = rev.Value.Revision,
+                            Purpose = rev.Value.Purpose,
+                            Method = rev.Value.Method,
+                            IssuedBy = rev.Value.IssuedBy,
+                            IsDistributed = rev.Value.IsDistributed,
+                            FilePath = rev.Value.FilePath
+                        };
+                    }
+                    Documents.Add(metadata);
 
-                // Ensure FilePath is set from the *absolute* latest revision after loading
-                if (metadata.RevisionHistory.Any())
-                {
-                    var latestRevisionEntry = metadata.RevisionHistory.OrderByDescending(kv => kv.Key).First();
-                    metadata.FilePath = latestRevisionEntry.Value.FilePath;
+                    if (metadata.RevisionHistory.Any())
+                    {
+                        var latestRevisionEntry = metadata.RevisionHistory.OrderByDescending(kv => kv.Key).First();
+                        metadata.FilePath = latestRevisionEntry.Value.FilePath;
+                    }
                 }
             }
+        }
+        
+        processedFolders = _currentStorage != null && _currentStorage.Projects != null
+            ? new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath))
+            : new HashSet<string>();
+        Console.WriteLine($"Found {processedFolders.Count} previously processed folders (based on current storage state)");
 
-            // Track which folders we've already processed
-            processedFolders = new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath));
-            Console.WriteLine($"Found {processedFolders.Count} previously processed folders");
+
+        // Scan for new files
+        var allSubDirectories = Directory.GetDirectories(folderPath);
+        List<string> directoriesToScan;
+
+        if (isSpecificRescan)
+        {
+            directoriesToScan = allSubDirectories.Contains(specificFolderToRescanFullPath, StringComparer.OrdinalIgnoreCase)
+                ? new List<string> { specificFolderToRescanFullPath }
+                : new List<string>();
+            Console.WriteLine(directoriesToScan.Any() ? $"Targeting specific folder for rescan: {Path.GetFileName(specificFolderToRescanFullPath)}" : $"Specified folder for rescan not found or invalid: {specificFolderToRescanFullPath}. Skipping scan for this path.");
         }
         else
         {
-            // Create new storage if none exists
-            _currentStorage = new ProjectStorage 
-            { 
-                BaseFolderPath = folderPath,
-                LastScanDate = DateTime.Now,
-                LastProcessedDate = DateTime.Now,
-                Projects = new List<DrawingProject>()
-            };
+            directoriesToScan = allSubDirectories.ToList();
         }
 
-        // Scan for new files
-        var subDirectories = Directory.GetDirectories(folderPath);
-        Console.WriteLine($"\n=== Starting Directory Scan ===");
-        
+        Console.WriteLine($"\n=== Starting Directory Scan (Source: {(isSpecificRescan ? "Specific Rescan" : "All Eligible")}) ===");
         // Filter directories that need processing - only process unprocessed folders
-        var dateDirectories = subDirectories
+        var dateDirectories = directoriesToScan
             .Where(dir => 
             {
                 var dirInfo = new DirectoryInfo(dir);
                 
-                // Skip if folder is already processed
-                if (processedFolders.Contains(dir))
+                // If NOT a specific rescan, skip if folder is already processed.
+                // If it IS a specific rescan, processedFolders will not contain specificFolderToRescanFullPath due to earlier removal.
+                if (!isSpecificRescan && processedFolders.Contains(dir))
                 {
                     var folderName = Path.GetFileName(dir);
                     Console.WriteLine($"⏩ Skipping previously processed directory: {folderName}");
@@ -191,13 +224,12 @@ public class ProjectManager : INotifyPropertyChanged
                 }
                 
                 Console.WriteLine($"\n🔍 Scanning directory: {Path.GetFileName(dir)}");
-
                 // Remove any leading non-digit characters and handle underscore/dash separators
-                var originalDirName = dir;
-                dir = dir.Replace("_", "-").Trim();
-                Console.WriteLine($"  Normalized name: {dir}");
+                var dirNameForLog = Path.GetFileName(dir);
+                var dirNameToParse = Path.GetFileName(dir).Replace("_", "-").Trim();
+                Console.WriteLine($"  Normalized name for parsing: {dirNameToParse}");
                 
-                var dateMatch = Regex.Match(dir, @"(\d{8})");
+                var dateMatch = Regex.Match(dirNameToParse, @"(\d{8})");
                 if (dateMatch.Success)
                 {
                     var potentialDate = dateMatch.Groups[1].Value;
@@ -205,35 +237,34 @@ public class ProjectManager : INotifyPropertyChanged
                     
                     if (DateTime.TryParseExact(potentialDate, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var date))
                     {
-                        Console.WriteLine($"  ✅ Valid date folder: {dir} (parsed {date:yyyy-MM-dd})");
-                        OnFolderStatusUpdated?.Invoke(Path.GetFileName(dir), "Processed");
+                        Console.WriteLine($"  ✅ Valid date folder: {dirNameForLog} (parsed {date:yyyy-MM-dd})");
+                        OnFolderStatusUpdated?.Invoke(dirNameForLog, "Processed");
                         return true;
                     }
                     else
                     {
                         Console.WriteLine($"  ❌ Failed parsing date from: {potentialDate}");
-                        OnFolderStatusUpdated?.Invoke(Path.GetFileName(dir), "Error");
+                        OnFolderStatusUpdated?.Invoke(dirNameForLog, "Error");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"  ❌ No 8-digit date found in directory name");
+                    Console.WriteLine($"  ❌ No 8-digit date found in directory name: {dirNameToParse}");
                 }
 
                 // Then try with common separators removed
-                var cleanName = new string(dir.TakeWhile(char.IsDigit).ToArray());
+                var cleanName = new string(dirNameToParse.TakeWhile(char.IsDigit).ToArray());
                 Console.WriteLine($"  🧹 Cleaned name attempt: '{cleanName}'");
                 
-                if (cleanName.Length == 8 && 
-                    DateTime.TryParseExact(cleanName, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                if (cleanName.Length == 8 && DateTime.TryParseExact(cleanName, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
                 {
                     Console.WriteLine($"  ✅ Cleaned name valid: {parsedDate:yyyy-MM-dd}");
                     OnFolderStatusUpdated?.Invoke(Path.GetFileName(dir), "Processed");
                     return true;
                 }
                 
-                Console.WriteLine($"  ❌ Failed to parse date from directory: {originalDirName}");
-                OnFolderStatusUpdated?.Invoke(Path.GetFileName(dir), "Error");
+                Console.WriteLine($"  ❌ Failed to parse date from directory: {Path.GetFileName(dir)}");
+                OnFolderStatusUpdated?.Invoke(dirNameForLog, "Error");
                 return false;
             })
             .ToList();
@@ -246,7 +277,7 @@ public class ProjectManager : INotifyPropertyChanged
         }
         
         // Log directories that were skipped
-        var skippedDirs = subDirectories.Except(dateDirectories).ToList();
+        var skippedDirs = directoriesToScan.Except(dateDirectories).ToList();
         if (skippedDirs.Any())
         {
             Console.WriteLine($"\nSkipped {skippedDirs.Count} directories:");
@@ -256,9 +287,9 @@ public class ProjectManager : INotifyPropertyChanged
             }
         }
 
-        if (!dateDirectories.Any())
+        if (!isSpecificRescan && !dateDirectories.Any())
         {
-            throw new Exception("No valid date folders found. Folders should start with a date in format YYYYMMDD.");
+            throw new Exception("No valid new date folders found. Folders should start with a date in format YYYYMMDD.");
         }
 
         // Only get PDF files from date directories
@@ -269,9 +300,9 @@ public class ProjectManager : INotifyPropertyChanged
         Console.WriteLine($"\n=== PDF File Processing ===");
         Console.WriteLine($"Found {pdfFiles.Count} PDF files in date directories");
 
-        if (!pdfFiles.Any())
+        if (!isSpecificRescan && !pdfFiles.Any() && dateDirectories.Any()) // If there were date dirs but no PDFs in them (full scan)
         {
-            throw new Exception("No PDF files found in any folders.");
+            throw new Exception("No PDF files found in any of the processed date folders.");
         }
 
         // Try to detect project number from the first valid PDF name
@@ -288,22 +319,14 @@ public class ProjectManager : INotifyPropertyChanged
             }
         }
 
-        if (string.IsNullOrEmpty(detectedProjectNo))
-        {
-            throw new Exception("Could not detect project number from PDF filenames. Please ensure files follow the naming convention.");
-        }
-
-        // Only update project number if it's not already set from storage
-        if (string.IsNullOrEmpty(ProjectNumber))
+        if (string.IsNullOrEmpty(this.ProjectNumber) && !string.IsNullOrEmpty(detectedProjectNo))
         {
             ProjectNumber = detectedProjectNo;
         }
-        else if (ProjectNumber != detectedProjectNo)
+        else if (!string.IsNullOrEmpty(detectedProjectNo) && ProjectNumber != detectedProjectNo)
         {
             throw new Exception($"Project number mismatch. Storage has {ProjectNumber} but found {detectedProjectNo} in PDF files.");
         }
-
-        // First collect all issue dates from folder names and file dates
         var allIssueDates = dateDirectories
             .Select(dir => 
             {
@@ -333,8 +356,6 @@ public class ProjectManager : INotifyPropertyChanged
             })
             .OrderBy(d => d)
             .ToList();
-
-        IssueDates.AddRange(allIssueDates);
 
         foreach (var filePath in pdfFiles)
         {
@@ -516,6 +537,16 @@ public class ProjectManager : INotifyPropertyChanged
                 existingProject.LastModified = dirInfo.LastWriteTime;
             }
         }
+
+        // Rebuild IssueDates from all documents currently in the collection
+        IssueDates.Clear();
+        var uniqueDatesFromDocs = Documents
+            .SelectMany(d => d.RevisionHistory.Keys)
+            .Select(dt => dt.Date) // Ensure only date part
+            .Distinct()
+            .OrderBy(d => d)
+            .ToList();
+        IssueDates.AddRange(uniqueDatesFromDocs);
 
         SaveProjectData();
     }

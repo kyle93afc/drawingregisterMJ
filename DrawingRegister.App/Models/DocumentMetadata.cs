@@ -173,7 +173,7 @@ namespace DrawingRegister.App.Models
         // Check if a document was distributed to a company at a specific issue date
         public bool WasDistributedToCompany(string companyId, DateTime issueDate)
         {
-            if (!DistributionCompanyIds.TryGetValue(issueDate, out var companyIds))
+            if (!DistributionCompanyIds.TryGetValue(issueDate.Date, out var companyIds))
                 return false;
                 
             return companyIds.Contains(companyId);
@@ -182,12 +182,12 @@ namespace DrawingRegister.App.Models
         // Toggle distribution status for a company at a specific issue date
         public void ToggleCompanyDistribution(string companyId, DateTime issueDate)
         {
-            if (!DistributionCompanyIds.ContainsKey(issueDate))
+            if (!DistributionCompanyIds.ContainsKey(issueDate.Date))
             {
-                DistributionCompanyIds[issueDate] = new List<string>();
+                DistributionCompanyIds[issueDate.Date] = new List<string>();
             }
             
-            var companyIds = DistributionCompanyIds[issueDate];
+            var companyIds = DistributionCompanyIds[issueDate.Date];
             
             if (companyIds.Contains(companyId))
                 companyIds.Remove(companyId);
@@ -198,7 +198,7 @@ namespace DrawingRegister.App.Models
         // Set distribution for multiple companies at once
         public void SetCompanyDistributions(List<string> companyIds, DateTime issueDate)
         {
-            DistributionCompanyIds[issueDate] = new List<string>(companyIds);
+            DistributionCompanyIds[issueDate.Date] = new List<string>(companyIds);
         }
     }
 

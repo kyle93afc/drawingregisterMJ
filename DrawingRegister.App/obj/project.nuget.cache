@@ -1,21 +1,17 @@
 {
   "version": 2,
-  "dgSpecHash": "Qev4gpOXEgE=",
+  "dgSpecHash": "EOdyfW7Gdlg=",
   "success": true,
   "projectFilePath": "C:\\Cursor_Files\\drawingregisterMJ\\DrawingRegister.App\\DrawingRegister.App.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\k.greig\\.nuget\\packages\\harfbuzzsharp\\7.3.0\\harfbuzzsharp.7.3.0.nupkg.sha512",
     "C:\\Users\\k.greig\\.nuget\\packages\\harfbuzzsharp.nativeassets.macos\\7.3.0\\harfbuzzsharp.nativeassets.macos.7.3.0.nupkg.sha512",
     "C:\\Users\\k.greig\\.nuget\\packages\\harfbuzzsharp.nativeassets.win32\\7.3.0\\harfbuzzsharp.nativeassets.win32.7.3.0.nupkg.sha512",
-    "C:\\Users\\k.greig\\.nuget\\packages\\microsoft.net.illink.tasks\\8.0.16\\microsoft.net.illink.tasks.8.0.16.nupkg.sha512",
     "C:\\Users\\k.greig\\.nuget\\packages\\questpdf\\2023.12.1\\questpdf.2023.12.1.nupkg.sha512",
     "C:\\Users\\k.greig\\.nuget\\packages\\skiasharp\\2.88.6\\skiasharp.2.88.6.nupkg.sha512",
     "C:\\Users\\k.greig\\.nuget\\packages\\skiasharp.harfbuzz\\2.88.6\\skiasharp.harfbuzz.2.88.6.nupkg.sha512",
     "C:\\Users\\k.greig\\.nuget\\packages\\skiasharp.nativeassets.macos\\2.88.6\\skiasharp.nativeassets.macos.2.88.6.nupkg.sha512",
-    "C:\\Users\\k.greig\\.nuget\\packages\\skiasharp.nativeassets.win32\\2.88.6\\skiasharp.nativeassets.win32.2.88.6.nupkg.sha512",
-    "C:\\Users\\k.greig\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\8.0.16\\microsoft.netcore.app.runtime.win-x64.8.0.16.nupkg.sha512",
-    "C:\\Users\\k.greig\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\8.0.16\\microsoft.windowsdesktop.app.runtime.win-x64.8.0.16.nupkg.sha512",
-    "C:\\Users\\k.greig\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\8.0.16\\microsoft.aspnetcore.app.runtime.win-x64.8.0.16.nupkg.sha512"
+    "C:\\Users\\k.greig\\.nuget\\packages\\skiasharp.nativeassets.win32\\2.88.6\\skiasharp.nativeassets.win32.2.88.6.nupkg.sha512"
   ],
   "logs": []
 }
