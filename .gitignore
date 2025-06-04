@@ -1,9 +1,9 @@
 .vs/
-bin/
-obj/
+**/bin/
+**/obj/
 
-# Private individual user cursor rules
-.cursor/rules/_*.mdc
+# Cursor rules files
+.cursor/rules/*.mdc
 
 # Documentation and templates
 xnotes/
