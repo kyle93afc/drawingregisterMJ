@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Threading.Tasks;
+using System.Threading;
 using DrawingRegister.App.Models;
 using System.Collections.Generic;
 using MessageBox = System.Windows.MessageBox;
@@ -649,7 +650,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         DocumentGrid.ItemsSource = documents.OrderBy(d => d.DocumentNumber).ToList();
     }
 
-    private void ImportDocuments_Click(object sender, RoutedEventArgs e)
+    private async void ImportDocuments_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
@@ -665,6 +666,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 var progressWindow = new FolderProgressWindow();
                 progressWindow.Show();
 
+                // Disable the import button to prevent multiple simultaneous imports
+                var importButton = sender as System.Windows.Controls.Button;
+                if (importButton != null)
+                {
+                    importButton.IsEnabled = false;
+                }
+
                 // Wire up the folder status callback
                 _project.OnFolderStatusUpdated = (folderName, status) =>
                 {
@@ -678,19 +686,53 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     });
                 };
 
-                _project.ImportDocuments(dialog.SelectedPath);
+                // Create progress reporter for detailed progress updates
+                var progress = new Progress<string>(message =>
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        progressWindow.Title = $"Import Progress - {message}";
+                    });
+                });
+
+                // Create cancellation token source for the operation
+                var cancellationTokenSource = new CancellationTokenSource();
+
+                // Add cancel button functionality to progress window
+                progressWindow.Closed += (s, args) =>
+                {
+                    cancellationTokenSource.Cancel();
+                };
+
+                await _project.ImportDocumentsAsync(dialog.SelectedPath, null, cancellationTokenSource.Token, progress);
+                
                 UpdateIssueDateFilterOptions();
                 UpdateRevisionColumns();
                 FilterDocuments();
+                
+                progressWindow.Close();
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Import operation was cancelled.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error importing documents: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+            finally
+            {
+                // Re-enable the import button
+                var importButton = sender as System.Windows.Controls.Button;
+                if (importButton != null)
+                {
+                    importButton.IsEnabled = true;
+                }
+            }
         }
     }
 
-    private void RefreshView_Click(object sender, RoutedEventArgs e)
+    private async void RefreshView_Click(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -707,8 +749,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 return;
             }
 
+            // Disable the refresh button during operation
+            var refreshButton = sender as System.Windows.Controls.Button;
+            if (refreshButton != null)
+            {
+                refreshButton.IsEnabled = false;
+            }
+
+            // Create progress reporter
+            var progress = new Progress<string>(message =>
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    // Update status bar or title if needed
+                    this.Title = $"Drawing Register - {message}";
+                });
+            });
+
+            // Create cancellation token
+            var cancellationTokenSource = new CancellationTokenSource();
+
             // Rescan the current folder
-            _project.ImportDocuments(_project._currentBasePath);
+            await _project.ImportDocumentsAsync(_project._currentBasePath, null, cancellationTokenSource.Token, progress);
 
             // Refresh the document grid view
             var view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
@@ -720,10 +782,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Force grid to update
             DocumentGrid.Items.Refresh();
 
+            // Reset title
+            this.Title = "Drawing Register";
+
             MessageBox.Show($"Successfully refreshed {_project.Documents.Count} documents.", 
                 "Refresh Complete", 
                 MessageBoxButton.OK, 
                 MessageBoxImage.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            MessageBox.Show("Refresh operation was cancelled.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -731,6 +800,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 "Refresh Error", 
                 MessageBoxButton.OK, 
                 MessageBoxImage.Error);
+        }
+        finally
+        {
+            // Re-enable the refresh button
+            var refreshButton = sender as System.Windows.Controls.Button;
+            if (refreshButton != null)
+            {
+                refreshButton.IsEnabled = true;
+            }
+            
+            // Reset title
+            this.Title = "Drawing Register";
         }
     }
 
