@@ -8,6 +8,13 @@ using System.Text.Json;
 
 namespace DrawingRegister.App.Models;
 
+public class ImportContext
+{
+    public string FolderPath { get; set; } = string.Empty;
+    public string? SpecificFolderToRescanFullPath { get; set; }
+    public bool IsSpecificRescan { get; set; }
+}
+
 public class ProjectManager : INotifyPropertyChanged
 {
     private const string STORAGE_FILENAME = "project_data.json";
@@ -82,60 +89,108 @@ public class ProjectManager : INotifyPropertyChanged
 
     public void ImportDocuments(string folderPath, string? specificFolderToRescanFullPath = null)
     {
-        bool isSpecificRescan = !string.IsNullOrEmpty(specificFolderToRescanFullPath);
+        var importContext = InitializeImportContext(folderPath, specificFolderToRescanFullPath);
+        
+        LoadExistingProjectData(importContext);
+        var processedFolders = LoadDocumentsFromStorage(importContext);
+        
+        var eligibleDirectories = ScanAndFilterDirectories(folderPath, importContext, processedFolders);
+        var pdfFiles = ExtractPdfFiles(eligibleDirectories);
+        
+        ValidateAndDetectProjectNumber(pdfFiles);
+        ProcessPdfFiles(pdfFiles, eligibleDirectories);
+        
+        UpdateStorageWithProcessedDirectories(eligibleDirectories);
+        RebuildIssueDates();
+        SaveProjectData();
+    }
 
-        if (!isSpecificRescan) // Full import/refresh
+    private ImportContext InitializeImportContext(string folderPath, string? specificFolderToRescanFullPath)
+    {
+        var context = new ImportContext
         {
-            Documents.Clear();
-            // IssueDates will be rebuilt at the end from all documents.
-            ProjectNumber = string.Empty;
-            ProjectName = string.Empty;
-            Discipline = string.Empty;
-            RegisterNumber = string.Empty;
-            ClientNumber = string.Empty;
+            FolderPath = folderPath,
+            SpecificFolderToRescanFullPath = specificFolderToRescanFullPath,
+            IsSpecificRescan = !string.IsNullOrEmpty(specificFolderToRescanFullPath)
+        };
+
+        if (!context.IsSpecificRescan)
+        {
+            ClearProjectData();
         }
 
         _currentBasePath = folderPath;
         var storageFile = Path.Combine(folderPath, STORAGE_FILENAME);
         
-        // Initialize the DistributionManager with the project path
         DistributionManager = new DistributionManager(folderPath);
+        _currentStorage = ProjectStorage.Load(storageFile) ?? new ProjectStorage 
+        { 
+            BaseFolderPath = folderPath, 
+            Projects = new List<DrawingProject>() 
+        };
+        
+        return context;
+    }
 
-        // Try to load existing project data if it exists
-        _currentStorage = ProjectStorage.Load(storageFile);
-        var processedFolders = new HashSet<string>();
+    private void ClearProjectData()
+    {
+        Documents.Clear();
+        ProjectNumber = string.Empty;
+        ProjectName = string.Empty;
+        Discipline = string.Empty;
+        RegisterNumber = string.Empty;
+        ClientNumber = string.Empty;
+    }
 
-        if (_currentStorage == null)
+    private void LoadExistingProjectData(ImportContext context)
+    {
+        if (context.IsSpecificRescan)
         {
-            _currentStorage = new ProjectStorage { BaseFolderPath = folderPath, Projects = new List<DrawingProject>() };
+            HandleSpecificRescan(context.SpecificFolderToRescanFullPath!);
+        }
+        else if (_currentStorage != null)
+        {
+            RestoreProjectMetadata();
+        }
+    }
+
+    private void HandleSpecificRescan(string specificFolderPath)
+    {
+        Console.WriteLine($"\n=== Preparing to rescan: {Path.GetFileName(specificFolderPath)} ===");
+        
+        var docsToRemove = Documents.Where(doc =>
+            doc.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && 
+                Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderPath, StringComparison.OrdinalIgnoreCase) == true) ||
+            (!string.IsNullOrEmpty(doc.FilePath) && 
+                Path.GetDirectoryName(doc.FilePath)?.Equals(specificFolderPath, StringComparison.OrdinalIgnoreCase) == true)
+        ).ToList();
+        
+        foreach (var doc in docsToRemove)
+        {
+            Documents.Remove(doc);
         }
 
-        if (isSpecificRescan)
-        {
-            Console.WriteLine($"\n=== Preparing to rescan: {Path.GetFileName(specificFolderToRescanFullPath)} ===");
-            var docsToRemove = Documents.Where(doc =>
-                doc.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true) ||
-                (!string.IsNullOrEmpty(doc.FilePath) && Path.GetDirectoryName(doc.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true)
-            ).ToList();
-            foreach (var doc in docsToRemove) { Documents.Remove(doc); }
+        _currentStorage.Documents.RemoveAll(docInfo =>
+            docInfo.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && 
+                Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderPath, StringComparison.OrdinalIgnoreCase) == true) ||
+            (!string.IsNullOrEmpty(docInfo.FilePath) && 
+                Path.GetDirectoryName(docInfo.FilePath)?.Equals(specificFolderPath, StringComparison.OrdinalIgnoreCase) == true));
+        
+        _currentStorage.Projects.RemoveAll(p => p.FolderPath.Equals(specificFolderPath, StringComparison.OrdinalIgnoreCase));
+    }
 
-            _currentStorage.Documents.RemoveAll(docInfo =>
-                 docInfo.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true) ||
-                (!string.IsNullOrEmpty(docInfo.FilePath) && Path.GetDirectoryName(docInfo.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true));
-            _currentStorage.Projects.RemoveAll(p => p.FolderPath.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase));
-        }
-        else if (_currentStorage != null) // Full scan and storage exists
-        {
-            Console.WriteLine("\n=== Loading Existing Project Data ===");
-            // Restore project metadata from storage first
-            ProjectNumber = _currentStorage.ProjectNumber;
-            ProjectName = _currentStorage.ProjectName;
-            Discipline = _currentStorage.Discipline;
-            RegisterNumber = _currentStorage.RegisterNumber;
-            ClientNumber = _currentStorage.ClientNumber;
-            
-            Console.WriteLine($"Restored project metadata: {ProjectNumber} - {ProjectName} - {Discipline}");
-        }
+    private void RestoreProjectMetadata()
+    {
+        Console.WriteLine("\n=== Loading Existing Project Data ===");
+        
+        ProjectNumber = _currentStorage.ProjectNumber;
+        ProjectName = _currentStorage.ProjectName;
+        Discipline = _currentStorage.Discipline;
+        RegisterNumber = _currentStorage.RegisterNumber;
+        ClientNumber = _currentStorage.ClientNumber;
+        
+        Console.WriteLine($"Restored project metadata: {ProjectNumber} - {ProjectName} - {Discipline}");
+    }
 
         // Populate Documents from _currentStorage (which might have been modified if isSpecificRescan)
         if (_currentStorage != null && _currentStorage.Documents != null)
@@ -187,7 +242,7 @@ public class ProjectManager : INotifyPropertyChanged
         processedFolders = _currentStorage != null && _currentStorage.Projects != null
             ? new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath))
             : new HashSet<string>();
-        Console.WriteLine($"Found {processedFolders.Count} previously processed folders (based on current storage state)");
+        Console.WriteLine($"Found {processedFolders.Count} previously processed folders (based on current storage state)");\n\n    private HashSet<string> LoadDocumentsFromStorage(ImportContext context)\n    {\n        if (_currentStorage?.Documents != null)\n        {\n            Console.WriteLine($"\\n=== Loading Documents From Storage (Count: {_currentStorage.Documents.Count}) ===\");\n            \n            foreach (var docStorageInfo in _currentStorage.Documents)\n            {\n                if (!Documents.Any(d => d.DocumentNumber == docStorageInfo.DocumentNumber))\n                {\n                    var metadata = CreateDocumentMetadataFromStorage(docStorageInfo);\n                    Documents.Add(metadata);\n                    \n                    if (metadata.RevisionHistory.Any())\n                    {\n                        var latestRevisionEntry = metadata.RevisionHistory.OrderByDescending(kv => kv.Key).First();\n                        metadata.FilePath = latestRevisionEntry.Value.FilePath;\n                    }\n                }\n            }\n        }\n        \n        var processedFolders = _currentStorage?.Projects != null\n            ? new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath))\n            : new HashSet<string>();\n        Console.WriteLine($"Found {processedFolders.Count} previously processed folders (based on current storage state)");\n        \n        return processedFolders;\n    }\n\n    private DocumentMetadata CreateDocumentMetadataFromStorage(DocumentStorageInfo docStorageInfo)\n    {\n        var metadata = new DocumentMetadata\n        {\n            DocumentNumber = docStorageInfo.DocumentNumber,\n            Description = docStorageInfo.Description,\n            Package = docStorageInfo.Package,\n            DocumentType = docStorageInfo.DocumentType,\n            Size = docStorageInfo.Size,\n            ProjectNumber = this.ProjectNumber,\n            ProjectName = this.ProjectName,\n            Discipline = this.Discipline,\n            RegisterNumber = this.RegisterNumber,\n            ClientNumber = this.ClientNumber,\n            DistributionCompanyIds = docStorageInfo.DistributionCompanyIds\n        };\n\n        foreach (var rev in docStorageInfo.RevisionHistory)\n        {\n            metadata.RevisionHistory[rev.Key] = new RevisionInfo\n            {\n                Revision = rev.Value.Revision,\n                Purpose = rev.Value.Purpose,\n                Method = rev.Value.Method,\n                IssuedBy = rev.Value.IssuedBy,\n                IsDistributed = rev.Value.IsDistributed,\n                FilePath = rev.Value.FilePath\n            };\n        }\n        \n        return metadata;\n    }"
 
 
         // Scan for new files

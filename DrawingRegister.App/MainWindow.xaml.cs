@@ -29,6 +29,17 @@ using System.Windows.Input;
 
 namespace DrawingRegister.App;
 
+public class FilterCriteria
+{
+    public string PurposeFilter { get; set; } = "All";
+    public string MethodFilter { get; set; } = "All";
+    public string IssuedByFilter { get; set; } = string.Empty;
+    public string SearchText { get; set; } = string.Empty;
+    public string SearchType { get; set; } = "Document No";
+    public DateTime? SelectedFilterDate { get; set; }
+    public string? SelectedSubfolderPath { get; set; }
+}
+
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
@@ -493,156 +504,149 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void FilterDocuments()
     {
-        // Get the current filters
-        string purposeFilter = "All";
-        string methodFilter = "All";
-        
-        if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem)
-            purposeFilter = purposeItem.Content.ToString();
-            
-        if (MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem)
-            methodFilter = methodItem.Content.ToString();
-            
-        string issuedByFilter = IssuedByFilter.Text.Trim();
-        string searchText = SearchBox.Text.Trim();
-        
-        // Start with all documents
+        var filterCriteria = GetFilterCriteria();
         var filteredDocs = _project.Documents.ToList();
         
-        // Date and Subfolder filter logic
-        DateTime? selectedFilterDate = null;
-        string? selectedSubfolderPath = null;
+        filteredDocs = ApplySearchFilter(filteredDocs, filterCriteria);
+        filteredDocs = ApplyDateAndSubfolderFilter(filteredDocs, filterCriteria);
+        filteredDocs = ApplyPurposeFilter(filteredDocs, filterCriteria);
+        filteredDocs = ApplyMethodFilter(filteredDocs, filterCriteria);
+        filteredDocs = ApplyIssuedByFilter(filteredDocs, filterCriteria);
+        
+        UpdateDocumentGrid(filteredDocs);
+    }
 
-        if (IssueDateFilter.SelectedItem is ComboBoxItem dateItem && dateItem.Content.ToString() != "All Dates")
+    private FilterCriteria GetFilterCriteria()
+    {
+        var criteria = new FilterCriteria();
+        
+        // Get filter values from UI controls
+        if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem)
+            criteria.PurposeFilter = purposeItem.Content?.ToString() ?? "All";
+            
+        if (MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem)
+            criteria.MethodFilter = methodItem.Content?.ToString() ?? "All";
+            
+        criteria.IssuedByFilter = IssuedByFilter.Text.Trim();
+        criteria.SearchText = SearchBox.Text.Trim();
+        
+        if (SearchTypeCombo.SelectedItem is ComboBoxItem selectedItem)
+            criteria.SearchType = selectedItem.Content?.ToString() ?? "Document No";
+        
+        // Parse selected date
+        if (IssueDateFilter.SelectedItem is ComboBoxItem dateItem && dateItem.Content?.ToString() != "All Dates")
         {
-            if (DateTime.TryParseExact(dateItem.Content.ToString(), "dd/MM/yyyy", null, 
+            if (DateTime.TryParseExact(dateItem.Content?.ToString() ?? "", "dd/MM/yyyy", null, 
                 System.Globalization.DateTimeStyles.None, out var parsedDate))
             {
-                selectedFilterDate = parsedDate.Date;
+                criteria.SelectedFilterDate = parsedDate.Date;
             }
         }
 
-        if (selectedFilterDate.HasValue && SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag)
+        // Get subfolder path if date is selected
+        if (criteria.SelectedFilterDate.HasValue && 
+            SubfolderFilterCombo.Visibility == Visibility.Visible && 
+            SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && 
+            folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
         {
-            if (folderPathTag != "ALL")
-            {
-                selectedSubfolderPath = folderPathTag;
-            }
+            criteria.SelectedSubfolderPath = folderPathTag;
         }
         
-        // Apply search text filter if not empty
-        if (!string.IsNullOrEmpty(searchText))
+        return criteria;
+    }
+
+    private List<Models.DocumentMetadata> ApplySearchFilter(List<Models.DocumentMetadata> documents, FilterCriteria criteria)
+    {
+        if (string.IsNullOrEmpty(criteria.SearchText))
+            return documents;
+            
+        return criteria.SearchType switch
         {
-            string searchType = "Document No";
-            if (SearchTypeCombo.SelectedItem is ComboBoxItem selectedItem)
-                searchType = selectedItem.Content.ToString();
-                
-            switch (searchType)
-            {
-                case "Document No":
-                    filteredDocs = filteredDocs.Where(d => d.DocumentNumber.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
-                    break;
-                case "Description":
-                    filteredDocs = filteredDocs.Where(d => d.Description.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
-                    break;
-                case "Package":
-                    filteredDocs = filteredDocs.Where(d => d.Package.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
-                    break;
-                case "Type":
-                    filteredDocs = filteredDocs.Where(d => d.DocumentType.Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
-                    break;
-            }
-        }
-        
-        // Apply date filter if selected
-        if (selectedFilterDate.HasValue)
+            "Document No" => documents.Where(d => d.DocumentNumber.Contains(criteria.SearchText, StringComparison.OrdinalIgnoreCase)).ToList(),
+            "Description" => documents.Where(d => d.Description.Contains(criteria.SearchText, StringComparison.OrdinalIgnoreCase)).ToList(),
+            "Package" => documents.Where(d => d.Package.Contains(criteria.SearchText, StringComparison.OrdinalIgnoreCase)).ToList(),
+            "Type" => documents.Where(d => d.DocumentType.Contains(criteria.SearchText, StringComparison.OrdinalIgnoreCase)).ToList(),
+            _ => documents
+        };
+    }
+
+    private List<Models.DocumentMetadata> ApplyDateAndSubfolderFilter(List<Models.DocumentMetadata> documents, FilterCriteria criteria)
+    {
+        if (!criteria.SelectedFilterDate.HasValue)
+            return documents;
+
+        // Filter by date
+        var dateFiltered = documents.Where(doc => 
+            doc.RevisionHistory.Any(revEntry => revEntry.Key.Date == criteria.SelectedFilterDate.Value)
+        ).ToList();
+
+        // Apply subfolder filter if specified
+        if (!string.IsNullOrEmpty(criteria.SelectedSubfolderPath))
         {
-            // First, filter by date
-            filteredDocs = filteredDocs.Where(doc => 
-                doc.RevisionHistory.Any(revEntry => revEntry.Key.Date == selectedFilterDate.Value)
+            dateFiltered = dateFiltered.Where(doc => 
+                doc.RevisionHistory.Any(revEntry => 
+                    revEntry.Key.Date == criteria.SelectedFilterDate.Value &&
+                    !string.IsNullOrEmpty(revEntry.Value.FilePath) &&
+                    string.Equals(Path.GetDirectoryName(revEntry.Value.FilePath), criteria.SelectedSubfolderPath, StringComparison.OrdinalIgnoreCase)
+                )
             ).ToList();
+        }
 
-            // Then, if a specific subfolder is selected, filter by subfolder
-            if (!string.IsNullOrEmpty(selectedSubfolderPath))
-            {
-                filteredDocs = filteredDocs.Where(doc => 
-                    doc.RevisionHistory.Any(revEntry => 
-                        revEntry.Key.Date == selectedFilterDate.Value &&
-                        !string.IsNullOrEmpty(revEntry.Value.FilePath) &&
-                        string.Equals(Path.GetDirectoryName(revEntry.Value.FilePath), selectedSubfolderPath, StringComparison.OrdinalIgnoreCase)
-                    )
-                ).ToList();
-            }
-        }
+        return dateFiltered;
+    }
+
+    private List<Models.DocumentMetadata> ApplyPurposeFilter(List<Models.DocumentMetadata> documents, FilterCriteria criteria)
+    {
+        if (criteria.PurposeFilter == "All")
+            return documents;
+
+        var purposeCode = criteria.PurposeFilter.Split('-')[0].Trim();
         
-        // Apply purpose filter
-        if (purposeFilter != "All")
-        {
-            string purposeCode = purposeFilter.Split('-')[0].Trim();
-            if (selectedFilterDate.HasValue)
-            {
-                filteredDocs = filteredDocs.Where(d => 
-                    d.RevisionHistory.Any(r => 
-                        r.Key.Date == selectedFilterDate.Value && 
-                        r.Value.Purpose.StartsWith(purposeCode, StringComparison.OrdinalIgnoreCase)
-                    )
-                ).ToList();
-            }
-            else
-            {
-                filteredDocs = filteredDocs.Where(d => 
-                    d.RevisionHistory.Any(r => 
-                        r.Value.Purpose.StartsWith(purposeCode, StringComparison.OrdinalIgnoreCase)
-                    )
-                ).ToList();
-            }
-        }
+        return documents.Where(d => 
+            criteria.SelectedFilterDate.HasValue 
+                ? d.RevisionHistory.Any(r => 
+                    r.Key.Date == criteria.SelectedFilterDate.Value && 
+                    r.Value.Purpose.StartsWith(purposeCode, StringComparison.OrdinalIgnoreCase))
+                : d.RevisionHistory.Any(r => 
+                    r.Value.Purpose.StartsWith(purposeCode, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+    }
+
+    private List<Models.DocumentMetadata> ApplyMethodFilter(List<Models.DocumentMetadata> documents, FilterCriteria criteria)
+    {
+        if (criteria.MethodFilter == "All")
+            return documents;
+
+        var methodCode = criteria.MethodFilter.Split('-')[0].Trim();
         
-        // Apply method filter
-        if (methodFilter != "All")
-        {
-            string methodCode = methodFilter.Split('-')[0].Trim();
-            if (selectedFilterDate.HasValue)
-            {
-                filteredDocs = filteredDocs.Where(d => 
-                    d.RevisionHistory.Any(r => 
-                        r.Key.Date == selectedFilterDate.Value && 
-                        r.Value.Method.StartsWith(methodCode, StringComparison.OrdinalIgnoreCase)
-                    )
-                ).ToList();
-            }
-            else
-            {
-                filteredDocs = filteredDocs.Where(d => 
-                    d.RevisionHistory.Any(r => r.Value.Method.StartsWith(methodCode, StringComparison.OrdinalIgnoreCase))
-                ).ToList();
-            }
-        }
-        
-        // Apply issued by filter
-        if (!string.IsNullOrEmpty(issuedByFilter))
-        {
-            if (selectedFilterDate.HasValue)
-            {
-                filteredDocs = filteredDocs
-                    .Where(d => d.RevisionHistory.Any(r => 
-                            r.Key.Date == selectedFilterDate.Value && 
-                            r.Value.IssuedBy.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase)
-                        )
-                    ).ToList();
-            }
-            else
-            {
-                filteredDocs = filteredDocs.Where(d => 
-                    d.RevisionHistory.Any(r => 
-                        r.Value.IssuedBy.Contains(issuedByFilter, StringComparison.OrdinalIgnoreCase)
-                    )
-                ).ToList();
-            }
-        }
-        
-        // Update the grid
-        DocumentGrid.ItemsSource = filteredDocs.OrderBy(d => d.DocumentNumber).ToList();
+        return documents.Where(d => 
+            criteria.SelectedFilterDate.HasValue 
+                ? d.RevisionHistory.Any(r => 
+                    r.Key.Date == criteria.SelectedFilterDate.Value && 
+                    r.Value.Method.StartsWith(methodCode, StringComparison.OrdinalIgnoreCase))
+                : d.RevisionHistory.Any(r => 
+                    r.Value.Method.StartsWith(methodCode, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+    }
+
+    private List<Models.DocumentMetadata> ApplyIssuedByFilter(List<Models.DocumentMetadata> documents, FilterCriteria criteria)
+    {
+        if (string.IsNullOrEmpty(criteria.IssuedByFilter))
+            return documents;
+
+        return documents.Where(d => 
+            criteria.SelectedFilterDate.HasValue 
+                ? d.RevisionHistory.Any(r => 
+                    r.Key.Date == criteria.SelectedFilterDate.Value && 
+                    r.Value.IssuedBy.Contains(criteria.IssuedByFilter, StringComparison.OrdinalIgnoreCase))
+                : d.RevisionHistory.Any(r => 
+                    r.Value.IssuedBy.Contains(criteria.IssuedByFilter, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+    }
+
+    private void UpdateDocumentGrid(List<Models.DocumentMetadata> documents)
+    {
+        DocumentGrid.ItemsSource = documents.OrderBy(d => d.DocumentNumber).ToList();
     }
 
     private void ImportDocuments_Click(object sender, RoutedEventArgs e)
