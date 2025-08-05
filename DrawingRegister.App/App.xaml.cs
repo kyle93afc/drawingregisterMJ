@@ -100,8 +100,8 @@ namespace DrawingRegister.App
         {
             try
             {
-                // Replace with your GitHub releases URL
-                string updateUrl = "https://github.com/YourUsername/YourRepo/releases";
+                // GitHub releases URL for auto-updates
+                string updateUrl = "https://github.com/kyle93afc/drawingregisterMJ/releases";
                 
                 using (var mgr = await UpdateManager.GitHubUpdateManager(updateUrl))
                 {

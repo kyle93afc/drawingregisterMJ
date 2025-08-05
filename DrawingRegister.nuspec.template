@@ -4,8 +4,8 @@
     <id>DrawingRegister</id>
     <version>$VERSION$</version>
     <title>Drawing Register</title>
-    <authors>Your Company Name</authors>
-    <owners>Your Company Name</owners>
+    <authors>kyle93afc</authors>
+    <owners>kyle93afc</owners>
     <description>Engineering drawing and document management system with revision tracking</description>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <iconUrl>file:///DrawingRegister.App/Resources/drawing-register-icon.ico</iconUrl>
