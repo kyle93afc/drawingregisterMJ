@@ -89,7 +89,6 @@
                 <RadioButton x:Name="AllDocumentsRadio" 
                              Content="All Documents" 
                              Style="{StaticResource RadioButtonStyle}"
-                             IsChecked="True"
                              Checked="ReportType_Changed"/>
                 <RadioButton x:Name="FilteredDocumentsRadio" 
                              Content="Filtered by Purpose of Issue" 

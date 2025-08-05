@@ -29,6 +29,18 @@ namespace DrawingRegister.App
             InitializeComponent();
             _availableDates = availableDates;
             PopulateDateComboBox();
+            
+            // Set initial state after all components are loaded
+            Loaded += ReportFilterDialog_Loaded;
+        }
+
+        private void ReportFilterDialog_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Set initial state programmatically to avoid null reference exceptions
+            AllDocumentsRadio.IsChecked = true;
+            SelectedReportType = ReportType.AllDocuments;
+            PurposeFilterPanel.Visibility = Visibility.Collapsed;
+            DateFilterPanel.Visibility = Visibility.Collapsed;
         }
 
         private void PopulateDateComboBox()
@@ -53,6 +65,10 @@ namespace DrawingRegister.App
 
         private void ReportType_Changed(object sender, RoutedEventArgs e)
         {
+            // Ensure all UI elements are loaded before trying to access them
+            if (PurposeFilterPanel == null || DateFilterPanel == null || IncludeDistributionCheckBox == null)
+                return;
+
             if (AllDocumentsRadio?.IsChecked == true)
             {
                 SelectedReportType = ReportType.AllDocuments;
