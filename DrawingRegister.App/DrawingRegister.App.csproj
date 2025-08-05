@@ -9,10 +9,16 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>Resources\drawing-register-icon.ico</ApplicationIcon>
+    <AssemblyName>DrawingRegister</AssemblyName>
+    <Version>1.0.0</Version>
+    <Authors>Your Company Name</Authors>
+    <Product>Drawing Register</Product>
+    <Company>Your Company Name</Company>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="QuestPDF" Version="2023.12.1" />
+    <PackageReference Include="Clowd.Squirrel" Version="2.11.1" />
   </ItemGroup>
 
   <ItemGroup>
