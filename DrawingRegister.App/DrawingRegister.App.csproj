@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Resources\drawing-register-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
