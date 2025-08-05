@@ -1031,9 +1031,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Enable QuestPDF debugging to get more detailed error information
             QuestPDF.Settings.EnableDebugging = true;
 
+            // Show the report filter dialog
+            var filterDialog = new ReportFilterDialog(_project.IssueDates);
+            if (filterDialog.ShowDialog() != true)
+                return;
+
+            // Get selected options from dialog
+            var reportType = filterDialog.SelectedReportType;
+            var selectedPurpose = filterDialog.SelectedPurpose;
+            var selectedDate = filterDialog.SelectedDate;
+            var includeDistribution = filterDialog.IncludeDistribution;
+            var groupByPackage = filterDialog.GroupByPackage;
+
             // Determine if we're generating a transmittal (specific date) or full register
-            bool isTransmittal = IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && 
-                                selectedItem.Content.ToString() != "All Dates";
+            bool isTransmittal = reportType == ReportFilterDialog.ReportType.Transmittal;
 
             string selectedSubfolderPathForReport = null;
             if (isTransmittal && SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
@@ -1041,11 +1052,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 selectedSubfolderPathForReport = folderPathTag;
             }
 
-            string fileNamePrefix = isTransmittal 
-                ? $"Transmittal_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}" 
-                : $"Register_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}";
-            if (isTransmittal && !string.IsNullOrEmpty(selectedSubfolderPathForReport))
-                fileNamePrefix += $"_{new DirectoryInfo(selectedSubfolderPathForReport).Name.Replace(" ", "_")}";
+            // Build filename based on report type
+            string fileNamePrefix;
+            if (reportType == ReportFilterDialog.ReportType.FilteredByPurpose && !string.IsNullOrEmpty(selectedPurpose))
+            {
+                fileNamePrefix = $"Register_{_project.RegisterNumber}_{selectedPurpose.Replace(" ", "_")}_{DateTime.Now:yyyyMMdd}";
+            }
+            else if (isTransmittal)
+            {
+                fileNamePrefix = $"Transmittal_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}";
+                if (!string.IsNullOrEmpty(selectedSubfolderPathForReport))
+                    fileNamePrefix += $"_{new DirectoryInfo(selectedSubfolderPathForReport).Name.Replace(" ", "_")}";
+            }
+            else
+            {
+                fileNamePrefix = $"Register_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}";
+            }
 
             var saveDialog = new SaveFileDialog
             {
@@ -1069,7 +1091,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
                             // Use a single Element call for each section
                             page.Header().Element(header => ComposeHeader(header, isTransmittal));
-                            page.Content().Element(content => ComposeContent(content, isTransmittal, selectedSubfolderPathForReport));
+                            page.Content().Element(content => ComposeContent(content, isTransmittal, selectedSubfolderPathForReport, 
+                                reportType, selectedPurpose, selectedDate, includeDistribution, groupByPackage));
                             
                             // Only add page numbers in the footer, no transmittal confirmation here
                             page.Footer().AlignCenter().Text(text =>
@@ -1217,40 +1240,64 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         });
     }
 
-    private void ComposeContent(IContainer container, bool isTransmittal = false, string selectedSubfolderPathForReport = null)
+    private void ComposeContent(IContainer container, bool isTransmittal = false, string selectedSubfolderPathForReport = null,
+        ReportFilterDialog.ReportType reportType = ReportFilterDialog.ReportType.AllDocuments, 
+        string selectedPurpose = null, DateTime? selectedDateFromDialog = null, 
+        bool includeDistribution = false, bool groupByPackage = true)
     {
         container.Column(column =>
         {
-            // Get documents to display - either all or filtered by date
+            // Get documents to display based on filter type
             List<Models.DocumentMetadata> documentsToDisplay;
-            DateTime? selectedDate = null;
+            DateTime? selectedDate = selectedDateFromDialog;
             
-            if (isTransmittal && IssueDateFilter.SelectedItem is ComboBoxItem selectedItem)
+            // Apply filtering based on report type
+            if (reportType == ReportFilterDialog.ReportType.FilteredByPurpose && !string.IsNullOrEmpty(selectedPurpose))
             {
-                if (DateTime.TryParseExact(selectedItem.Content.ToString(), "dd/MM/yyyy", null, 
-                    System.Globalization.DateTimeStyles.None, out var parsedDate))
-                {
-                    selectedDate = parsedDate;
-                    documentsToDisplay = _project.Documents
-                        .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Value.Date))
-                        .ToList();
+                // Filter by purpose of issue - check if any revision has the matching purpose
+                documentsToDisplay = _project.Documents
+                    .Where(d => d.RevisionHistory.Any(r => 
+                        !string.IsNullOrEmpty(r.Value.Purpose) && 
+                        r.Value.Purpose.Equals(selectedPurpose, StringComparison.OrdinalIgnoreCase)))
+                    .OrderBy(d => d.DocumentNumber)
+                    .ToList();
+                    
+                System.Diagnostics.Debug.WriteLine($"Filtering by purpose: '{selectedPurpose}'");
+                System.Diagnostics.Debug.WriteLine($"Total documents: {_project.Documents.Count}");
+                System.Diagnostics.Debug.WriteLine($"Filtered documents: {documentsToDisplay.Count}");
+                
+                // Log the purposes found for debugging
+                var allPurposes = _project.Documents
+                    .SelectMany(d => d.RevisionHistory.Values)
+                    .Select(r => r.Purpose)
+                    .Where(p => !string.IsNullOrEmpty(p))
+                    .Distinct()
+                    .OrderBy(p => p)
+                    .ToList();
+                System.Diagnostics.Debug.WriteLine($"Available purposes: {string.Join(", ", allPurposes)}");
+            }
+            else if (reportType == ReportFilterDialog.ReportType.Transmittal && selectedDate.HasValue)
+            {
+                // Filter by transmittal date
+                documentsToDisplay = _project.Documents
+                    .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Value.Date))
+                    .ToList();
 
-                    if (!string.IsNullOrEmpty(selectedSubfolderPathForReport))
-                    {
-                        documentsToDisplay = documentsToDisplay
-                            .Where(d => d.RevisionHistory.Any(r => 
-                                r.Key.Date == selectedDate.Value.Date &&
-                                !string.IsNullOrEmpty(r.Value.FilePath) &&
-                                string.Equals(Path.GetDirectoryName(r.Value.FilePath), selectedSubfolderPathForReport, StringComparison.OrdinalIgnoreCase)
-                            ))
-                            .ToList();
-                    }
-                    documentsToDisplay = documentsToDisplay.OrderBy(d => d.DocumentNumber).ToList();
+                if (!string.IsNullOrEmpty(selectedSubfolderPathForReport))
+                {
+                    documentsToDisplay = documentsToDisplay
+                        .Where(d => d.RevisionHistory.Any(r => 
+                            r.Key.Date == selectedDate.Value.Date &&
+                            !string.IsNullOrEmpty(r.Value.FilePath) &&
+                            string.Equals(Path.GetDirectoryName(r.Value.FilePath), selectedSubfolderPathForReport, StringComparison.OrdinalIgnoreCase)
+                        ))
+                        .ToList();
                 }
-                else { documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList(); } // Fallback
+                documentsToDisplay = documentsToDisplay.OrderBy(d => d.DocumentNumber).ToList();
             }
             else
             {
+                // Show all documents
                 documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
             }
             
@@ -1407,13 +1454,63 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
             else if (!isTransmittal)
             {
-                // For full register, add a note about what a register is
-                column.Item().PaddingBottom(10).Background("#f5f5f5").Padding(5).Text(text =>
+                // For filtered reports, add a filter info section
+                if (reportType == ReportFilterDialog.ReportType.FilteredByPurpose && !string.IsNullOrEmpty(selectedPurpose))
                 {
-                    text.Span("NOTE: ").Bold();
-                    text.Span("This document is a comprehensive Drawing Register containing all project drawings. ");
-                    text.Span("For specific drawing distributions, please refer to Transmittals.");
-                });
+                    column.Item().PaddingBottom(10).Table(filterInfoTable =>
+                    {
+                        filterInfoTable.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(1);
+                            columns.RelativeColumn(3);
+                        });
+
+                        // Purpose Filter row
+                        filterInfoTable.Cell().Element(c =>
+                        {
+                            c.Background("#eb1845")
+                             .Padding(5)
+                             .AlignCenter()
+                             .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
+                             .Text("FILTER APPLIED");
+                        });
+                        
+                        filterInfoTable.Cell().Element(c =>
+                        {
+                            c.Background("#f5f5f5")
+                             .Padding(5)
+                             .AlignLeft()
+                             .Text($"PURPOSE OF ISSUE: {selectedPurpose.ToUpper()}");
+                        });
+
+                        // Document count row
+                        filterInfoTable.Cell().Element(c =>
+                        {
+                            c.Background("#ffffff")
+                             .Padding(5)
+                             .AlignLeft()
+                             .Text(x => x.Span("DOCUMENTS FOUND:").Bold());
+                        });
+                        
+                        filterInfoTable.Cell().Element(c =>
+                        {
+                            c.Background("#ffffff")
+                             .Padding(5)
+                             .AlignLeft()
+                             .Text(documentsToDisplay.Count.ToString());
+                        });
+                    });
+                }
+                else
+                {
+                    // For full register, add a note about what a register is
+                    column.Item().PaddingBottom(10).Background("#f5f5f5").Padding(5).Text(text =>
+                    {
+                        text.Span("NOTE: ").Bold();
+                        text.Span("This document is a comprehensive Drawing Register containing all project drawings. ");
+                        text.Span("For specific drawing distributions, please refer to Transmittals.");
+                    });
+                }
             }
 
             // Add the main document table
