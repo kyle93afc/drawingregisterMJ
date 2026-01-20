@@ -127,6 +127,67 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <!-- Red Button Style -->
+        <Style x:Key="RedButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#eb1845"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MinWidth" Value="120"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Effect="{StaticResource MaterialDropShadow}">
+                            <ContentPresenter x:Name="contentPresenter"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            TextBlock.FontWeight="SemiBold"
+                                            Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="border"
+                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                      To="#c91438" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="border"
+                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                      To="#eb1845" Duration="0:0:0.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#a8102f"/>
+                                <Setter TargetName="contentPresenter" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#BDBDBD"/>
+                                <Setter Property="Foreground" Value="#757575"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         
         <!-- Styles -->
         <Style TargetType="DataGridColumnHeader">
@@ -256,7 +317,7 @@
 
         <!-- Action Buttons -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,5">
-            <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
+            <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click" Style="{StaticResource RedButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="SAVE PROJECT" Click="SaveProject_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="REFRESH VIEW" Click="RefreshView_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="MANAGE DISTRIBUTION" Click="ManageDistribution_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
@@ -460,8 +521,9 @@
                   Grid.Row="5" 
                   AutoGenerateColumns="False"
                   IsReadOnly="True"
-                  SelectionMode="Single"
+                  SelectionMode="Extended"
                   SelectionChanged="DocumentGrid_SelectionChanged"
+                  PreviewMouseRightButtonDown="DocumentGrid_PreviewMouseRightButtonDown"
                   AlternationCount="2"
                   VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Auto"
@@ -473,6 +535,15 @@
                 <ContextMenu>
                     <MenuItem Header="Edit Document" Click="EditDocument_Click"/>
                     <MenuItem Header="Manage Distribution" Click="ManageDistribution_Click"/>
+                    <Separator/>
+                    <MenuItem Header="Set Paper Size">
+                        <MenuItem Header="A0" Click="SetPaperSize_Click" Tag="A0"/>
+                        <MenuItem Header="A1" Click="SetPaperSize_Click" Tag="A1"/>
+                        <MenuItem Header="A2" Click="SetPaperSize_Click" Tag="A2"/>
+                        <MenuItem Header="A3" Click="SetPaperSize_Click" Tag="A3"/>
+                        <MenuItem Header="A4" Click="SetPaperSize_Click" Tag="A4"/>
+                        <MenuItem Header="A5" Click="SetPaperSize_Click" Tag="A5"/>
+                    </MenuItem>
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>

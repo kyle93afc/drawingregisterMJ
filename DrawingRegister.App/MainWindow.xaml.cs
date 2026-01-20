@@ -12,6 +12,7 @@ using MessageBox = System.Windows.MessageBox;
 using TextBox = System.Windows.Controls.TextBox;
 using Binding = System.Windows.Data.Binding;
 using System.Windows.Media;
+using System.Windows.Input;
 using System.Collections.ObjectModel;
 using Microsoft.Win32;
 using QuestPDF.Fluent;
@@ -865,6 +866,53 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Refresh views
             DocumentGrid.Items.Refresh();
             RevisionTimeline.Items.Refresh();
+        }
+    }
+
+    private void DocumentGrid_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        // Find the row that was clicked
+        var dep = (DependencyObject)e.OriginalSource;
+        while (dep != null && !(dep is DataGridRow))
+        {
+            dep = VisualTreeHelper.GetParent(dep);
+        }
+
+        if (dep is DataGridRow row)
+        {
+            // If the clicked row is already selected, don't change the selection
+            if (row.IsSelected)
+            {
+                e.Handled = true;
+                // Manually show context menu
+                DocumentGrid.ContextMenu.PlacementTarget = DocumentGrid;
+                DocumentGrid.ContextMenu.IsOpen = true;
+            }
+            // If not selected, let default behavior select just this row
+        }
+    }
+
+    private void SetPaperSize_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem && menuItem.Tag is string size)
+        {
+            var selectedItems = DocumentGrid.SelectedItems.Cast<Models.DocumentMetadata>().ToList();
+
+            if (selectedItems.Count == 0)
+            {
+                MessageBox.Show("Please select one or more documents first.", "No Selection", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            foreach (var doc in selectedItems)
+            {
+                doc.Size = size;
+            }
+
+            _project.SaveProjectData();
+            DocumentGrid.Items.Refresh();
+
+            MessageBox.Show($"Paper size set to {size} for {selectedItems.Count} document(s).", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
