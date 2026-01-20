@@ -30,7 +30,6 @@ namespace DrawingRegister.App
             PackageBox.Text = document.Package;
             DocumentTypeBox.Text = document.DocumentType;
             SizeBox.Text = document.Size;
-            FilePathBox.Text = document.FilePath;
             
             // Set up event handlers for preview updates
             DocumentNumberBox.TextChanged += (s, e) => UpdateFileNamePreview(s, e);

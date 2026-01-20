@@ -98,7 +98,21 @@
                 <TextBox x:Name="IssuedByTextBox" Width="200" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper"/>
                 <CheckBox x:Name="UpdateIssuedByCheck" Content="Update Issued By" IsChecked="True"/>
             </StackPanel>
-            
+
+            <!-- Paper Size -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="Paper Size:" VerticalAlignment="Center" Width="120"/>
+                <ComboBox x:Name="SizeCombo" Width="200" Margin="0,0,10,0">
+                    <ComboBoxItem Content="A0"/>
+                    <ComboBoxItem Content="A1"/>
+                    <ComboBoxItem Content="A2"/>
+                    <ComboBoxItem Content="A3"/>
+                    <ComboBoxItem Content="A4"/>
+                    <ComboBoxItem Content="A5"/>
+                </ComboBox>
+                <CheckBox x:Name="UpdateSizeCheck" Content="Update Size" IsChecked="True"/>
+            </StackPanel>
+
             <!-- Distribution Section -->
             <Expander Header="Distribution" Margin="0,10,0,0">
                 <Grid Margin="0,10,0,0">
@@ -159,6 +173,7 @@
                     <DataGridTextColumn Header="Current Purpose" Binding="{Binding PurposeOfIssue}" Width="*"/>
                     <DataGridTextColumn Header="Current Method" Binding="{Binding MethodOfIssue}" Width="*"/>
                     <DataGridTextColumn Header="Current Issued By" Binding="{Binding IssuedBy}" Width="*"/>
+                    <DataGridTextColumn Header="Current Size" Binding="{Binding Size}" Width="*"/>
                 </DataGrid.Columns>
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">

@@ -16,7 +16,6 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -45,15 +44,11 @@
         <TextBlock Grid.Row="4" Grid.Column="0" Text="Size:" VerticalAlignment="Center" Margin="0,0,10,10" FontWeight="Bold"/>
         <TextBox Grid.Row="4" Grid.Column="1" x:Name="SizeBox" Margin="0,0,0,10" Height="30" FontSize="14"/>
 
-        <!-- File Path (Read-only) -->
-        <TextBlock Grid.Row="5" Grid.Column="0" Text="File Path:" VerticalAlignment="Center" Margin="0,0,10,10" FontWeight="Bold"/>
-        <TextBox Grid.Row="5" Grid.Column="1" x:Name="FilePathBox" Margin="0,0,0,10" Height="30" FontSize="14" IsReadOnly="True" Background="#f5f5f5"/>
-
         <!-- Update File Option -->
-        <CheckBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" x:Name="UpdateFileCheckbox" Content="Update source file name to match" IsChecked="True" Margin="0,10,0,10"/>
+        <CheckBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" x:Name="UpdateFileCheckbox" Content="Update source file name to match" IsChecked="True" Margin="0,10,0,10"/>
 
         <!-- Preview -->
-        <Border Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" BorderBrush="#ddd" BorderThickness="1" Margin="0,0,0,10">
+        <Border Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" BorderBrush="#ddd" BorderThickness="1" Margin="0,0,0,10">
             <StackPanel>
                 <TextBlock Text="File Name Preview:" Margin="5,5,5,0" FontWeight="Bold"/>
                 <TextBlock x:Name="FileNamePreview" Margin="5" TextWrapping="Wrap"/>
@@ -61,7 +56,7 @@
         </Border>
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="35" Margin="0,0,10,0" Click="CancelButton_Click"/>
             <Button x:Name="SaveButton" Content="Save" Width="100" Height="35" Click="SaveButton_Click"/>
         </StackPanel>

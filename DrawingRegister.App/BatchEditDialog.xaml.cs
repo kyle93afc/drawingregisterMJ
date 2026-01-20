@@ -45,7 +45,10 @@ namespace DrawingRegister.App
                     
                 if (MethodCombo.Items.Count > 0)
                     MethodCombo.SelectedIndex = 0;
-                    
+
+                if (SizeCombo.Items.Count > 0)
+                    SizeCombo.SelectedIndex = 3; // Default to A3
+
                 // Set default visibility
                 DateSelectionPanel.Visibility = Visibility.Visible;
                 FolderSelectionPanel.Visibility = Visibility.Collapsed;
@@ -898,7 +901,15 @@ namespace DrawingRegister.App
                     .GroupBy(i => i)
                     .OrderByDescending(g => g.Count())
                     .FirstOrDefault()?.Key;
-                    
+
+                // Find common size
+                var commonSize = _filteredDocuments
+                    .Select(d => d.Size)
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .GroupBy(s => s)
+                    .OrderByDescending(g => g.Count())
+                    .FirstOrDefault()?.Key;
+
                 // Set detected values in UI
                 if (!string.IsNullOrEmpty(commonPurpose) && PurposeCombo != null)
                 {
@@ -927,6 +938,18 @@ namespace DrawingRegister.App
                 if (!string.IsNullOrEmpty(commonIssuedBy) && IssuedByTextBox != null)
                 {
                     IssuedByTextBox.Text = commonIssuedBy;
+                }
+
+                if (!string.IsNullOrEmpty(commonSize) && SizeCombo != null)
+                {
+                    foreach (ComboBoxItem item in SizeCombo.Items)
+                    {
+                        if (item.Content?.ToString() == commonSize)
+                        {
+                            SizeCombo.SelectedItem = item;
+                            break;
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -966,13 +989,20 @@ namespace DrawingRegister.App
                         method = method.Split(new[] { " - " }, StringSplitOptions.None)[0];
                 }
                 
-                if (UpdateIssuedByCheck != null && UpdateIssuedByCheck.IsChecked == true && 
+                if (UpdateIssuedByCheck != null && UpdateIssuedByCheck.IsChecked == true &&
                     IssuedByTextBox != null && !string.IsNullOrEmpty(IssuedByTextBox.Text))
                 {
                     issuedBy = IssuedByTextBox.Text.Trim().ToUpper();
                 }
-                
-                if (purpose == null && method == null && issuedBy == null)
+
+                string size = null;
+                if (UpdateSizeCheck != null && UpdateSizeCheck.IsChecked == true &&
+                    SizeCombo != null && SizeCombo.SelectedItem is ComboBoxItem sizeItem)
+                {
+                    size = sizeItem.Content?.ToString();
+                }
+
+                if (purpose == null && method == null && issuedBy == null && size == null)
                 {
                     System.Windows.MessageBox.Show("Please select at least one property to update.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -1042,15 +1072,22 @@ namespace DrawingRegister.App
                             {
                                 if (purpose != null)
                                     doc.PurposeOfIssue = purpose;
-                                    
+
                                 if (method != null)
                                     doc.MethodOfIssue = method;
-                                    
+
                                 if (issuedBy != null)
                                     doc.IssuedBy = issuedBy;
-                                    
+
                                 docUpdated = true;
                             }
+                        }
+
+                        // Update size (document-level property, not revision-level)
+                        if (size != null)
+                        {
+                            doc.Size = size;
+                            docUpdated = true;
                         }
                     }
                     else
@@ -1080,8 +1117,15 @@ namespace DrawingRegister.App
                                 docUpdated = true;
                             }
                         }
+
+                        // Update size (document-level property, not revision-level)
+                        if (size != null)
+                        {
+                            doc.Size = size;
+                            docUpdated = true;
+                        }
                     }
-                    
+
                     // Update distribution if any companies are selected
                     if (selectedCompanyIds.Any())
                     {
