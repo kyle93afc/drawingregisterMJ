@@ -300,9 +300,15 @@
 
             <!-- Row 1 -->
             <TextBlock Text="DISCIPLINE:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
-            <TextBox x:Name="DisciplineBox" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5" FontSize="14"/>
+            <ComboBox x:Name="DisciplineCombo" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5" FontSize="14" Height="30"
+                      SelectionChanged="DisciplineCombo_SelectionChanged">
+                <ComboBoxItem Tag="Z" Content="Z - General/Multi-discipline"/>
+                <ComboBoxItem Tag="C" Content="C - Civil"/>
+                <ComboBoxItem Tag="S" Content="S - Structural"/>
+                <ComboBoxItem Tag="A" Content="A - Architectural"/>
+            </ComboBox>
             <TextBlock Text="REG NO:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
-            <TextBox x:Name="RegNoBox" Grid.Row="1" Grid.Column="3" Width="300" Margin="0,0,0,5" FontSize="14"/>
+            <TextBox x:Name="RegNoBox" Grid.Row="1" Grid.Column="3" Width="300" Margin="0,0,0,5" FontSize="14" IsReadOnly="True" Background="#f0f0f0"/>
 
             <!-- Row 2 -->
             <TextBlock Text="PROJECT NO:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>

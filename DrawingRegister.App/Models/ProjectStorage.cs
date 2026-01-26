@@ -8,11 +8,8 @@ namespace DrawingRegister.App.Models;
 
 public class ProjectStorage
 {
-    public string ProjectNumber { get; set; } = string.Empty;
-    public string ProjectName { get; set; } = string.Empty;
-    public string Discipline { get; set; } = string.Empty;
-    public string RegisterNumber { get; set; } = string.Empty;
-    public string ClientNumber { get; set; } = string.Empty;
+    // Static project metadata (ProjectNumber, ProjectName, Discipline, RegisterNumber, ClientNumber)
+    // has been moved to ProjectInfo.cs (project_info.json) for separate persistence.
     public string BaseFolderPath { get; set; } = string.Empty;
     public DateTime LastScanDate { get; set; }
     public DateTime LastProcessedDate { get; set; }

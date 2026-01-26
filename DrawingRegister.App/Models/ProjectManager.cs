@@ -12,6 +12,7 @@ public class ProjectManager : INotifyPropertyChanged
 {
     private const string STORAGE_FILENAME = "project_data.json";
     public string _currentBasePath = string.Empty;
+    private ProjectInfo? _projectInfo;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -97,9 +98,12 @@ public class ProjectManager : INotifyPropertyChanged
 
         _currentBasePath = folderPath;
         var storageFile = Path.Combine(folderPath, STORAGE_FILENAME);
-        
+
         // Initialize the DistributionManager with the project path
         DistributionManager = new DistributionManager(folderPath);
+
+        // Load project info (static metadata) - persists separately from dynamic data
+        _projectInfo = ProjectInfo.Load(folderPath);
 
         // Try to load existing project data if it exists
         _currentStorage = ProjectStorage.Load(storageFile);
@@ -108,6 +112,34 @@ public class ProjectManager : INotifyPropertyChanged
         if (_currentStorage == null)
         {
             _currentStorage = new ProjectStorage { BaseFolderPath = folderPath, Projects = new List<DrawingProject>() };
+        }
+
+        // Migration: if project_info is empty but project_data.json has legacy static fields
+        if (string.IsNullOrEmpty(_projectInfo.ProjectNumber))
+        {
+            var legacyData = LoadLegacyStaticFields(storageFile);
+            if (legacyData != null && !string.IsNullOrEmpty(legacyData.ProjectNumber))
+            {
+                Console.WriteLine("\n=== Migrating static fields from project_data.json to project_info.json ===");
+                _projectInfo.ProjectNumber = legacyData.ProjectNumber;
+                _projectInfo.ProjectName = legacyData.ProjectName;
+                _projectInfo.Discipline = legacyData.Discipline;
+                _projectInfo.RegisterNumber = legacyData.RegisterNumber;
+                _projectInfo.ClientNumber = legacyData.ClientNumber;
+                _projectInfo.Save(folderPath);
+                Console.WriteLine($"Migrated: {_projectInfo.ProjectNumber} - {_projectInfo.ProjectName}");
+            }
+        }
+
+        // Apply static fields from ProjectInfo to ProjectManager properties
+        if (!isSpecificRescan)
+        {
+            ProjectNumber = _projectInfo.ProjectNumber;
+            ProjectName = _projectInfo.ProjectName;
+            Discipline = _projectInfo.Discipline;
+            RegisterNumber = _projectInfo.RegisterNumber;
+            ClientNumber = _projectInfo.ClientNumber;
+            Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} ===");
         }
 
         if (isSpecificRescan)
@@ -123,18 +155,6 @@ public class ProjectManager : INotifyPropertyChanged
                  docInfo.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true) ||
                 (!string.IsNullOrEmpty(docInfo.FilePath) && Path.GetDirectoryName(docInfo.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true));
             _currentStorage.Projects.RemoveAll(p => p.FolderPath.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase));
-        }
-        else if (_currentStorage != null) // Full scan and storage exists
-        {
-            Console.WriteLine("\n=== Loading Existing Project Data ===");
-            // Restore project metadata from storage first
-            ProjectNumber = _currentStorage.ProjectNumber;
-            ProjectName = _currentStorage.ProjectName;
-            Discipline = _currentStorage.Discipline;
-            RegisterNumber = _currentStorage.RegisterNumber;
-            ClientNumber = _currentStorage.ClientNumber;
-            
-            Console.WriteLine($"Restored project metadata: {ProjectNumber} - {ProjectName} - {Discipline}");
         }
 
         // Populate Documents from _currentStorage (which might have been modified if isSpecificRescan)
@@ -555,12 +575,16 @@ public class ProjectManager : INotifyPropertyChanged
     {
         if (string.IsNullOrEmpty(_currentBasePath) || _currentStorage == null) return;
 
-        // Update storage with current state
-        _currentStorage.ProjectNumber = ProjectNumber;
-        _currentStorage.ProjectName = ProjectName;
-        _currentStorage.Discipline = Discipline;
-        _currentStorage.RegisterNumber = RegisterNumber;
-        _currentStorage.ClientNumber = ClientNumber;
+        // Save static project info to separate file (project_info.json)
+        if (_projectInfo == null) _projectInfo = new ProjectInfo();
+        _projectInfo.ProjectNumber = ProjectNumber;
+        _projectInfo.ProjectName = ProjectName;
+        _projectInfo.Discipline = Discipline;
+        _projectInfo.RegisterNumber = RegisterNumber;
+        _projectInfo.ClientNumber = ClientNumber;
+        _projectInfo.Save(_currentBasePath);
+
+        // Save dynamic data only (static fields removed from ProjectStorage)
         _currentStorage.BaseFolderPath = _currentBasePath;
         _currentStorage.LastScanDate = DateTime.Now;
         _currentStorage.LastProcessedDate = DateTime.Now;
@@ -589,7 +613,7 @@ public class ProjectManager : INotifyPropertyChanged
         }).ToList();
 
         _currentStorage.Save(Path.Combine(_currentBasePath, STORAGE_FILENAME));
-        
+
         // Save distribution data
         DistributionManager?.SaveCompanies();
     }
@@ -770,5 +794,36 @@ public class ProjectManager : INotifyPropertyChanged
     object? GetPropertyValue(object obj, string propertyName)
     {
         return obj.GetType().GetProperty(propertyName)?.GetValue(obj);
+    }
+
+    /// <summary>
+    /// Loads legacy static fields from project_data.json for migration to project_info.json.
+    /// This supports backward compatibility with older project files.
+    /// </summary>
+    private LegacyProjectData? LoadLegacyStaticFields(string storageFilePath)
+    {
+        try
+        {
+            if (!File.Exists(storageFilePath)) return null;
+
+            var json = File.ReadAllText(storageFilePath);
+            return JsonSerializer.Deserialize<LegacyProjectData>(json);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Helper class to deserialize legacy static fields from old project_data.json format.
+    /// </summary>
+    private class LegacyProjectData
+    {
+        public string ProjectNumber { get; set; } = string.Empty;
+        public string ProjectName { get; set; } = string.Empty;
+        public string Discipline { get; set; } = string.Empty;
+        public string RegisterNumber { get; set; } = string.Empty;
+        public string ClientNumber { get; set; } = string.Empty;
     }
 } 

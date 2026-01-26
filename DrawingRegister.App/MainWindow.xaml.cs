@@ -69,11 +69,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         DataContext = this;
 
         // Bind UI elements to ProjectManager properties
-        ProjectNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ProjectNumber)) { Source = _project });
+        ProjectNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ProjectNumber)) { Source = _project, Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
         ProjectNameBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ProjectName)) { Source = _project });
-        DisciplineBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.Discipline)) { Source = _project });
         RegNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.RegisterNumber)) { Source = _project });
         ClientNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ClientNumber)) { Source = _project });
+
+        // Initialize DisciplineCombo based on stored Discipline value
+        InitializeDisciplineCombo();
+
+        // Subscribe to ProjectNumber changes to update RegisterNumber
+        _project.PropertyChanged += Project_PropertyChanged;
 
         // Bind grid to ProjectManager collections
         DocumentGrid.ItemsSource = _project.Documents;
@@ -100,6 +105,57 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Update issue date filter options when documents change
         UpdateIssueDateFilterOptions();
         UpdateRevisionColumns();
+    }
+
+    private void InitializeDisciplineCombo()
+    {
+        // Set the DisciplineCombo selection based on stored Discipline value
+        var storedDiscipline = _project.Discipline;
+        if (!string.IsNullOrEmpty(storedDiscipline))
+        {
+            // Find the ComboBoxItem with matching Tag
+            foreach (ComboBoxItem item in DisciplineCombo.Items)
+            {
+                if (item.Tag?.ToString() == storedDiscipline)
+                {
+                    DisciplineCombo.SelectedItem = item;
+                    return;
+                }
+            }
+        }
+        // Default to first item (Z - General/Multi-discipline) if no match
+        DisciplineCombo.SelectedIndex = 0;
+    }
+
+    private void Project_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ProjectManager.ProjectNumber))
+        {
+            UpdateRegisterNumber();
+        }
+    }
+
+    private void DisciplineCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateRegisterNumber();
+    }
+
+    private void UpdateRegisterNumber()
+    {
+        if (DisciplineCombo.SelectedItem is ComboBoxItem selected)
+        {
+            var disciplineCode = selected.Tag?.ToString() ?? "Z";
+            _project.Discipline = disciplineCode;
+
+            if (!string.IsNullOrEmpty(_project.ProjectNumber))
+            {
+                _project.RegisterNumber = $"{_project.ProjectNumber}-M+J-00-XX-RE-{disciplineCode}-00-01";
+            }
+            else
+            {
+                _project.RegisterNumber = string.Empty;
+            }
+        }
     }
 
     private void UpdateIssueDateFilterOptions()
@@ -676,6 +732,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 };
 
                 _project.ImportDocuments(dialog.SelectedPath);
+                InitializeDisciplineCombo();
+                UpdateRegisterNumber();
                 UpdateIssueDateFilterOptions();
                 UpdateRevisionColumns();
                 FilterDocuments();
@@ -706,6 +764,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
             // Rescan the current folder
             _project.ImportDocuments(_project._currentBasePath);
+
+            // Re-initialize discipline combo and update register number
+            InitializeDisciplineCombo();
+            UpdateRegisterNumber();
 
             // Refresh the document grid view
             var view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
