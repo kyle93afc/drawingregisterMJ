@@ -1,94 +1,105 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Serilog;
 using MessageBox = System.Windows.MessageBox;
-using System.IO;
-using System.Diagnostics;
 
-namespace DrawingRegister.App
+namespace DrawingRegister.App;
+
+/// <summary>
+/// Interaction logic for App.xaml
+/// </summary>
+public partial class App : System.Windows.Application
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
-    public partial class App : System.Windows.Application
+    public App()
     {
-        public App()
+        try
         {
-            try
-            {
-                this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-                System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-                
-                // Add startup logging
-                AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-                
-                // Log application startup
-                LogMessage("Application starting up");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error in App constructor: {ex.Message}\n{ex.StackTrace}");
-                MessageBox.Show($"Error initializing application: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}", 
-                    "Initialization Error", 
-                    MessageBoxButton.OK, 
-                    MessageBoxImage.Error);
-            }
-        }
+            // Configure Serilog for structured logging
+            ConfigureSerilog();
 
-        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
-        {
-            var exception = e.ExceptionObject as Exception;
-            LogMessage($"Unhandled exception: {exception?.Message}\n{exception?.StackTrace}");
-            
-            MessageBox.Show($"Fatal error: {exception?.Message}\n\nStack Trace:\n{exception?.StackTrace}", 
-                "Fatal Error", 
-                MessageBoxButton.OK, 
-                MessageBoxImage.Error);
-        }
+            DispatcherUnhandledException += App_DispatcherUnhandledException;
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
-        private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+            Log.Information("Application starting up");
+        }
+        catch (Exception ex)
         {
-            LogMessage($"Dispatcher unhandled exception: {e.Exception.Message}\n{e.Exception.StackTrace}");
-            
-            MessageBox.Show($"An error occurred: {e.Exception.Message}\n\nStack Trace:\n{e.Exception.StackTrace}", 
-                "Error", 
-                MessageBoxButton.OK, 
+            MessageBox.Show(
+                $"Error initializing application: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
+                "Initialization Error",
+                MessageBoxButton.OK,
                 MessageBoxImage.Error);
-            
-            e.Handled = true;
-        }
-        
-        private void LogMessage(string message)
-        {
-            try
-            {
-                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_log.txt");
-                File.AppendAllText(logPath, $"[{DateTime.Now}] {message}\n");
-                Debug.WriteLine($"[{DateTime.Now}] {message}");
-            }
-            catch
-            {
-                // Silently fail if logging fails
-            }
-        }
-        
-        protected override void OnStartup(StartupEventArgs e)
-        {
-            try
-            {
-                LogMessage("OnStartup called");
-                base.OnStartup(e);
-                LogMessage("OnStartup completed");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Error in OnStartup: {ex.Message}\n{ex.StackTrace}");
-                MessageBox.Show($"Error during startup: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}", 
-                    "Startup Error", 
-                    MessageBoxButton.OK, 
-                    MessageBoxImage.Error);
-            }
         }
     }
-}
 
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        try
+        {
+            Log.Information("OnStartup called");
+            base.OnStartup(e);
+            Log.Information("OnStartup completed");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Error during startup");
+            MessageBox.Show(
+                $"Error during startup: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
+                "Startup Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        Log.Information("Application shutting down");
+        Log.CloseAndFlush();
+        base.OnExit(e);
+    }
+
+    private static void ConfigureSerilog()
+    {
+        var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+        Directory.CreateDirectory(logDirectory);
+        var logPath = Path.Combine(logDirectory, "app_.log");
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Debug()
+            .WriteTo.File(
+                logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+    }
+
+    private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        var exception = e.ExceptionObject as Exception;
+        Log.Fatal(exception, "Unhandled domain exception");
+
+        MessageBox.Show(
+            $"Fatal error: {exception?.Message}\n\nStack Trace:\n{exception?.StackTrace}",
+            "Fatal Error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+    }
+
+    private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        Log.Error(e.Exception, "Dispatcher unhandled exception");
+
+        MessageBox.Show(
+            $"An error occurred: {e.Exception.Message}\n\nStack Trace:\n{e.Exception.StackTrace}",
+            "Error",
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+
+        e.Handled = true;
+    }
+}
