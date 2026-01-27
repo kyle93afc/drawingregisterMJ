@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using DrawingRegister.App.Services;
 using Serilog;
+using Velopack;
 using MessageBox = System.Windows.MessageBox;
 
 namespace DrawingRegister.App;
@@ -12,6 +14,23 @@ namespace DrawingRegister.App;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    private static UpdateService? _updateService;
+
+    /// <summary>
+    /// Custom entry point for the application.
+    /// Velopack requires this to be the first thing that runs.
+    /// </summary>
+    [STAThread]
+    public static void Main(string[] args)
+    {
+        // IMPORTANT: This must be the first line in Main()
+        VelopackApp.Build().Run();
+
+        var app = new App();
+        app.InitializeComponent();
+        app.Run();
+    }
+
     public App()
     {
         try
@@ -23,7 +42,7 @@ public partial class App : System.Windows.Application
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
-            Log.Information("Application starting up");
+            Log.Information("Application starting up - Version {Version}", UpdateService.CurrentVersion);
         }
         catch (Exception ex)
         {
@@ -41,6 +60,10 @@ public partial class App : System.Windows.Application
         {
             Log.Information("OnStartup called");
             base.OnStartup(e);
+
+            // Check for updates on startup (fire-and-forget)
+            _ = CheckForUpdatesOnStartupAsync();
+
             Log.Information("OnStartup completed");
         }
         catch (Exception ex)
@@ -49,6 +72,87 @@ public partial class App : System.Windows.Application
             MessageBox.Show(
                 $"Error during startup: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}",
                 "Startup Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private static async Task CheckForUpdatesOnStartupAsync()
+    {
+        try
+        {
+            _updateService = new UpdateService();
+
+            if (!_updateService.IsInstalled)
+            {
+                Log.Information("Application not installed via Velopack, skipping update check");
+                return;
+            }
+
+            var updateAvailable = await _updateService.CheckForUpdatesAsync();
+
+            if (updateAvailable)
+            {
+                var newVersion = _updateService.GetAvailableVersion() ?? "unknown";
+                Log.Information("Update available: {NewVersion}", newVersion);
+
+                // Show update dialog on UI thread
+                await Current.Dispatcher.InvokeAsync(() =>
+                {
+                    var result = MessageBox.Show(
+                        $"A new version ({newVersion}) is available!\n\nCurrent version: {UpdateService.CurrentVersion}\n\nWould you like to download and install it now?",
+                        "Update Available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        _ = DownloadAndInstallUpdateAsync();
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to check for updates on startup");
+            // Don't show error to user - update check is non-blocking
+        }
+    }
+
+    private static async Task DownloadAndInstallUpdateAsync()
+    {
+        if (_updateService == null) return;
+
+        try
+        {
+            // Show progress dialog
+            var progressDialog = new UpdateProgressDialog();
+            progressDialog.Show();
+
+            await _updateService.DownloadUpdatesAsync(progress =>
+            {
+                Current.Dispatcher.Invoke(() =>
+                {
+                    progressDialog.UpdateProgress(progress);
+                });
+            });
+
+            progressDialog.Close();
+
+            var result = MessageBox.Show(
+                "Update downloaded successfully!\n\nThe application will now restart to apply the update.",
+                "Update Ready",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+
+            _updateService.ApplyUpdatesAndRestart();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to download and install update");
+            MessageBox.Show(
+                $"Failed to download update: {ex.Message}",
+                "Update Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }

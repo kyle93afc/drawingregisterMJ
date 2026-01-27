@@ -2032,4 +2032,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             MessageBox.Show("Please select a document from the grid to remove.", "No Document Selected", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        var aboutDialog = new AboutDialog();
+        aboutDialog.Owner = this;
+        aboutDialog.ShowDialog();
+    }
 }

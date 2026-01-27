@@ -1,6 +1,8 @@
+# Build outputs
 .vs/
 **/bin/
 **/obj/
+publish/
 
 # Cursor rules files
 .cursor/rules/*.mdc
@@ -8,3 +10,83 @@
 # Documentation and templates
 xnotes/
 docs/
+
+# Windows Zone.Identifier metadata streams
+*Zone.Identifier
+*:Zone.Identifier
+
+# Velopack release artifacts
+Releases/
+*.nupkg
+*-Setup.exe
+*-Portable.zip
+*.delta
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.VC.db
+*.VC.VC.opendb
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Application data files (local testing)
+project_data.json
+
+# Secrets and credentials
+*.pfx
+*.snk
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+secrets.json
