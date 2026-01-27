@@ -109,11 +109,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void InitializeDisciplineCombo()
     {
-        // Set the DisciplineCombo selection based on stored Discipline value
+        // Set the DisciplineCombo selection based on stored Discipline value (full description)
         var storedDiscipline = _project.Discipline;
         if (!string.IsNullOrEmpty(storedDiscipline))
         {
-            // Find the ComboBoxItem with matching Tag
+            // Find the ComboBoxItem with matching Content (full description)
+            foreach (ComboBoxItem item in DisciplineCombo.Items)
+            {
+                if (item.Content?.ToString() == storedDiscipline)
+                {
+                    DisciplineCombo.SelectedItem = item;
+                    return;
+                }
+            }
+            // Fallback: try matching by Tag (code) for backward compatibility with old data
             foreach (ComboBoxItem item in DisciplineCombo.Items)
             {
                 if (item.Tag?.ToString() == storedDiscipline)
@@ -123,7 +132,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 }
             }
         }
-        // Default to first item (Z - General/Multi-discipline) if no match
+        // Default to first item (General/Multi-discipline) if no match
         DisciplineCombo.SelectedIndex = 0;
     }
 
@@ -145,7 +154,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (DisciplineCombo.SelectedItem is ComboBoxItem selected)
         {
             var disciplineCode = selected.Tag?.ToString() ?? "Z";
-            _project.Discipline = disciplineCode;
+            var disciplineDescription = selected.Content?.ToString() ?? "General/Multi-discipline";
+            _project.Discipline = disciplineDescription;
 
             if (!string.IsNullOrEmpty(_project.ProjectNumber))
             {
