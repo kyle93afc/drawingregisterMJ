@@ -2039,4 +2039,127 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         aboutDialog.Owner = this;
         aboutDialog.ShowDialog();
     }
+
+    private void ExportCsv_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Get the currently displayed documents from the grid
+            var documentsToExport = DocumentGrid.ItemsSource as IEnumerable<Models.DocumentMetadata>;
+            if (documentsToExport == null || !documentsToExport.Any())
+            {
+                MessageBox.Show("No documents to export.", "Export CSV", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Create filename based on whether a date filter is applied
+            string fileNamePrefix = $"DrawingRegister_{_project.ProjectNumber ?? "Export"}_{DateTime.Now:yyyyMMdd}";
+            if (IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && selectedItem.Content.ToString() != "All Dates")
+            {
+                fileNamePrefix = $"Transmittal_{_project.ProjectNumber ?? "Export"}_{selectedItem.Content.ToString().Replace("/", "")}";
+            }
+
+            var saveDialog = new SaveFileDialog
+            {
+                Filter = "CSV files (*.csv)|*.csv",
+                DefaultExt = "csv",
+                FileName = fileNamePrefix
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                // Get all unique issue dates for column headers
+                var allIssueDates = documentsToExport
+                    .SelectMany(d => d.RevisionHistory.Keys)
+                    .Distinct()
+                    .OrderByDescending(d => d)
+                    .ToList();
+
+                using (var writer = new StreamWriter(saveDialog.FileName, false, System.Text.Encoding.UTF8))
+                {
+                    // Write header row
+                    var headers = new List<string>
+                    {
+                        "Document No",
+                        "Description",
+                        "Package",
+                        "Type",
+                        "Size",
+                        "Latest Rev",
+                        "Latest Date"
+                    };
+
+                    // Add date columns
+                    foreach (var date in allIssueDates)
+                    {
+                        headers.Add(date.ToString("dd/MM/yyyy"));
+                    }
+
+                    writer.WriteLine(string.Join(",", headers.Select(EscapeCsvField)));
+
+                    // Write data rows
+                    foreach (var doc in documentsToExport)
+                    {
+                        var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+
+                        var row = new List<string>
+                        {
+                            doc.DocumentNumber,
+                            doc.Description,
+                            doc.Package,
+                            doc.DocumentType,
+                            doc.Size,
+                            latestRevision.Value?.Revision ?? "",
+                            latestRevision.Key != default ? latestRevision.Key.ToString("dd/MM/yyyy") : ""
+                        };
+
+                        // Add revision for each date column
+                        foreach (var date in allIssueDates)
+                        {
+                            var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
+                                ? revInfo.Revision
+                                : "";
+                            row.Add(revision);
+                        }
+
+                        writer.WriteLine(string.Join(",", row.Select(EscapeCsvField)));
+                    }
+                }
+
+                MessageBox.Show($"CSV exported successfully to:\n{saveDialog.FileName}\n\n{documentsToExport.Count()} documents exported.",
+                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // Optionally open the file
+                var result = MessageBox.Show("Would you like to open the CSV file now?", "Open File",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = saveDialog.FileName,
+                        UseShellExecute = true
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error exporting CSV: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static string EscapeCsvField(string field)
+    {
+        if (string.IsNullOrEmpty(field))
+            return "";
+
+        // If the field contains a comma, newline, or quote, it needs to be quoted
+        if (field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r'))
+        {
+            // Escape quotes by doubling them and wrap in quotes
+            return $"\"{field.Replace("\"", "\"\"")}\"";
+        }
+        return field;
+    }
 }

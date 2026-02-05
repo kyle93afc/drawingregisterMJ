@@ -342,6 +342,7 @@
             <Button Content="MANAGE DISTRIBUTION" Click="ManageDistribution_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="BATCH EDIT" Click="BatchEdit_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="GENERATE PDF REPORT" Click="GeneratePdfReport_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
+            <Button Content="EXPORT CSV" Click="ExportCsv_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <!-- ADDED BUTTON FOR REMOVING DOCUMENT ENTRY -->
             <Button x:Name="RemoveDocumentButton" Content="Remove Selected Document Entry" Click="RemoveDocumentButton_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
         </StackPanel>
