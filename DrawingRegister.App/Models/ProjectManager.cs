@@ -564,11 +564,9 @@ public class ProjectManager : INotifyPropertyChanged
                 var canonicalName = $"{documentNumber}_{description.Replace(" ", "_")}{Path.GetExtension(filePath)}";
                 var actualName = Path.GetFileName(filePath);
                 // Normalize separators for comparison: treat -, _, and space as equivalent
+                // Do NOT collapse multiples — double hyphens (e.g. 20--10) are a real problem to flag
                 var normalizedActual = actualName.ToLowerInvariant().Replace("-", "_").Replace(" ", "_");
                 var normalizedCanonical = canonicalName.ToLowerInvariant().Replace("-", "_").Replace(" ", "_");
-                // Collapse multiple consecutive underscores to single
-                normalizedActual = Regex.Replace(normalizedActual, @"_{2,}", "_");
-                normalizedCanonical = Regex.Replace(normalizedCanonical, @"_{2,}", "_");
                 if (normalizedActual != normalizedCanonical)
                 {
                     // Avoid duplicates (same file processed via multiple revisions)
