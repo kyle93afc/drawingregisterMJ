@@ -339,6 +339,7 @@
             <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click" Style="{StaticResource RedButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="SAVE PROJECT" Click="SaveProject_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="REFRESH VIEW" Click="RefreshView_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
+            <Button Content="RESCAN FOLDER" Click="RescanFolder_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="MANAGE DISTRIBUTION" Click="ManageDistribution_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="BATCH EDIT" Click="BatchEdit_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
             <Button Content="GENERATE PDF REPORT" Click="GeneratePdfReport_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>

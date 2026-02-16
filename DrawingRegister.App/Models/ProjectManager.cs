@@ -411,7 +411,7 @@ public class ProjectManager : INotifyPropertyChanged
             sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
 
             // Updated regex pattern to better handle drawing numbers and revisions
-            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+))?(?:-\s*(?<revision>[A-Z]\d{2}|[A-Z]))?(?:\s*-\s*(?<description>.+))?$");
+            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+)(?=[_\s-]|$))?(?:-\s*(?<revision>[A-Z]\d{2}|[A-Z])(?=[_\s-]|$))?(?:[_\s-]\s*(?<description>.+))?$");
             var match = regex.Match(sanitizedFileName);
 
             if (!match.Success)
@@ -556,6 +556,26 @@ public class ProjectManager : INotifyPropertyChanged
             }
 
             importResult.SuccessfullyParsed++;
+
+            // Check if file should be renamed to match canonical naming convention
+            if (!string.IsNullOrEmpty(description))
+            {
+                var canonicalName = $"{documentNumber}_{description.Replace(" ", "_")}{Path.GetExtension(filePath)}";
+                var actualName = Path.GetFileName(filePath);
+                if (!string.Equals(actualName, canonicalName, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Avoid duplicates (same file processed via multiple revisions)
+                    if (!importResult.SuggestedRenames.Any(r => string.Equals(r.OriginalPath, filePath, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        importResult.SuggestedRenames.Add(new FileRenameInfo
+                        {
+                            OriginalPath = filePath,
+                            SuggestedName = canonicalName,
+                            DocumentNumber = documentNumber
+                        });
+                    }
+                }
+            }
         }
 
         // After processing, update storage with processed directories

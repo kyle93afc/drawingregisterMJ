@@ -758,6 +758,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         message += $"\n\n... and {importResult.SkippedFiles.Count - 20} more.";
                     MessageBox.Show(message, "Import Warning - Skipped Files", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
+
+                HandleSuggestedRenames(importResult);
             }
             catch (Exception ex)
             {
@@ -815,13 +817,77 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 MessageBox.Show(refreshMessage, "Refresh Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             }
+
+            HandleSuggestedRenames(importResult);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error refreshing documents: {ex.Message}", 
-                "Refresh Error", 
-                MessageBoxButton.OK, 
+            MessageBox.Show($"Error refreshing documents: {ex.Message}",
+                "Refresh Error",
+                MessageBoxButton.OK,
                 MessageBoxImage.Error);
+        }
+    }
+
+    private void RescanFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(_project._currentBasePath))
+            {
+                MessageBox.Show("No project loaded. Please scan a folder first.",
+                    "Rescan Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (_project._currentStorage == null || _project._currentStorage.Projects.Count == 0)
+            {
+                MessageBox.Show("No processed folders found. Please scan a folder first.",
+                    "Rescan Error", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var folderPaths = _project._currentStorage.Projects.Select(p => p.FolderPath).ToList();
+            var dialog = new RescanFolderDialog(folderPaths);
+            dialog.Owner = this;
+
+            if (dialog.ShowDialog() == true)
+            {
+                var selectedFolder = dialog.SelectedFolderPath;
+
+                var importResult = _project.ImportDocuments(_project._currentBasePath, selectedFolder);
+
+                InitializeDisciplineCombo();
+                UpdateRegisterNumber();
+                UpdateIssueDateFilterOptions();
+                UpdateRevisionColumns();
+                FilterDocuments();
+
+                var folderName = System.IO.Path.GetFileName(selectedFolder);
+                var message = $"Rescan of '{folderName}' complete. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
+
+                if (importResult.HasSkippedFiles)
+                {
+                    var skippedList = importResult.SkippedFiles.Take(20)
+                        .Select(f => $"  • {f.FileName}\n    Reason: {f.Reason}");
+                    message += $"\n\n{importResult.SkippedFiles.Count} PDF files were not added:\n\n"
+                        + string.Join("\n\n", skippedList);
+                    if (importResult.SkippedFiles.Count > 20)
+                        message += $"\n\n... and {importResult.SkippedFiles.Count - 20} more.";
+                    MessageBox.Show(message, "Rescan Complete - With Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    MessageBox.Show(message, "Rescan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+
+                HandleSuggestedRenames(importResult);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error rescanning folder: {ex.Message}",
+                "Rescan Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -897,6 +963,65 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 DocumentGrid.Items.Refresh();
                 RevisionTimeline.Items.Refresh();
             }
+        }
+    }
+
+    private void HandleSuggestedRenames(ImportResult importResult)
+    {
+        if (!importResult.HasSuggestedRenames) return;
+
+        var dialog = new RenameFilesDialog(importResult.SuggestedRenames);
+        dialog.Owner = this;
+
+        if (dialog.ShowDialog() == true && dialog.ApprovedRenames.Count > 0)
+        {
+            int renamed = 0;
+            int failed = 0;
+            foreach (var rename in dialog.ApprovedRenames)
+            {
+                try
+                {
+                    var directory = Path.GetDirectoryName(rename.OriginalPath) ?? string.Empty;
+                    var newPath = Path.Combine(directory, rename.SuggestedName);
+
+                    if (File.Exists(newPath) && !string.Equals(rename.OriginalPath, newPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        failed++;
+                        continue;
+                    }
+
+                    File.Move(rename.OriginalPath, newPath);
+                    renamed++;
+
+                    // Update stored paths in documents and revision history
+                    foreach (var doc in _project.Documents)
+                    {
+                        if (string.Equals(doc.FilePath, rename.OriginalPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            doc.FilePath = newPath;
+                        }
+
+                        foreach (var rev in doc.RevisionHistory)
+                        {
+                            if (string.Equals(rev.Value.FilePath, rename.OriginalPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                rev.Value.FilePath = newPath;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    failed++;
+                }
+            }
+
+            _project.SaveProjectData();
+
+            var message = $"Renamed {renamed} file(s).";
+            if (failed > 0)
+                message += $" {failed} file(s) could not be renamed.";
+            MessageBox.Show(message, "Rename Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
