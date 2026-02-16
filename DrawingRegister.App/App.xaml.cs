@@ -61,6 +61,9 @@ public partial class App : System.Windows.Application
             Log.Information("OnStartup called");
             base.OnStartup(e);
 
+            // Show "What's New" if version changed since last launch
+            _ = ShowWhatsNewIfUpdatedAsync();
+
             // Check for updates on startup (fire-and-forget)
             _ = CheckForUpdatesOnStartupAsync();
 
@@ -74,6 +77,41 @@ public partial class App : System.Windows.Application
                 "Startup Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
+        }
+    }
+
+    private static async Task ShowWhatsNewIfUpdatedAsync()
+    {
+        try
+        {
+            var versionFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "last_version.txt");
+            var currentVersion = UpdateService.CurrentVersion;
+            var lastVersion = File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : null;
+
+            // Always write current version so first launch doesn't trigger
+            File.WriteAllText(versionFile, currentVersion);
+
+            if (lastVersion == null || lastVersion == currentVersion) return;
+
+            Log.Information("Version changed from {OldVersion} to {NewVersion}, showing What's New", lastVersion, currentVersion);
+
+            var updateService = new UpdateService();
+            var releaseNotes = await updateService.GetReleaseNotesAsync(currentVersion);
+
+            if (string.IsNullOrWhiteSpace(releaseNotes)) return;
+
+            await Current.Dispatcher.InvokeAsync(() =>
+            {
+                MessageBox.Show(
+                    $"Updated to v{currentVersion}\n\n{releaseNotes}",
+                    "What's New",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to show What's New dialog");
         }
     }
 
