@@ -6,129 +6,43 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
-        Title="Stakeholder Details" Height="250" Width="400"
-        WindowStartupLocation="CenterOwner">
-    <Window.Resources>
-        <!-- Button Style -->
-        <Style x:Key="BaseButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#5a6268"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="Margin" Value="0,0,12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
-                            <ContentPresenter x:Name="contentPresenter" 
-                                            HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"
-                                            TextBlock.FontWeight="SemiBold"
-                                            Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <EventTrigger RoutedEvent="MouseEnter">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#4a5258" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="MouseLeave">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#5a6268" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#3d444a"/>
-                                <Setter TargetName="contentPresenter" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#BDBDBD"/>
-                                <Setter Property="Foreground" Value="#757575"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <!-- Primary Button Style -->
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-            <Setter Property="Background" Value="#eb1845"/>
-        </Style>
-        
-        <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-            <Setter Property="Background" Value="#5a6268"/>
-        </Style>
-        
-        <!-- Text Box Style -->
-        <Style x:Key="TextBoxStyle" TargetType="TextBox">
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#CCCCCC"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
-    </Window.Resources>
-    
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="Stakeholder Details" FontSize="18" FontWeight="Bold" Margin="0,0,0,20"/>
-        
-        <!-- Name -->
-        <Grid Grid.Row="1" Margin="0,0,0,15">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBlock Grid.Column="0" Text="Name:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <TextBox Grid.Column="1" x:Name="NameTextBox" Style="{StaticResource TextBoxStyle}"/>
-        </Grid>
-        
-        <!-- Company -->
-        <Grid Grid.Row="2" Margin="0,0,0,15">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            
-            <TextBlock Grid.Column="0" Text="Company:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <TextBox Grid.Column="1" x:Name="CompanyTextBox" Style="{StaticResource TextBoxStyle}"/>
-        </Grid>
-        
-        <!-- Buttons -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButtonStyle}" 
-                    Click="Save_Click" Margin="0,0,10,0"/>
-            <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource SecondaryButtonStyle}" 
-                    Click="Cancel_Click"/>
-        </StackPanel>
+        Title="Stakeholder Details" Height="260" Width="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Slate50Brush}">
+    <Grid Margin="16">
+        <Border Style="{StaticResource CardStyle}" Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <TextBlock Grid.Row="0" Text="Stakeholder Details" Style="{StaticResource HeadingMedium}" Margin="0,0,0,16"/>
+
+                <!-- Name -->
+                <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                    <TextBlock Text="Name" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                    <TextBox x:Name="NameTextBox" Height="30"/>
+                </StackPanel>
+
+                <!-- Company -->
+                <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                    <TextBlock Text="Company" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                    <TextBox x:Name="CompanyTextBox" Height="30"/>
+                </StackPanel>
+
+                <!-- Buttons -->
+                <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click"
+                            Style="{StaticResource GhostButton}" Height="32" Margin="0,0,8,0"/>
+                    <Button x:Name="SaveButton" Content="Save" Click="Save_Click"
+                            Style="{StaticResource PrimaryButton}" Height="32"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
-</Window> 
+</Window>

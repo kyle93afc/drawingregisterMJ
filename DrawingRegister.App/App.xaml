@@ -1,14 +1,537 @@
-﻿<Application x:Class="DrawingRegister.App.App"
+<Application x:Class="DrawingRegister.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <!-- Set the application icon -->
-        <DrawingImage x:Key="AppIcon">
-            <DrawingImage.Drawing>
-                <ImageDrawing ImageSource="/Resources/company-logo.png" 
-                            Rect="0,0,16,16"/>
-            </DrawingImage.Drawing>
-        </DrawingImage>
+        <ResourceDictionary>
+            <!-- ============================================= -->
+            <!-- DESIGN SYSTEM: Drawing Register v2.0          -->
+            <!-- ============================================= -->
+
+            <!-- === COLOR PALETTE === -->
+            <!-- Brand -->
+            <Color x:Key="BrandRedColor">#eb1845</Color>
+            <Color x:Key="BrandRedHoverColor">#c91438</Color>
+            <Color x:Key="BrandRedPressedColor">#a8102f</Color>
+            <Color x:Key="BrandRedLightColor">#FEF2F4</Color>
+
+            <!-- Neutrals (Slate scale) -->
+            <Color x:Key="Slate50Color">#F8FAFC</Color>
+            <Color x:Key="Slate100Color">#F1F5F9</Color>
+            <Color x:Key="Slate200Color">#E2E8F0</Color>
+            <Color x:Key="Slate300Color">#CBD5E1</Color>
+            <Color x:Key="Slate400Color">#94A3B8</Color>
+            <Color x:Key="Slate500Color">#64748B</Color>
+            <Color x:Key="Slate600Color">#475569</Color>
+            <Color x:Key="Slate700Color">#334155</Color>
+            <Color x:Key="Slate800Color">#1E293B</Color>
+            <Color x:Key="Slate900Color">#0F172A</Color>
+
+            <!-- SolidColorBrushes -->
+            <SolidColorBrush x:Key="BrandRedBrush" Color="{StaticResource BrandRedColor}"/>
+            <SolidColorBrush x:Key="BrandRedHoverBrush" Color="{StaticResource BrandRedHoverColor}"/>
+            <SolidColorBrush x:Key="BrandRedLightBrush" Color="{StaticResource BrandRedLightColor}"/>
+
+            <SolidColorBrush x:Key="Slate50Brush" Color="{StaticResource Slate50Color}"/>
+            <SolidColorBrush x:Key="Slate100Brush" Color="{StaticResource Slate100Color}"/>
+            <SolidColorBrush x:Key="Slate200Brush" Color="{StaticResource Slate200Color}"/>
+            <SolidColorBrush x:Key="Slate300Brush" Color="{StaticResource Slate300Color}"/>
+            <SolidColorBrush x:Key="Slate400Brush" Color="{StaticResource Slate400Color}"/>
+            <SolidColorBrush x:Key="Slate500Brush" Color="{StaticResource Slate500Color}"/>
+            <SolidColorBrush x:Key="Slate600Brush" Color="{StaticResource Slate600Color}"/>
+            <SolidColorBrush x:Key="Slate700Brush" Color="{StaticResource Slate700Color}"/>
+            <SolidColorBrush x:Key="Slate800Brush" Color="{StaticResource Slate800Color}"/>
+            <SolidColorBrush x:Key="Slate900Brush" Color="{StaticResource Slate900Color}"/>
+
+            <!-- Semantic Colors -->
+            <SolidColorBrush x:Key="SurfaceBrush" Color="White"/>
+            <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource Slate50Color}"/>
+            <SolidColorBrush x:Key="CardBorderBrush" Color="{StaticResource Slate200Color}"/>
+            <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource Slate300Color}"/>
+            <SolidColorBrush x:Key="InputBorderFocusBrush" Color="{StaticResource BrandRedColor}"/>
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource Slate900Color}"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource Slate600Color}"/>
+            <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource Slate400Color}"/>
+
+            <!-- === EFFECTS === -->
+            <DropShadowEffect x:Key="CardShadow"
+                             BlurRadius="8"
+                             Direction="270"
+                             ShadowDepth="2"
+                             Opacity="0.08"
+                             Color="#000000"/>
+
+            <DropShadowEffect x:Key="ButtonShadow"
+                             BlurRadius="4"
+                             Direction="270"
+                             ShadowDepth="1"
+                             Opacity="0.1"
+                             Color="#000000"/>
+
+            <DropShadowEffect x:Key="ElevatedShadow"
+                             BlurRadius="16"
+                             Direction="270"
+                             ShadowDepth="4"
+                             Opacity="0.12"
+                             Color="#000000"/>
+
+            <!-- === CARD STYLE === -->
+            <Style x:Key="CardStyle" TargetType="Border">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="8"/>
+                <Setter Property="Padding" Value="16"/>
+                <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
+            </Style>
+
+            <!-- === TYPOGRAPHY === -->
+            <Style x:Key="HeadingLarge" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="22"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            </Style>
+
+            <Style x:Key="HeadingMedium" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            </Style>
+
+            <Style x:Key="HeadingSmall" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            </Style>
+
+            <Style x:Key="BodyText" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            </Style>
+
+            <Style x:Key="CaptionText" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+            </Style>
+
+            <Style x:Key="SectionLabel" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="{StaticResource Slate600Brush}"/>
+                <Setter Property="Margin" Value="0,0,8,0"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+
+            <!-- === BUTTON STYLES === -->
+
+            <!-- Primary Button (Brand Red - used sparingly for main CTA) -->
+            <Style x:Key="PrimaryButton" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource BrandRedBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="6"
+                                    Effect="{StaticResource ButtonShadow}">
+                                <ContentPresenter x:Name="contentPresenter"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="{StaticResource BrandRedHoverColor}" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="{StaticResource BrandRedColor}" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#a8102f"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="border" Property="Background" Value="{StaticResource Slate300Brush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource Slate500Brush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Secondary Button (Slate - most buttons use this) -->
+            <Style x:Key="SecondaryButton" TargetType="Button">
+                <Setter Property="Background" Value="{StaticResource Slate700Brush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="6"
+                                    Effect="{StaticResource ButtonShadow}">
+                                <ContentPresenter x:Name="contentPresenter"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="{StaticResource Slate800Color}" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="{StaticResource Slate700Color}" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{StaticResource Slate900Brush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="border" Property="Background" Value="{StaticResource Slate300Brush}"/>
+                                    <Setter Property="Foreground" Value="{StaticResource Slate500Brush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Ghost/Outline Button (for less prominent actions) -->
+            <Style x:Key="GhostButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource Slate700Brush}"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Slate300Brush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6">
+                                <ContentPresenter x:Name="contentPresenter"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="{StaticResource Slate100Color}" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="#00FFFFFF" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{StaticResource Slate200Brush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground" Value="{StaticResource Slate400Brush}"/>
+                                    <Setter Property="BorderBrush" Value="{StaticResource Slate200Brush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Toolbar Button (compact, for icon-text toolbar actions) -->
+            <Style x:Key="ToolbarButton" TargetType="Button">
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Foreground" Value="{StaticResource Slate700Brush}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Padding" Value="10,6"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="Normal"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="4">
+                                <ContentPresenter x:Name="contentPresenter"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <EventTrigger RoutedEvent="MouseEnter">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="{StaticResource Slate100Color}" Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <EventTrigger RoutedEvent="MouseLeave">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ColorAnimation Storyboard.TargetName="border"
+                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
+                                                          To="#00FFFFFF" Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{StaticResource Slate200Brush}"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground" Value="{StaticResource Slate400Brush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Danger Button (for destructive actions like Remove) -->
+            <Style x:Key="DangerButton" TargetType="Button">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="Foreground" Value="#DC2626"/>
+                <Setter Property="BorderBrush" Value="#FCA5A5"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="16,8"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6">
+                                <ContentPresenter x:Name="contentPresenter"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Margin="{TemplateBinding Padding}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#FEF2F2"/>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#DC2626"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="#FEE2E2"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Default button style (Secondary) -->
+            <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}"/>
+
+            <!-- BACKWARDS COMPAT: Keep old style keys pointing to new styles -->
+            <Style x:Key="BaseButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}"/>
+            <Style x:Key="RedButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButton}"/>
+            <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource PrimaryButton}"/>
+            <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButton}"/>
+
+            <!-- === INPUT STYLES === -->
+            <Style TargetType="TextBox">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Padding" Value="8,6"/>
+                <Setter Property="BorderBrush" Value="{StaticResource InputBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Slate400Brush}"/>
+                    </Trigger>
+                    <Trigger Property="IsFocused" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource BrandRedBrush}"/>
+                    </Trigger>
+                    <Trigger Property="IsReadOnly" Value="True">
+                        <Setter Property="Background" Value="{StaticResource Slate50Brush}"/>
+                        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style TargetType="ComboBox">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Padding" Value="8,6"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+            </Style>
+
+            <Style TargetType="ComboBoxItem">
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                <Setter Property="Padding" Value="8,4"/>
+                <Setter Property="FontSize" Value="13"/>
+            </Style>
+
+            <Style TargetType="DatePicker">
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Padding" Value="4,2"/>
+            </Style>
+
+            <!-- === DATAGRID STYLES === -->
+            <Style TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="{StaticResource Slate700Brush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Padding" Value="10,8"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Slate600Brush}"/>
+                <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+
+            <Style x:Key="VisibleHeader" TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="{StaticResource Slate700Brush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Padding" Value="10,8"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Slate600Brush}"/>
+                <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+
+            <Style x:Key="HiddenHeader" TargetType="DataGridColumnHeader">
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </Style>
+
+            <Style x:Key="RotatedColumnHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="DataGridColumnHeader">
+                            <Grid>
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}">
+                                    <StackPanel>
+                                        <TextBlock Text="{TemplateBinding Content}" Foreground="White" FontSize="11">
+                                            <TextBlock.LayoutTransform>
+                                                <RotateTransform Angle="-90"/>
+                                            </TextBlock.LayoutTransform>
+                                            <TextBlock.Margin>2,25,2,5</TextBlock.Margin>
+                                            <TextBlock.TextAlignment>Left</TextBlock.TextAlignment>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style TargetType="DataGridRow">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="BorderBrush" Value="{StaticResource Slate100Brush}"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                <Style.Triggers>
+                    <Trigger Property="AlternationIndex" Value="1">
+                        <Setter Property="Background" Value="{StaticResource Slate50Brush}"/>
+                    </Trigger>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="{StaticResource BrandRedLightBrush}"/>
+                    </Trigger>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="#FDE8EC"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style TargetType="DataGridCell">
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="Padding" Value="4,2"/>
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- === SEPARATOR === -->
+            <Style x:Key="CardDivider" TargetType="Separator">
+                <Setter Property="Background" Value="{StaticResource Slate200Brush}"/>
+                <Setter Property="Margin" Value="0,8"/>
+                <Setter Property="Height" Value="1"/>
+            </Style>
+
+            <!-- === REVISION CELL TEMPLATE === -->
+            <DataTemplate x:Key="RevisionCellTemplate">
+                <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" Width="120" Background="White" CornerRadius="2">
+                    <TextBlock Text="{Binding}" Padding="8" TextWrapping="Wrap" FontSize="12"/>
+                </Border>
+            </DataTemplate>
+
+            <!-- === DIALOG WINDOW BASE STYLE === -->
+            <Style x:Key="DialogWindow" TargetType="Window">
+                <Setter Property="Background" Value="{StaticResource Slate50Brush}"/>
+                <Setter Property="WindowStartupLocation" Value="CenterOwner"/>
+                <Setter Property="ResizeMode" Value="NoResize"/>
+            </Style>
+
+            <!-- Set the application icon -->
+            <DrawingImage x:Key="AppIcon">
+                <DrawingImage.Drawing>
+                    <ImageDrawing ImageSource="/Resources/company-logo.png"
+                                Rect="0,0,16,16"/>
+                </DrawingImage.Drawing>
+            </DrawingImage>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

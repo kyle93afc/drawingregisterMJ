@@ -6,141 +6,70 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
-        Title="Manage Distribution Companies" Height="500" Width="600"
-        WindowStartupLocation="CenterOwner">
-    <Window.Resources>
-        <!-- Button Style -->
-        <Style x:Key="BaseButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#5a6268"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="Margin" Value="0,0,12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
-                            <ContentPresenter x:Name="contentPresenter" 
-                                            HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"
-                                            TextBlock.FontWeight="SemiBold"
-                                            Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <EventTrigger RoutedEvent="MouseEnter">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#4a5258" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="MouseLeave">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#5a6268" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#3d444a"/>
-                                <Setter TargetName="contentPresenter" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#BDBDBD"/>
-                                <Setter Property="Foreground" Value="#757575"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <!-- Primary Button Style -->
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-            <Setter Property="Background" Value="#eb1845"/>
-        </Style>
-        
-        <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-            <Setter Property="Background" Value="#5a6268"/>
-        </Style>
-    </Window.Resources>
-    
-    <Grid Margin="20">
+        Title="Manage Distribution Companies" Height="460" Width="560"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Slate50Brush}">
+    <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        
+
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="DISTRIBUTION COMPANIES" FontSize="20" FontWeight="Bold" Margin="0,0,0,20"/>
-        
-        <!-- Companies List -->
-        <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            
-            <TextBlock Grid.Row="0" Text="Manage the list of companies that can receive document distributions" 
-                       Margin="0,0,0,10" TextWrapping="Wrap"/>
-            
-            <ListView Grid.Row="1" x:Name="CompaniesList" SelectionMode="Single" Margin="0,0,0,10">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="250"/>
-                        <GridViewColumn Header="Category" DisplayMemberBinding="{Binding Category}" Width="250"/>
-                    </GridView>
-                </ListView.View>
-                <ListView.GroupStyle>
-                    <GroupStyle>
-                        <GroupStyle.HeaderTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Margin="0,5,0,0"/>
-                            </DataTemplate>
-                        </GroupStyle.HeaderTemplate>
-                    </GroupStyle>
-                </ListView.GroupStyle>
-            </ListView>
-        </Grid>
-        
+        <TextBlock Grid.Row="0" Text="Distribution Companies" Style="{StaticResource HeadingLarge}" Margin="4,0,0,16"/>
+
+        <!-- Companies List Card -->
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Manage the list of companies that can receive document distributions"
+                           FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"/>
+
+                <ListView Grid.Row="1" x:Name="CompaniesList" SelectionMode="Single"
+                          BorderThickness="1" BorderBrush="{StaticResource Slate200Brush}">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="260"/>
+                            <GridViewColumn Header="Category" DisplayMemberBinding="{Binding Category}" Width="260"/>
+                        </GridView>
+                    </ListView.View>
+                    <ListView.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12"
+                                               Foreground="{StaticResource Slate700Brush}" Margin="0,6,0,2"/>
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListView.GroupStyle>
+                </ListView>
+            </Grid>
+        </Border>
+
         <!-- Buttons -->
-        <Grid Grid.Row="2" Margin="0,10,0,0">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            
-            <!-- Company Management Buttons -->
+
             <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <Button x:Name="AddCompanyButton" Content="Add Company" Style="{StaticResource SecondaryButtonStyle}" 
-                        Click="AddCompany_Click" Margin="0,0,10,0"/>
-                <Button x:Name="EditCompanyButton" Content="Edit Company" Style="{StaticResource SecondaryButtonStyle}" 
-                        Click="EditCompany_Click" Margin="0,0,10,0"/>
-                <Button x:Name="DeleteCompanyButton" Content="Delete Company" Style="{StaticResource SecondaryButtonStyle}" 
-                        Click="DeleteCompany_Click"/>
+                <Button x:Name="AddCompanyButton" Content="Add Company" Click="AddCompany_Click"
+                        Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Height="32"/>
+                <Button x:Name="EditCompanyButton" Content="Edit Company" Click="EditCompany_Click"
+                        Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32"/>
+                <Button x:Name="DeleteCompanyButton" Content="Delete Company" Click="DeleteCompany_Click"
+                        Style="{StaticResource DangerButton}" Height="32"/>
             </StackPanel>
-            
-            <!-- Dialog Buttons -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="SaveButton" Content="Close" Style="{StaticResource PrimaryButtonStyle}" 
-                        Click="Save_Click"/>
-            </StackPanel>
+
+            <Button Grid.Column="1" x:Name="SaveButton" Content="Close" Click="Save_Click"
+                    Style="{StaticResource PrimaryButton}" Height="32"/>
         </Grid>
     </Grid>
-</Window> 
+</Window>

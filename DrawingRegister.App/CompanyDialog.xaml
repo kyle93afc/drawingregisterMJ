@@ -6,117 +6,50 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
-        Title="Company Details" Height="300" Width="400"
-        WindowStartupLocation="CenterOwner">
-    <Window.Resources>
-        <!-- Button Style -->
-        <Style x:Key="BaseButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#5a6268"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="Margin" Value="0,0,12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
-                            <ContentPresenter x:Name="contentPresenter" 
-                                            HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"
-                                            TextBlock.FontWeight="SemiBold"
-                                            Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <EventTrigger RoutedEvent="MouseEnter">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#4a5258" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="MouseLeave">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#5a6268" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#3d444a"/>
-                                <Setter TargetName="contentPresenter" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#BDBDBD"/>
-                                <Setter Property="Foreground" Value="#757575"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <!-- Primary Button Style -->
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-            <Setter Property="Background" Value="#eb1845"/>
-        </Style>
-        
-        <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-            <Setter Property="Background" Value="#5a6268"/>
-        </Style>
-    </Window.Resources>
-    
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="COMPANY DETAILS" FontSize="16" FontWeight="Bold" Margin="0,0,0,20"/>
-        
-        <!-- Company Name -->
-        <StackPanel Grid.Row="1" Margin="0,0,0,15">
-            <TextBlock Text="Company Name:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-            <TextBox x:Name="NameTextBox" Padding="5" FontSize="14"/>
-        </StackPanel>
-        
-        <!-- Category -->
-        <StackPanel Grid.Row="2" Margin="0,0,0,15">
-            <TextBlock Text="Category:" FontWeight="SemiBold" Margin="0,0,0,5"/>
-            <ComboBox x:Name="CategoryComboBox" Padding="5" FontSize="14" IsEditable="True">
-                <ComboBoxItem Content="Client"/>
-                <ComboBoxItem Content="Contractor"/>
-                <ComboBoxItem Content="Council"/>
-                <ComboBoxItem Content="Consultant"/>
-                <ComboBoxItem Content="Supplier"/>
-                <ComboBoxItem Content="Other"/>
-            </ComboBox>
-        </StackPanel>
-        
-        <!-- Buttons -->
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button x:Name="SaveButton" Content="Save" Style="{StaticResource PrimaryButtonStyle}" 
-                    Click="Save_Click" Margin="0,0,10,0"/>
-            <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource SecondaryButtonStyle}" 
-                    Click="Cancel_Click"/>
-        </StackPanel>
+        Title="Company Details" Height="280" Width="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Slate50Brush}">
+    <Grid Margin="16">
+        <Border Style="{StaticResource CardStyle}" Padding="20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <TextBlock Grid.Row="0" Text="Company Details" Style="{StaticResource HeadingMedium}" Margin="0,0,0,16"/>
+
+                <!-- Company Name -->
+                <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                    <TextBlock Text="Company Name" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                    <TextBox x:Name="NameTextBox" Height="30"/>
+                </StackPanel>
+
+                <!-- Category -->
+                <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                    <TextBlock Text="Category" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="CategoryComboBox" Height="30" IsEditable="True">
+                        <ComboBoxItem Content="Client"/>
+                        <ComboBoxItem Content="Contractor"/>
+                        <ComboBoxItem Content="Council"/>
+                        <ComboBoxItem Content="Consultant"/>
+                        <ComboBoxItem Content="Supplier"/>
+                        <ComboBoxItem Content="Other"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Buttons -->
+                <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click"
+                            Style="{StaticResource GhostButton}" Height="32" Margin="0,0,8,0"/>
+                    <Button x:Name="SaveButton" Content="Save" Click="Save_Click"
+                            Style="{StaticResource PrimaryButton}" Height="32"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
-</Window> 
+</Window>

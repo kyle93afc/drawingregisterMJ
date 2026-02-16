@@ -792,11 +792,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             InitializeDisciplineCombo();
             UpdateRegisterNumber();
 
+            // Clear all filters so user sees everything
+            SearchBox.Text = "";
+            StartDatePicker.SelectedDate = null;
+            EndDatePicker.SelectedDate = null;
+            if (IssueDateFilter.Items.Count > 0)
+                IssueDateFilter.SelectedIndex = 0; // "All Dates"
+            if (PurposeOfIssueFilter.Items.Count > 0)
+                PurposeOfIssueFilter.SelectedIndex = 0; // "All"
+            if (MethodOfIssueFilter.Items.Count > 0)
+                MethodOfIssueFilter.SelectedIndex = 0; // "All"
+            IssuedByFilter.Text = "";
+
             // Refresh the document grid view
             var view = CollectionViewSource.GetDefaultView(DocumentGrid.ItemsSource);
             view.Refresh();
 
-            // Reapply any active filters
+            // Apply filters (now all cleared, so shows everything)
             FilterDocuments();
 
             // Force grid to update
