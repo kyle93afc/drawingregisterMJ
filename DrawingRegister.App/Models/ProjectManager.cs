@@ -786,34 +786,52 @@ public class ProjectManager : INotifyPropertyChanged
         }
     }
 
+    // ISO A-series paper sizes in mm (short edge x long edge)
+    private static readonly (string Name, double Width, double Height)[] PaperSizes =
+    {
+        ("A0", 841, 1189),
+        ("A1", 594, 841),
+        ("A2", 420, 594),
+        ("A3", 297, 420),
+        ("A4", 210, 297),
+    };
+
     private string DetermineDrawingSize(string filePath)
     {
         try
         {
-            // Try to get size from filename
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            var parts = fileName.Split('-');
-            
-            // Check if size is encoded in the filename
-            foreach (var part in parts)
+            using var document = UglyToad.PdfPig.PdfDocument.Open(filePath);
+            if (document.NumberOfPages == 0) return "A";
+
+            var page = document.GetPage(1);
+            // Convert points to mm (1 point = 25.4/72 mm)
+            var widthMm = page.Width * 25.4 / 72.0;
+            var heightMm = page.Height * 25.4 / 72.0;
+
+            // Normalise to portrait (short edge x long edge)
+            var shortEdge = Math.Min(widthMm, heightMm);
+            var longEdge = Math.Max(widthMm, heightMm);
+
+            // Find closest matching paper size
+            string bestMatch = "A";
+            double bestDistance = double.MaxValue;
+
+            foreach (var (name, w, h) in PaperSizes)
             {
-                if (part.StartsWith("A") && part.Length <= 2)
+                var distance = Math.Abs(shortEdge - w) + Math.Abs(longEdge - h);
+                if (distance < bestDistance)
                 {
-                    return part; // A0, A1, A2, etc.
+                    bestDistance = distance;
+                    bestMatch = name;
                 }
             }
 
-            // If not found in filename, try to determine from standard sizes
-            using (var stream = File.OpenRead(filePath))
-            {
-                // TODO: Implement PDF size detection if needed
-                // For now, return default size
-                return "A1";
-            }
+            // Only return a match if within reasonable tolerance (20mm total)
+            return bestDistance <= 20 ? bestMatch : "A";
         }
         catch
         {
-            return "A1"; // Default to A1 if size cannot be determined
+            return "A";
         }
     }
 
