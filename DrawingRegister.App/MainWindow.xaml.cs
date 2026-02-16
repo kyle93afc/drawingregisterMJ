@@ -741,12 +741,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     });
                 };
 
-                _project.ImportDocuments(dialog.SelectedPath);
+                var importResult = _project.ImportDocuments(dialog.SelectedPath);
                 InitializeDisciplineCombo();
                 UpdateRegisterNumber();
                 UpdateIssueDateFilterOptions();
                 UpdateRevisionColumns();
                 FilterDocuments();
+
+                if (importResult.HasSkippedFiles)
+                {
+                    var skippedList = importResult.SkippedFiles.Take(20)
+                        .Select(f => $"  • {f.FileName}\n    Reason: {f.Reason}");
+                    var message = $"{importResult.SkippedFiles.Count} of {importResult.TotalPdfFiles} PDF files were not added to the register:\n\n"
+                        + string.Join("\n\n", skippedList);
+                    if (importResult.SkippedFiles.Count > 20)
+                        message += $"\n\n... and {importResult.SkippedFiles.Count - 20} more.";
+                    MessageBox.Show(message, "Import Warning - Skipped Files", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             catch (Exception ex)
             {
@@ -773,7 +784,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
 
             // Rescan the current folder
-            _project.ImportDocuments(_project._currentBasePath);
+            var importResult = _project.ImportDocuments(_project._currentBasePath);
 
             // Re-initialize discipline combo and update register number
             InitializeDisciplineCombo();
@@ -789,10 +800,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Force grid to update
             DocumentGrid.Items.Refresh();
 
-            MessageBox.Show($"Successfully refreshed {_project.Documents.Count} documents.", 
-                "Refresh Complete", 
-                MessageBoxButton.OK, 
-                MessageBoxImage.Information);
+            var refreshMessage = $"Successfully refreshed {_project.Documents.Count} documents. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
+            if (importResult.HasSkippedFiles)
+            {
+                var skippedList = importResult.SkippedFiles.Take(20)
+                    .Select(f => $"  • {f.FileName}\n    Reason: {f.Reason}");
+                refreshMessage += $"\n\n⚠ {importResult.SkippedFiles.Count} PDF files were not added:\n\n"
+                    + string.Join("\n\n", skippedList);
+                if (importResult.SkippedFiles.Count > 20)
+                    refreshMessage += $"\n\n... and {importResult.SkippedFiles.Count - 20} more.";
+                MessageBox.Show(refreshMessage, "Refresh Complete - With Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                MessageBox.Show(refreshMessage, "Refresh Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
         }
         catch (Exception ex)
         {

@@ -81,8 +81,9 @@ public class ProjectManager : INotifyPropertyChanged
         }
     }
 
-    public void ImportDocuments(string folderPath, string? specificFolderToRescanFullPath = null)
+    public ImportResult ImportDocuments(string folderPath, string? specificFolderToRescanFullPath = null)
     {
+        var importResult = new ImportResult();
         bool isSpecificRescan = !string.IsNullOrEmpty(specificFolderToRescanFullPath);
 
         if (!isSpecificRescan) // Full import/refresh
@@ -317,6 +318,7 @@ public class ProjectManager : INotifyPropertyChanged
             .SelectMany(dir => Directory.GetFiles(dir, "*.pdf"))
             .ToList();
 
+        importResult.TotalPdfFiles = pdfFiles.Count;
         Console.WriteLine($"\n=== PDF File Processing ===");
         Console.WriteLine($"Found {pdfFiles.Count} PDF files in date directories");
 
@@ -404,12 +406,22 @@ public class ProjectManager : INotifyPropertyChanged
                 issueDate = fileInfo.CreationTime;
             }
 
+            // Sanitize: collapse multiple consecutive hyphens to single, trim spaces around hyphens
+            var sanitizedFileName = Regex.Replace(fileName, @"-{2,}", "-");
+            sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
+
             // Updated regex pattern to better handle drawing numbers and revisions
             var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+))?(?:-\s*(?<revision>[A-Z]\d{2}|[A-Z]))?(?:\s*-\s*(?<description>.+))?$");
-            var match = regex.Match(fileName);
-            
+            var match = regex.Match(sanitizedFileName);
+
             if (!match.Success)
             {
+                importResult.SkippedFiles.Add(new SkippedFileInfo
+                {
+                    FileName = fileName,
+                    FilePath = filePath,
+                    Reason = "Filename format not recognised"
+                });
                 continue;
             }
 
@@ -417,6 +429,12 @@ public class ProjectManager : INotifyPropertyChanged
             var fileProjectNo = match.Groups["projectNo"].Value;
             if (fileProjectNo != ProjectNumber)
             {
+                importResult.SkippedFiles.Add(new SkippedFileInfo
+                {
+                    FileName = fileName,
+                    FilePath = filePath,
+                    Reason = $"Project number mismatch (expected {ProjectNumber}, found {fileProjectNo})"
+                });
                 continue;
             }
 
@@ -536,6 +554,8 @@ public class ProjectManager : INotifyPropertyChanged
                 metadata.FilePath = filePath; // Set initial FilePath
                 Documents.Add(metadata);
             }
+
+            importResult.SuccessfullyParsed++;
         }
 
         // After processing, update storage with processed directories
@@ -569,6 +589,8 @@ public class ProjectManager : INotifyPropertyChanged
         IssueDates.AddRange(uniqueDatesFromDocs);
 
         SaveProjectData();
+
+        return importResult;
     }
 
     public void SaveProjectData()
