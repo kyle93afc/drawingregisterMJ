@@ -558,11 +558,18 @@ public class ProjectManager : INotifyPropertyChanged
             importResult.SuccessfullyParsed++;
 
             // Check if file should be renamed to match canonical naming convention
+            // Only flag files with real structural differences, not just separator style (- vs _ vs space)
             if (!string.IsNullOrEmpty(description))
             {
                 var canonicalName = $"{documentNumber}_{description.Replace(" ", "_")}{Path.GetExtension(filePath)}";
                 var actualName = Path.GetFileName(filePath);
-                if (!string.Equals(actualName, canonicalName, StringComparison.OrdinalIgnoreCase))
+                // Normalize separators for comparison: treat -, _, and space as equivalent
+                var normalizedActual = actualName.ToLowerInvariant().Replace("-", "_").Replace(" ", "_");
+                var normalizedCanonical = canonicalName.ToLowerInvariant().Replace("-", "_").Replace(" ", "_");
+                // Collapse multiple consecutive underscores to single
+                normalizedActual = Regex.Replace(normalizedActual, @"_{2,}", "_");
+                normalizedCanonical = Regex.Replace(normalizedCanonical, @"_{2,}", "_");
+                if (normalizedActual != normalizedCanonical)
                 {
                     // Avoid duplicates (same file processed via multiple revisions)
                     if (!importResult.SuggestedRenames.Any(r => string.Equals(r.OriginalPath, filePath, StringComparison.OrdinalIgnoreCase)))
