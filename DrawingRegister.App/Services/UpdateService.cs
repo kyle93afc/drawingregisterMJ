@@ -1,5 +1,7 @@
 using System;
+using System.Net.Http;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Serilog;
 using Velopack;
@@ -118,6 +120,33 @@ public class UpdateService
             Log.Error(ex, "Failed to apply update");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Fetches release notes for a specific version from GitHub.
+    /// </summary>
+    public async Task<string> GetReleaseNotesAsync(string version)
+    {
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("DrawingRegister");
+            var url = $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases/tags/v{version}";
+            var response = await httpClient.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var body = doc.RootElement.GetProperty("body").GetString();
+                return body ?? string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to fetch release notes for version {Version}", version);
+        }
+        return string.Empty;
     }
 
     /// <summary>

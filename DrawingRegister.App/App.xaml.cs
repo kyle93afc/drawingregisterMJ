@@ -96,11 +96,17 @@ public partial class App : System.Windows.Application
                 var newVersion = _updateService.GetAvailableVersion() ?? "unknown";
                 Log.Information("Update available: {NewVersion}", newVersion);
 
+                // Fetch release notes from GitHub
+                var releaseNotes = await _updateService.GetReleaseNotesAsync(newVersion);
+                var notesSection = string.IsNullOrWhiteSpace(releaseNotes)
+                    ? ""
+                    : $"\n\n{releaseNotes}";
+
                 // Show update dialog on UI thread
                 await Current.Dispatcher.InvokeAsync(() =>
                 {
                     var result = MessageBox.Show(
-                        $"A new version ({newVersion}) is available!\n\nCurrent version: {UpdateService.CurrentVersion}\n\nWould you like to download and install it now?",
+                        $"A new version ({newVersion}) is available!\n\nCurrent version: {UpdateService.CurrentVersion}{notesSection}\n\nWould you like to download and install it now?",
                         "Update Available",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Information);
