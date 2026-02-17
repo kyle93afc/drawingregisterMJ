@@ -27,6 +27,7 @@ using QuestPDF.Elements.Table;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using System.Windows.Input;
+using Microsoft.Web.WebView2.Core;
 
 namespace DrawingRegister.App;
 
@@ -39,6 +40,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private string _searchText = string.Empty;
     private Models.DocumentMetadata? _selectedDocument;
+    private bool _webView2Initialized = false;
+    private string? _currentPreviewFilePath = null;
+    private bool _isPreviewVisible = false;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -220,6 +224,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Add a column for each issue date
         foreach (var date in issueDates)
         {
+            var elementStyle = new Style(typeof(TextBlock));
+            elementStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty,
+                new Binding("RevisionHistory")
+                {
+                    Converter = (IValueConverter)FindResource("RevisionColorAtDateConverter"),
+                    ConverterParameter = date
+                }));
+            elementStyle.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
+
             var column = new DataGridTextColumn
             {
                 Header = date.ToString("dd/MM/yyyy"),
@@ -229,7 +242,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 {
                     Converter = (IValueConverter)FindResource("RevisionAtDateConverter"),
                     ConverterParameter = date
-                }
+                },
+                ElementStyle = elementStyle
             };
             DocumentGrid.Columns.Add(column);
         }
@@ -903,11 +917,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void DocumentGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void DocumentGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (DocumentGrid.SelectedItem is Models.DocumentMetadata selectedDoc)
         {
             SelectedDocument = selectedDoc;
+            if (_isPreviewVisible)
+            {
+                await PreviewDocumentAsync(selectedDoc);
+            }
+        }
+        else if (_isPreviewVisible)
+        {
+            ShowPreviewPlaceholder("NO DOCUMENT SELECTED", "Select a document to preview");
         }
     }
 
@@ -915,10 +937,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         // If clicked on empty space (not on a row)
         if (e.OriginalSource is System.Windows.Controls.DataGridRow) return;
-        
+
         // Clear selection and selected document
         DocumentGrid.SelectedItem = null;
         SelectedDocument = null;
+
+        if (_isPreviewVisible)
+        {
+            ShowPreviewPlaceholder("NO DOCUMENT SELECTED", "Select a document to preview");
+        }
     }
 
     private void DocumentGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -937,11 +964,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void RevisionTimeline_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private async void RevisionTimeline_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement element && element.DataContext is KeyValuePair<DateTime, RevisionInfo> revision)
         {
-            OpenDocument(revision.Value.FilePath);
+            if (_isPreviewVisible && SelectedDocument != null)
+            {
+                await PreviewDocumentAsync(SelectedDocument, revision.Value.FilePath);
+            }
+            else
+            {
+                OpenDocument(revision.Value.FilePath);
+            }
         }
     }
 
@@ -975,6 +1009,224 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 DocumentGrid.Items.Refresh();
                 RevisionTimeline.Items.Refresh();
             }
+        }
+    }
+
+    // =========================================
+    // PDF PREVIEW PANEL
+    // =========================================
+
+    private async System.Threading.Tasks.Task EnsureWebView2InitializedAsync()
+    {
+        if (_webView2Initialized) return;
+
+        try
+        {
+            var userDataFolder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "DrawingRegister", "WebView2");
+            Directory.CreateDirectory(userDataFolder);
+
+            var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+            await PdfWebView.EnsureCoreWebView2Async(env);
+
+            PdfWebView.CoreWebView2.Settings.IsZoomControlEnabled = true;
+            PdfWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            PdfWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+            PdfWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+
+            // Block non-file navigations for security
+            PdfWebView.CoreWebView2.NavigationStarting += (s, args) =>
+            {
+                var uri = args.Uri;
+                if (!uri.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+                    !uri.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
+                {
+                    args.Cancel = true;
+                }
+            };
+
+            _webView2Initialized = true;
+        }
+        catch (WebView2RuntimeNotFoundException)
+        {
+            MessageBox.Show(
+                "The WebView2 Runtime is not installed.\n\n" +
+                "Please download and install it from:\nhttps://developer.microsoft.com/en-us/microsoft-edge/webview2/\n\n" +
+                "The PDF preview feature requires this component.",
+                "WebView2 Runtime Required",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            PreviewToggle.IsChecked = false;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to initialize PDF preview: {ex.Message}",
+                "Preview Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            PreviewToggle.IsChecked = false;
+        }
+    }
+
+    private async void PreviewToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        _isPreviewVisible = PreviewToggle.IsChecked == true;
+
+        if (_isPreviewVisible)
+        {
+            await EnsureWebView2InitializedAsync();
+            if (!_webView2Initialized) return;
+
+            // Show the preview panel
+            SplitterColumn.Width = new GridLength(5);
+            PreviewColumn.Width = new GridLength(450);
+            PreviewSplitter.Visibility = Visibility.Visible;
+            PreviewPanel.Visibility = Visibility.Visible;
+
+            // Preview the currently selected document
+            if (SelectedDocument != null)
+            {
+                await PreviewDocumentAsync(SelectedDocument);
+            }
+            else
+            {
+                ShowPreviewPlaceholder("NO DOCUMENT SELECTED", "Select a document to preview");
+            }
+        }
+        else
+        {
+            // Hide the preview panel
+            SplitterColumn.Width = new GridLength(0);
+            PreviewColumn.Width = new GridLength(0);
+            PreviewSplitter.Visibility = Visibility.Collapsed;
+            PreviewPanel.Visibility = Visibility.Collapsed;
+
+            // Release file handle
+            if (_webView2Initialized)
+            {
+                PdfWebView.CoreWebView2.Navigate("about:blank");
+            }
+            _currentPreviewFilePath = null;
+        }
+    }
+
+    private async System.Threading.Tasks.Task PreviewDocumentAsync(Models.DocumentMetadata document, string? specificRevisionFilePath = null)
+    {
+        if (!_isPreviewVisible || !_webView2Initialized) return;
+
+        // Determine the file path to preview
+        string? filePath = specificRevisionFilePath;
+        string revisionLabel = document.Revision ?? "";
+
+        if (string.IsNullOrEmpty(filePath))
+        {
+            // Use the latest revision's file path, or the document's main file path
+            if (document.RevisionHistory.Any())
+            {
+                var latest = document.RevisionHistory.OrderByDescending(kv => kv.Key).First();
+                filePath = latest.Value.FilePath;
+                revisionLabel = latest.Value.Revision ?? revisionLabel;
+            }
+            else
+            {
+                filePath = document.FilePath;
+            }
+        }
+        else
+        {
+            // Find the revision label for the specific file
+            var matchingRevision = document.RevisionHistory
+                .FirstOrDefault(kv => string.Equals(kv.Value.FilePath, specificRevisionFilePath, StringComparison.OrdinalIgnoreCase));
+            if (matchingRevision.Value != null)
+            {
+                revisionLabel = matchingRevision.Value.Revision ?? revisionLabel;
+            }
+        }
+
+        // No file path available
+        if (string.IsNullOrEmpty(filePath))
+        {
+            ShowPreviewPlaceholder("NO FILE PATH", "This document has no associated file");
+            _currentPreviewFilePath = null;
+            return;
+        }
+
+        // Skip reload if same file already displayed
+        if (string.Equals(_currentPreviewFilePath, filePath, StringComparison.OrdinalIgnoreCase))
+        {
+            // Just update header text
+            PreviewHeaderText.Text = $"{document.DocumentNumber}  Rev {revisionLabel}";
+            return;
+        }
+
+        // Check file exists
+        if (!File.Exists(filePath))
+        {
+            ShowPreviewError(filePath);
+            _currentPreviewFilePath = null;
+            return;
+        }
+
+        // Check it's a PDF
+        if (!filePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowPreviewPlaceholder("NOT A PDF FILE", Path.GetFileName(filePath));
+            _currentPreviewFilePath = null;
+            return;
+        }
+
+        // Navigate to the PDF
+        try
+        {
+            PreviewHeaderText.Text = $"{document.DocumentNumber}  Rev {revisionLabel}";
+            PdfWebView.Visibility = Visibility.Visible;
+            PreviewPlaceholder.Visibility = Visibility.Collapsed;
+            PreviewError.Visibility = Visibility.Collapsed;
+
+            var fileUri = new Uri(filePath).AbsoluteUri + "#view=Fit";
+            PdfWebView.CoreWebView2.Navigate(fileUri);
+            _currentPreviewFilePath = filePath;
+        }
+        catch (Exception ex)
+        {
+            ShowPreviewPlaceholder("PREVIEW ERROR", ex.Message);
+            _currentPreviewFilePath = null;
+        }
+    }
+
+    private void ShowPreviewPlaceholder(string title, string subtitle)
+    {
+        PlaceholderTitle.Text = title;
+        PlaceholderSubtitle.Text = subtitle;
+        PreviewPlaceholder.Visibility = Visibility.Visible;
+        PreviewError.Visibility = Visibility.Collapsed;
+        PdfWebView.Visibility = Visibility.Collapsed;
+
+        if (_webView2Initialized)
+        {
+            PdfWebView.CoreWebView2.Navigate("about:blank");
+        }
+        _currentPreviewFilePath = null;
+    }
+
+    private void ShowPreviewError(string filePath)
+    {
+        ErrorFilePath.Text = filePath;
+        PreviewError.Visibility = Visibility.Visible;
+        PreviewPlaceholder.Visibility = Visibility.Collapsed;
+        PdfWebView.Visibility = Visibility.Collapsed;
+
+        if (_webView2Initialized)
+        {
+            PdfWebView.CoreWebView2.Navigate("about:blank");
+        }
+        _currentPreviewFilePath = null;
+    }
+
+    private void OpenExternalPdf_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(_currentPreviewFilePath) && File.Exists(_currentPreviewFilePath))
+        {
+            OpenDocument(_currentPreviewFilePath);
         }
     }
 
@@ -2078,6 +2330,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         if (!_disposed)
         {
+            if (disposing)
+            {
+                PdfWebView?.Dispose();
+            }
             _disposed = true;
         }
     }

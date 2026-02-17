@@ -10,9 +10,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
 
     <!-- Version and Assembly Info -->
-    <Version>1.0.6</Version>
-    <AssemblyVersion>1.0.6.0</AssemblyVersion>
-    <FileVersion>1.0.6.0</FileVersion>
+    <Version>1.0.7</Version>
+    <AssemblyVersion>1.0.7.0</AssemblyVersion>
+    <FileVersion>1.0.7.0</FileVersion>
     <Product>Document and Drawing Register</Product>
     <Company>M+J Engineers</Company>
     <Copyright>Copyright (c) 2025 M+J Engineers</Copyright>
@@ -31,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
     <PackageReference Include="PdfPig" Version="0.1.13" />
     <PackageReference Include="QuestPDF" Version="2023.12.1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
