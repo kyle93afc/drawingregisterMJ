@@ -7,193 +7,206 @@
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
         Title="Batch Edit Drawing Properties" Height="540" Width="820"
+        MinHeight="450" MinWidth="650"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        Background="White" WindowStyle="None" AllowsTransparency="True"
+        ResizeMode="CanResizeWithGrip">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="Batch Edit Drawing Properties" Style="{StaticResource HeadingLarge}" Margin="4,0,0,10"/>
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <StackPanel>
+                    <TextBlock Text="Batch Edit Drawing Properties" Style="{StaticResource HeadingMedium}"/>
+                    <TextBlock Text="Edit properties for multiple documents at once" Style="{StaticResource CaptionText}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="CancelButton_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
 
-        <!-- Filter + Edit Properties + Distribution -->
-        <Grid Grid.Row="1" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="10"/>
-                <ColumnDefinition Width="250"/>
-            </Grid.ColumnDefinitions>
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
 
-            <!-- Left Column: Filter + Edit Properties -->
-            <StackPanel Grid.Column="0">
-                <!-- Filter Card -->
-                <Border Style="{StaticResource CardStyle}" Padding="12" Margin="0,0,0,8">
-                    <StackPanel>
-                        <TextBlock Text="Filter By" Style="{StaticResource HeadingSmall}" Margin="0,0,0,6"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <RadioButton x:Name="FilterByDate" Content="Issue Date" IsChecked="True" Margin="0,0,16,0" Checked="FilterOption_Changed"/>
-                            <RadioButton x:Name="FilterByFolder" Content="Subfolder" Margin="0,0,16,0" Checked="FilterOption_Changed"/>
-                            <RadioButton x:Name="FilterByDateAndFolder" Content="Date and Subfolder" Margin="0,0,16,0" Checked="FilterOption_Changed"/>
-                        </StackPanel>
+            <!-- Filter + Edit Properties + Distribution -->
+            <Grid Grid.Row="2" Margin="16,12,16,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="240"/>
+                </Grid.ColumnDefinitions>
 
-                        <!-- Date Selection -->
-                        <StackPanel x:Name="DateSelectionPanel" Orientation="Horizontal">
-                            <TextBlock Text="Issue Date" Style="{StaticResource SectionLabel}" Width="80"/>
-                            <ComboBox x:Name="IssueDateCombo" Width="200" Height="28" SelectionChanged="FilterCriteria_Changed"/>
-                        </StackPanel>
+                <!-- Left Column: Filter + Edit Properties -->
+                <StackPanel Grid.Column="0">
+                    <!-- Filter Card -->
+                    <Border Style="{StaticResource CardStyle}" Padding="12" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Filter By" Style="{StaticResource HeadingSmall}" Margin="0,0,0,6"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <RadioButton x:Name="FilterByDate" Content="Issue Date" IsChecked="True" Margin="0,0,16,0" Checked="FilterOption_Changed"/>
+                                <RadioButton x:Name="FilterByFolder" Content="Subfolder" Margin="0,0,16,0" Checked="FilterOption_Changed"/>
+                                <RadioButton x:Name="FilterByDateAndFolder" Content="Date and Subfolder" Margin="0,0,16,0" Checked="FilterOption_Changed"/>
+                            </StackPanel>
 
-                        <!-- Folder Selection -->
-                        <StackPanel x:Name="FolderSelectionPanel" Orientation="Horizontal" Visibility="Collapsed">
-                            <TextBlock Text="Subfolder" Style="{StaticResource SectionLabel}" Width="80"/>
-                            <ComboBox x:Name="SubfolderCombo" Width="380" Height="28" SelectionChanged="FilterCriteria_Changed"
-                                      ToolTip="Select a subfolder to filter documents" ToolTipService.ShowDuration="5000"/>
-                        </StackPanel>
-
-                        <!-- Date and Folder Selection -->
-                        <StackPanel x:Name="DateAndFolderSelectionPanel" Orientation="Vertical" Visibility="Collapsed">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <StackPanel x:Name="DateSelectionPanel" Orientation="Horizontal">
                                 <TextBlock Text="Issue Date" Style="{StaticResource SectionLabel}" Width="80"/>
-                                <ComboBox x:Name="DateAndFolderDateCombo" Width="200" Height="28" SelectionChanged="DateAndFolderDate_Changed"/>
+                                <ComboBox x:Name="IssueDateCombo" Width="200" Height="28" SelectionChanged="FilterCriteria_Changed"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal">
+
+                            <StackPanel x:Name="FolderSelectionPanel" Orientation="Horizontal" Visibility="Collapsed">
                                 <TextBlock Text="Subfolder" Style="{StaticResource SectionLabel}" Width="80"/>
-                                <ComboBox x:Name="DateAndFolderSubfolderCombo" Width="380" Height="28" SelectionChanged="FilterCriteria_Changed"
-                                          ToolTip="Select a subfolder for the selected date" ToolTipService.ShowDuration="5000"/>
+                                <ComboBox x:Name="SubfolderCombo" Width="380" Height="28" SelectionChanged="FilterCriteria_Changed"
+                                          ToolTip="Select a subfolder to filter documents"/>
+                            </StackPanel>
+
+                            <StackPanel x:Name="DateAndFolderSelectionPanel" Orientation="Vertical" Visibility="Collapsed">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="Issue Date" Style="{StaticResource SectionLabel}" Width="80"/>
+                                    <ComboBox x:Name="DateAndFolderDateCombo" Width="200" Height="28" SelectionChanged="DateAndFolderDate_Changed"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Subfolder" Style="{StaticResource SectionLabel}" Width="80"/>
+                                    <ComboBox x:Name="DateAndFolderSubfolderCombo" Width="380" Height="28" SelectionChanged="FilterCriteria_Changed"
+                                              ToolTip="Select a subfolder for the selected date"/>
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
-                    </StackPanel>
+                    </Border>
+
+                    <!-- Edit Properties Card -->
+                    <Border Style="{StaticResource CardStyle}" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Edit Properties" Style="{StaticResource HeadingSmall}" Margin="0,0,0,8"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="Purpose" Style="{StaticResource SectionLabel}" Width="80"/>
+                                <ComboBox x:Name="PurposeCombo" Width="200" Height="28" Margin="0,0,10,0">
+                                    <ComboBoxItem Content="S - Concept Issue"/>
+                                    <ComboBoxItem Content="P - Planning Issue"/>
+                                    <ComboBoxItem Content="T - Warrant / Tender"/>
+                                    <ComboBoxItem Content="C - Construction Issue"/>
+                                    <ComboBoxItem Content="A - Approval"/>
+                                    <ComboBoxItem Content="I - Information"/>
+                                    <ComboBoxItem Content="W - Warrant"/>
+                                </ComboBox>
+                                <CheckBox x:Name="UpdatePurposeCheck" Content="Update" IsChecked="True" VerticalAlignment="Center" FontSize="12"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="Method" Style="{StaticResource SectionLabel}" Width="80"/>
+                                <ComboBox x:Name="MethodCombo" Width="180" Height="28" Margin="0,0,10,0">
+                                    <ComboBoxItem Content="E - Email"/>
+                                    <ComboBoxItem Content="S - SharePoint"/>
+                                    <ComboBoxItem Content="P - Post"/>
+                                    <ComboBoxItem Content="H - Hand"/>
+                                </ComboBox>
+                                <CheckBox x:Name="UpdateMethodCheck" Content="Update" IsChecked="True" VerticalAlignment="Center" FontSize="12"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Issued By" Style="{StaticResource SectionLabel}" Width="80"/>
+                                <TextBox x:Name="IssuedByTextBox" Width="60" Height="28" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper"/>
+                                <CheckBox x:Name="UpdateIssuedByCheck" Content="Update" IsChecked="True" VerticalAlignment="Center" FontSize="12"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right Column: Distribution -->
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Distribution" Style="{StaticResource HeadingSmall}" Margin="0,0,0,4"/>
+                        <TextBlock Grid.Row="1" Text="Select companies:" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
+
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="DistributionList">
+                                <ItemsControl.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"
+                                                               Foreground="{StaticResource Slate700Brush}" Margin="0,6,0,3"/>
+                                                    <Separator Background="{StaticResource Slate200Brush}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ItemsControl.GroupStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Name}"
+                                                  IsChecked="{Binding IsSelected}"
+                                                  Margin="4,1" FontSize="12"
+                                                  Tag="{Binding Id}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button x:Name="SelectAllButton" Content="Select All" Width="80" Height="24"
+                                    Margin="0,0,6,0" Click="SelectAll_Click" Style="{StaticResource GhostButton}" Padding="6,3" FontSize="11"/>
+                            <Button x:Name="ClearAllButton" Content="Clear All" Width="80" Height="24"
+                                    Click="ClearAll_Click" Style="{StaticResource GhostButton}" Padding="6,3" FontSize="11"/>
+                        </StackPanel>
+                    </Grid>
                 </Border>
+            </Grid>
 
-                <!-- Edit Properties Card -->
-                <Border Style="{StaticResource CardStyle}" Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="Edit Properties" Style="{StaticResource HeadingSmall}" Margin="0,0,0,8"/>
-
-                        <!-- Purpose of Issue -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <TextBlock Text="Purpose" Style="{StaticResource SectionLabel}" Width="80"/>
-                            <ComboBox x:Name="PurposeCombo" Width="200" Height="28" Margin="0,0,10,0">
-                                <ComboBoxItem Content="S - Concept Issue"/>
-                                <ComboBoxItem Content="P - Planning Issue"/>
-                                <ComboBoxItem Content="T - Warrant / Tender"/>
-                                <ComboBoxItem Content="C - Construction Issue"/>
-                                <ComboBoxItem Content="A - Approval"/>
-                                <ComboBoxItem Content="I - Information"/>
-                                <ComboBoxItem Content="W - Warrant"/>
-                            </ComboBox>
-                            <CheckBox x:Name="UpdatePurposeCheck" Content="Update" IsChecked="True" VerticalAlignment="Center" FontSize="12"/>
-                        </StackPanel>
-
-                        <!-- Method of Issue -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <TextBlock Text="Method" Style="{StaticResource SectionLabel}" Width="80"/>
-                            <ComboBox x:Name="MethodCombo" Width="180" Height="28" Margin="0,0,10,0">
-                                <ComboBoxItem Content="E - Email"/>
-                                <ComboBoxItem Content="S - SharePoint"/>
-                                <ComboBoxItem Content="P - Post"/>
-                                <ComboBoxItem Content="H - Hand"/>
-                            </ComboBox>
-                            <CheckBox x:Name="UpdateMethodCheck" Content="Update" IsChecked="True" VerticalAlignment="Center" FontSize="12"/>
-                        </StackPanel>
-
-                        <!-- Issued By -->
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Issued By" Style="{StaticResource SectionLabel}" Width="80"/>
-                            <TextBox x:Name="IssuedByTextBox" Width="60" Height="28" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper"/>
-                            <CheckBox x:Name="UpdateIssuedByCheck" Content="Update" IsChecked="True" VerticalAlignment="Center" FontSize="12"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-
-            <!-- Right Column: Distribution -->
-            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="12">
+            <!-- Preview Grid -->
+            <Border Grid.Row="3" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1"
+                    CornerRadius="6" Margin="16,0,16,8" ClipToBounds="True">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="Distribution" Style="{StaticResource HeadingSmall}" Margin="0,0,0,4"/>
-                    <TextBlock Grid.Row="1" Text="Select companies to distribute to:" FontSize="11"
-                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6"/>
-
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl x:Name="DistributionList">
-                            <ItemsControl.GroupStyle>
-                                <GroupStyle>
-                                    <GroupStyle.HeaderTemplate>
-                                        <DataTemplate>
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11"
-                                                           Foreground="{StaticResource Slate700Brush}" Margin="0,6,0,3"/>
-                                                <Separator Background="{StaticResource Slate200Brush}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </GroupStyle.HeaderTemplate>
-                                </GroupStyle>
-                            </ItemsControl.GroupStyle>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <CheckBox Content="{Binding Name}"
-                                              IsChecked="{Binding IsSelected}"
-                                              Margin="4,1" FontSize="12"
-                                              Tag="{Binding Id}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,6,0,0">
-                        <Button x:Name="SelectAllButton" Content="Select All" Width="80" Height="26"
-                                Margin="0,0,6,0" Click="SelectAll_Click" Style="{StaticResource GhostButton}" Padding="6,3"/>
-                        <Button x:Name="ClearAllButton" Content="Clear All" Width="80" Height="26"
-                                Click="ClearAll_Click" Style="{StaticResource GhostButton}" Padding="6,3"/>
-                    </StackPanel>
+                    <TextBlock Grid.Row="0" Text="Affected Documents" Style="{StaticResource HeadingSmall}" Margin="12,8,0,6"/>
+                    <DataGrid Grid.Row="1" x:Name="PreviewGrid"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto"
+                              AlternationCount="2"
+                              GridLinesVisibility="None"
+                              BorderThickness="0"
+                              CanUserSortColumns="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Document No" Binding="{Binding DocumentNumber}" Width="*"/>
+                            <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*"/>
+                            <DataGridTextColumn Header="Purpose" Binding="{Binding PurposeOfIssue}" Width="*"/>
+                            <DataGridTextColumn Header="Method" Binding="{Binding MethodOfIssue}" Width="*"/>
+                            <DataGridTextColumn Header="Issued By" Binding="{Binding IssuedBy}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </Grid>
             </Border>
+
+            <!-- Footer -->
+            <Border Grid.Row="4" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="30" Margin="0,0,8,0"
+                            Click="CancelButton_Click" Style="{StaticResource GhostButton}"/>
+                    <Button x:Name="ApplyButton" Content="Apply Changes" Width="120" Height="30"
+                            Click="ApplyButton_Click" Style="{StaticResource PrimaryButton}"/>
+                </StackPanel>
+            </Border>
         </Grid>
-
-        <!-- Preview Grid -->
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="0,0,0,8" Padding="10" ClipToBounds="True">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Text="Affected Documents" Style="{StaticResource HeadingSmall}" Margin="0,0,0,6"/>
-                <DataGrid Grid.Row="1" x:Name="PreviewGrid"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Auto"
-                          AlternationCount="2"
-                          GridLinesVisibility="None"
-                          BorderThickness="0"
-                          CanUserSortColumns="True">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Document No" Binding="{Binding DocumentNumber}" Width="*"/>
-                        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*"/>
-                        <DataGridTextColumn Header="Purpose" Binding="{Binding PurposeOfIssue}" Width="*"/>
-                        <DataGridTextColumn Header="Method" Binding="{Binding MethodOfIssue}" Width="*"/>
-                        <DataGridTextColumn Header="Issued By" Binding="{Binding IssuedBy}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Grid>
-        </Border>
-
-        <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,4,0">
-            <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="32" Margin="0,0,8,0"
-                    Click="CancelButton_Click" Style="{StaticResource GhostButton}"/>
-            <Button x:Name="ApplyButton" Content="Apply Changes" Width="120" Height="32"
-                    Click="ApplyButton_Click" Style="{StaticResource PrimaryButton}"/>
-        </StackPanel>
-    </Grid>
+    </Border>
 </Window>

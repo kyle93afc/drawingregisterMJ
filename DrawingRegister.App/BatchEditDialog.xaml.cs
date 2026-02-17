@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using DrawingRegister.App.Models;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -39,13 +41,6 @@ namespace DrawingRegister.App
                 // Set initial filtered documents
                 UpdateFilteredDocuments();
                 
-                // Set default values for edit fields
-                if (PurposeCombo.Items.Count > 0)
-                    PurposeCombo.SelectedIndex = 0;
-                    
-                if (MethodCombo.Items.Count > 0)
-                    MethodCombo.SelectedIndex = 0;
-
                 // Set default visibility
                 DateSelectionPanel.Visibility = Visibility.Visible;
                 FolderSelectionPanel.Visibility = Visibility.Collapsed;
@@ -1152,6 +1147,60 @@ namespace DrawingRegister.App
             {
                 company.IsSelected = false;
             }
+        }
+
+        private void Header_DragMove(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left) DragMove();
+        }
+
+        // Win32 resize support for borderless window
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            var source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            source?.AddHook(WndProc);
+        }
+
+        private const int WM_NCHITTEST = 0x0084;
+        private const int HTLEFT = 10;
+        private const int HTRIGHT = 11;
+        private const int HTTOP = 12;
+        private const int HTTOPLEFT = 13;
+        private const int HTTOPRIGHT = 14;
+        private const int HTBOTTOM = 15;
+        private const int HTBOTTOMLEFT = 16;
+        private const int HTBOTTOMRIGHT = 17;
+        private const int BORDER_WIDTH = 6;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr DefWindowProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_NCHITTEST)
+            {
+                int x = (short)(lParam.ToInt64() & 0xFFFF);
+                int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+
+                var point = PointFromScreen(new System.Windows.Point(x, y));
+                int row = point.Y < BORDER_WIDTH ? 0 : (point.Y > ActualHeight - BORDER_WIDTH ? 2 : 1);
+                int col = point.X < BORDER_WIDTH ? 0 : (point.X > ActualWidth - BORDER_WIDTH ? 2 : 1);
+
+                int[,] hitTests = {
+                    { HTTOPLEFT, HTTOP, HTTOPRIGHT },
+                    { HTLEFT, 0, HTRIGHT },
+                    { HTBOTTOMLEFT, HTBOTTOM, HTBOTTOMRIGHT }
+                };
+
+                int hit = hitTests[row, col];
+                if (hit != 0)
+                {
+                    handled = true;
+                    return new IntPtr(hit);
+                }
+            }
+            return IntPtr.Zero;
         }
     }
 } 

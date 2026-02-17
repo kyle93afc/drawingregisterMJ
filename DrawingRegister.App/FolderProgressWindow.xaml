@@ -4,26 +4,41 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Folder Scan Progress" Height="380" Width="540"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="16">
-        <Border Style="{StaticResource CardStyle}" Padding="20">
-            <StackPanel Orientation="Vertical">
-                <TextBlock Text="Folder Scan Progress" Style="{StaticResource HeadingMedium}" Margin="0,0,0,12"/>
-                <ListBox ItemsSource="{Binding FolderStatuses}" Height="240"
-                         BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Margin="4,2">
-                                <TextBlock Text="{Binding FolderName}" Width="420" FontSize="13"/>
-                                <TextBlock Text="{Binding StatusIcon}"
-                                          FontSize="16"
-                                          Foreground="{Binding StatusColor}"
-                                          Margin="10,0,0,0"/>
-                            </DockPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </StackPanel>
-        </Border>
-    </Grid>
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <TextBlock Text="Folder Scan Progress" Style="{StaticResource HeadingMedium}"/>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="CloseButton_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
+
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
+
+            <!-- Content -->
+            <ListBox Grid.Row="2" ItemsSource="{Binding FolderStatuses}" Margin="20,16,20,20"
+                     BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel Margin="4,2">
+                            <TextBlock Text="{Binding FolderName}" Width="420" FontSize="13"/>
+                            <TextBlock Text="{Binding StatusIcon}"
+                                      FontSize="16"
+                                      Foreground="{Binding StatusColor}"
+                                      Margin="10,0,0,0"/>
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </Border>
 </Window>
