@@ -35,6 +35,10 @@
                 <StackPanel Grid.Row="2" Margin="0,0,0,10">
                     <TextBlock Text="Purpose of Issue" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
                     <ComboBox x:Name="PurposeCombo" SelectedValue="{Binding Purpose}" Height="28">
+                        <ComboBoxItem Content="Concept Issue"/>
+                        <ComboBoxItem Content="Planning Issue"/>
+                        <ComboBoxItem Content="Warrant / Tender"/>
+                        <ComboBoxItem Content="Construction Issue"/>
                         <ComboBoxItem Content="Approval"/>
                         <ComboBoxItem Content="Construction"/>
                         <ComboBoxItem Content="Draft"/>

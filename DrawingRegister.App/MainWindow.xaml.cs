@@ -429,10 +429,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         string currentMethod = method ?? CurrentMethodIndicator.Text;
         
         // Reset all purpose indicators
-        ResetIndicator(PurposeA);
-        ResetIndicator(PurposeC);
-        ResetIndicator(PurposeI);
+        ResetIndicator(PurposeS);
+        ResetIndicator(PurposeP);
         ResetIndicator(PurposeT);
+        ResetIndicator(PurposeC);
+        ResetIndicator(PurposeA);
+        ResetIndicator(PurposeI);
+        ResetIndicator(PurposeW);
         
         // Reset all method indicators
         ResetIndicator(MethodE);
@@ -452,14 +455,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Highlight the selected purpose
         if (!string.IsNullOrEmpty(currentPurpose))
         {
-            if (currentPurpose.StartsWith("A"))
-                HighlightIndicator(PurposeA);
-            else if (currentPurpose.StartsWith("C"))
-                HighlightIndicator(PurposeC);
-            else if (currentPurpose.StartsWith("I"))
-                HighlightIndicator(PurposeI);
+            if (currentPurpose.StartsWith("S"))
+                HighlightIndicator(PurposeS);
+            else if (currentPurpose.StartsWith("P"))
+                HighlightIndicator(PurposeP);
             else if (currentPurpose.StartsWith("T"))
                 HighlightIndicator(PurposeT);
+            else if (currentPurpose.StartsWith("C"))
+                HighlightIndicator(PurposeC);
+            else if (currentPurpose.StartsWith("A"))
+                HighlightIndicator(PurposeA);
+            else if (currentPurpose.StartsWith("I"))
+                HighlightIndicator(PurposeI);
+            else if (currentPurpose.StartsWith("W"))
+                HighlightIndicator(PurposeW);
         }
         
         // Highlight the selected method

@@ -76,13 +76,14 @@
                         <!-- Purpose of Issue -->
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                             <TextBlock Text="Purpose" Style="{StaticResource SectionLabel}" Width="80"/>
-                            <ComboBox x:Name="PurposeCombo" Width="180" Height="28" Margin="0,0,10,0">
+                            <ComboBox x:Name="PurposeCombo" Width="200" Height="28" Margin="0,0,10,0">
+                                <ComboBoxItem Content="S - Concept Issue"/>
+                                <ComboBoxItem Content="P - Planning Issue"/>
+                                <ComboBoxItem Content="T - Warrant / Tender"/>
+                                <ComboBoxItem Content="C - Construction Issue"/>
                                 <ComboBoxItem Content="A - Approval"/>
-                                <ComboBoxItem Content="C - Construction"/>
                                 <ComboBoxItem Content="I - Information"/>
-                                <ComboBoxItem Content="T - Tender"/>
                                 <ComboBoxItem Content="W - Warrant"/>
-                                <ComboBoxItem Content="P - Planning"/>
                             </ComboBox>
                             <CheckBox x:Name="UpdatePurposeCheck" Content="Update" IsChecked="True" VerticalAlignment="Center" FontSize="12"/>
                         </StackPanel>

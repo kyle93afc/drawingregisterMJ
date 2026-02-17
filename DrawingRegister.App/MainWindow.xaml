@@ -9,7 +9,7 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
         Icon="pack://application:,,,/DrawingRegister.App;component/Assets/icon.ico"
-        Title="DOCUMENT AND DRAWING REGISTER v1.0.7" Height="800" Width="1200"
+        Title="DOCUMENT AND DRAWING REGISTER v1.0.8" Height="800" Width="1200"
         Background="{StaticResource Slate50Brush}">
     <Window.Resources>
         <converters:DateToColumnConverter x:Key="DateToColumnConverter"/>
@@ -174,36 +174,40 @@
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
                         <TextBlock Text="Purpose" Style="{StaticResource SectionLabel}"/>
-                        <ComboBox x:Name="PurposeOfIssueFilter" Width="130" Height="28" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
+                        <ComboBox x:Name="PurposeOfIssueFilter" Width="160" Height="28" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
                             <ComboBoxItem Content="All"/>
+                            <ComboBoxItem Content="S - Concept Issue"/>
+                            <ComboBoxItem Content="P - Planning Issue"/>
+                            <ComboBoxItem Content="T - Warrant / Tender"/>
+                            <ComboBoxItem Content="C - Construction Issue"/>
                             <ComboBoxItem Content="A - Approval"/>
-                            <ComboBoxItem Content="C - Construction"/>
                             <ComboBoxItem Content="I - Information"/>
-                            <ComboBoxItem Content="T - Tender"/>
                             <ComboBoxItem Content="W - Warrant"/>
-                            <ComboBoxItem Content="P - Planning"/>
                         </ComboBox>
                     </StackPanel>
 
                     <!-- Purpose Indicators (refined as chips) -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,16,4" VerticalAlignment="Center">
-                        <Border x:Name="PurposeA" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
-                            <TextBlock Text="A" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
+                        <Border x:Name="PurposeS" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
+                            <TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="PurposeC" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
-                            <TextBlock Text="C" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
-                        </Border>
-                        <Border x:Name="PurposeI" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
-                            <TextBlock Text="I" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
+                        <Border x:Name="PurposeP" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
+                            <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
                         <Border x:Name="PurposeT" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
                             <TextBlock Text="T" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
+                        <Border x:Name="PurposeC" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
+                            <TextBlock Text="C" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeA" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
+                            <TextBlock Text="A" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeI" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
+                            <TextBlock Text="I" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
+                        </Border>
                         <Border x:Name="PurposeW" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
                             <TextBlock Text="W" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
-                        </Border>
-                        <Border x:Name="PurposeP" Width="24" Height="24" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="2,0">
-                            <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="11" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
 
