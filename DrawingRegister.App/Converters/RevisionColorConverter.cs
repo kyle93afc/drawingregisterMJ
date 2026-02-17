@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Windows.Data;
 using System.Windows.Media;
+using DrawingRegister.App.Models;
 
 namespace DrawingRegister.App.Converters
 {
@@ -9,7 +12,20 @@ namespace DrawingRegister.App.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var revision = value as string;
+            string? revision = value as string;
+
+            // Handle Dictionary<DateTime, RevisionInfo> (from RevisionHistory binding)
+            if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && revisionHistory.Any())
+            {
+                var latestDate = revisionHistory.Keys.Max(dt => dt.Date);
+                revision = revisionHistory
+                    .Where(kvp => kvp.Key.Date == latestDate)
+                    .Select(kvp => kvp.Value.Revision)
+                    .Where(r => !string.IsNullOrWhiteSpace(r))
+                    .OrderByDescending(r => r)
+                    .FirstOrDefault();
+            }
+
             var mode = (parameter as string)?.ToLower() ?? "bg";
 
             var prefix = !string.IsNullOrEmpty(revision)

@@ -561,7 +561,8 @@ public class ProjectManager : INotifyPropertyChanged
             // Only flag files with real structural differences, not just separator style (- vs _ vs space)
             if (!string.IsNullOrEmpty(description))
             {
-                var canonicalName = $"{documentNumber}_{description.Replace(" ", "_")}{Path.GetExtension(filePath)}";
+                var revisionPart = (revision != "-" && !string.IsNullOrEmpty(revision)) ? $"-{revision}" : "";
+                var canonicalName = $"{documentNumber}{revisionPart}_{description.Replace(" ", "_")}{Path.GetExtension(filePath)}";
                 var actualName = Path.GetFileName(filePath);
                 // Normalize separators for comparison: treat -, _, and space as equivalent
                 // Do NOT collapse multiples — double hyphens (e.g. 20--10) are a real problem to flag

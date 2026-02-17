@@ -199,11 +199,11 @@
             </Border>
 
             <!-- Footer -->
-            <Border Grid.Row="4" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+            <Border Grid.Row="4" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,12,20,14">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="30" Margin="0,0,8,0"
+                    <Button x:Name="CancelButton" Content="Cancel" Width="110" Height="40" Margin="0,0,8,0"
                             Click="CancelButton_Click" Style="{StaticResource GhostButton}"/>
-                    <Button x:Name="ApplyButton" Content="Apply Changes" Width="120" Height="30"
+                    <Button x:Name="ApplyButton" Content="Apply Changes" Width="150" Height="36"
                             Click="ApplyButton_Click" Style="{StaticResource PrimaryButton}"/>
                 </StackPanel>
             </Border>

@@ -8,44 +8,47 @@
         mc:Ignorable="d"
         Title="Distribution Information" Height="440" Width="580"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Slate50Brush}">
+        Background="White" WindowStyle="None" AllowsTransparency="True">
     <Window.Resources>
-        <!-- Category Header Style -->
         <Style x:Key="CategoryHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="{StaticResource Slate800Brush}"/>
             <Setter Property="Margin" Value="0,16,0,6"/>
         </Style>
-
-        <!-- Distribution Item Style -->
         <Style x:Key="DistributionItemStyle" TargetType="Grid">
             <Setter Property="Margin" Value="0,4,0,4"/>
         </Style>
     </Window.Resources>
 
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="Distribution Information" Style="{StaticResource HeadingLarge}" Margin="4,0,0,12"/>
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10">
+                <StackPanel>
+                    <TextBlock Text="Distribution Information" Style="{StaticResource HeadingMedium}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="Date of Issue: " Style="{StaticResource CaptionText}"/>
+                        <TextBlock x:Name="DateOfIssueText" Text="01/01/2023" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="CloseButton_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
 
-        <!-- Date Card -->
-        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,12" Padding="12">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Date of Issue" Style="{StaticResource SectionLabel}"/>
-                <TextBlock x:Name="DateOfIssueText" Text="01/01/2023" FontSize="14" FontWeight="SemiBold" Margin="4,0,0,0" VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
 
-        <!-- Distribution List Card -->
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="0,0,0,12" Padding="16">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <!-- Distribution List -->
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="20,16,20,12">
                 <StackPanel x:Name="DistributionPanel">
                     <TextBlock Text="Clients" Style="{StaticResource CategoryHeaderStyle}"/>
                     <Grid Style="{StaticResource DistributionItemStyle}">
@@ -68,24 +71,26 @@
                     </Grid>
                 </StackPanel>
             </ScrollViewer>
-        </Border>
 
-        <!-- Summary + Close -->
-        <Grid Grid.Row="3">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+            <!-- Footer -->
+            <Border Grid.Row="3" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="Total Recipients:" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Slate600Brush}" Margin="0,0,4,0"/>
-                <TextBlock x:Name="TotalRecipientsText" Text="0" FontSize="12" Margin="0,0,16,0"/>
-                <TextBlock Text="Total Documents:" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource Slate600Brush}" Margin="0,0,4,0"/>
-                <TextBlock x:Name="TotalDocumentsText" Text="0" FontSize="12"/>
-            </StackPanel>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Recipients:" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource Slate600Brush}" Margin="0,0,4,0"/>
+                        <TextBlock x:Name="TotalRecipientsText" Text="0" FontSize="11" Margin="0,0,16,0"/>
+                        <TextBlock Text="Documents:" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource Slate600Brush}" Margin="0,0,4,0"/>
+                        <TextBlock x:Name="TotalDocumentsText" Text="0" FontSize="11"/>
+                    </StackPanel>
 
-            <Button Grid.Column="1" Content="Close" Click="CloseButton_Click"
-                    Style="{StaticResource PrimaryButton}" Height="32"/>
+                    <Button Grid.Column="1" Content="Close" Click="CloseButton_Click"
+                            Style="{StaticResource PrimaryButton}" Height="30"/>
+                </Grid>
+            </Border>
         </Grid>
-    </Grid>
+    </Border>
 </Window>

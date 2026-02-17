@@ -4,36 +4,45 @@
         Title="About Document and Drawing Register"
         SizeToContent="WidthAndHeight" MinWidth="360"
         WindowStartupLocation="CenterOwner"
-        WindowStyle="ToolWindow"
         ResizeMode="NoResize"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="16">
-        <Border Style="{StaticResource CardStyle}" Padding="20">
-            <StackPanel>
-                <!-- Company Logo -->
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <TextBlock Text="About" Style="{StaticResource HeadingMedium}" VerticalAlignment="Center"/>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Click="Close_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
+
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
+
+            <!-- Content -->
+            <StackPanel Grid.Row="2" Margin="20,20,20,16">
                 <Image Source="pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png"
                        Height="50" HorizontalAlignment="Center" Margin="0,0,0,16"/>
 
-                <!-- Application Title -->
                 <TextBlock Text="Document and Drawing Register"
                            Style="{StaticResource HeadingLarge}"
-                           HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                           HorizontalAlignment="Center" Margin="0,0,0,12"/>
 
-                <!-- Accent Line -->
-                <Border Background="{StaticResource BrandRedBrush}" Height="3" Width="40"
-                        CornerRadius="2" HorizontalAlignment="Center" Margin="0,0,0,12"/>
-
-                <!-- Version -->
                 <TextBlock x:Name="VersionText" Text="Version 1.0.0"
                            Style="{StaticResource CaptionText}"
                            HorizontalAlignment="Center" Margin="0,0,0,16"/>
 
-                <!-- Description -->
                 <TextBlock Text="A professional tool for managing document and drawing registers for engineering projects."
                            TextWrapping="Wrap" TextAlignment="Center" FontSize="12"
                            Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,16"/>
 
-                <!-- GitHub Link -->
                 <TextBlock HorizontalAlignment="Center" Margin="0,0,0,16" FontSize="12">
                     <Hyperlink x:Name="GitHubLink"
                                NavigateUri="https://github.com/kyle93afc/drawingregisterMJ"
@@ -42,16 +51,17 @@
                     </Hyperlink>
                 </TextBlock>
 
-                <!-- Copyright -->
                 <TextBlock Text="Copyright (c) 2025 M+J Engineers"
                            Style="{StaticResource CaptionText}"
-                           HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
 
-                <!-- Close Button -->
-                <Button Content="Close" Width="100" Height="32"
+            <!-- Footer -->
+            <Border Grid.Row="3" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+                <Button Content="Close" Width="100" Height="30"
                         HorizontalAlignment="Center" Click="Close_Click"
                         Style="{StaticResource PrimaryButton}"/>
-            </StackPanel>
-        </Border>
-    </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

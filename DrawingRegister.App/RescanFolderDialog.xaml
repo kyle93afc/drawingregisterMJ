@@ -7,30 +7,46 @@
         mc:Ignorable="d"
         Title="Rescan Folder" Height="380" Width="460"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="16">
-        <Border Style="{StaticResource CardStyle}" Padding="20">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Text="Select a folder to rescan" Style="{StaticResource HeadingMedium}" Margin="0,0,0,12"/>
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <StackPanel>
+                    <TextBlock Text="Rescan Folder" Style="{StaticResource HeadingMedium}"/>
+                    <TextBlock Text="Select a folder to rescan for documents" Style="{StaticResource CaptionText}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="CancelButton_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
 
-                <ListBox Grid.Row="1" x:Name="FolderListBox" Margin="0,0,0,12" FontSize="13"
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
+
+            <!-- Content -->
+            <Grid Grid.Row="2" Margin="20,16,20,12">
+                <ListBox x:Name="FolderListBox" FontSize="13"
                          BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1"
                          MouseDoubleClick="FolderListBox_MouseDoubleClick"/>
+            </Grid>
 
-                <!-- Buttons -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Cancel" Width="100" Height="32" Margin="0,0,8,0"
+            <!-- Footer -->
+            <Border Grid.Row="3" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Cancel" Width="100" Height="30" Margin="0,0,8,0"
                             Click="CancelButton_Click" Style="{StaticResource GhostButton}"/>
-                    <Button Content="Rescan" Width="100" Height="32"
+                    <Button Content="Rescan" Width="100" Height="30"
                             Click="RescanButton_Click" Style="{StaticResource PrimaryButton}"/>
                 </StackPanel>
-            </Grid>
-        </Border>
-    </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

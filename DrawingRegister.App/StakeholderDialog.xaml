@@ -6,43 +6,47 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
-        Title="Stakeholder Details" Height="260" Width="420"
-        WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="16">
-        <Border Style="{StaticResource CardStyle}" Padding="20">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        Title="Stakeholder Details" Height="240" Width="420"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-                <!-- Header -->
-                <TextBlock Grid.Row="0" Text="Stakeholder Details" Style="{StaticResource HeadingMedium}" Margin="0,0,0,16"/>
-
-                <!-- Name -->
-                <StackPanel Grid.Row="1" Margin="0,0,0,12">
-                    <TextBlock Text="Name" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
-                    <TextBox x:Name="NameTextBox" Height="30"/>
-                </StackPanel>
-
-                <!-- Company -->
-                <StackPanel Grid.Row="2" Margin="0,0,0,12">
-                    <TextBlock Text="Company" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
-                    <TextBox x:Name="CompanyTextBox" Height="30"/>
-                </StackPanel>
-
-                <!-- Buttons -->
-                <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click"
-                            Style="{StaticResource GhostButton}" Height="32" Margin="0,0,8,0"/>
-                    <Button x:Name="SaveButton" Content="Save" Click="Save_Click"
-                            Style="{StaticResource PrimaryButton}" Height="32"/>
-                </StackPanel>
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <TextBlock Text="Stakeholder Details" Style="{StaticResource HeadingMedium}" VerticalAlignment="Center"/>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Click="Cancel_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
             </Grid>
-        </Border>
-    </Grid>
+
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
+
+            <!-- Content -->
+            <StackPanel Grid.Row="2" Margin="20,16,20,8">
+                <TextBlock Text="Name" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                <TextBox x:Name="NameTextBox" Height="30" Margin="0,0,0,12"/>
+
+                <TextBlock Text="Company" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
+                <TextBox x:Name="CompanyTextBox" Height="30"/>
+            </StackPanel>
+
+            <!-- Footer -->
+            <Border Grid.Row="3" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click"
+                            Style="{StaticResource GhostButton}" Height="30" Margin="0,0,8,0"/>
+                    <Button x:Name="SaveButton" Content="Save" Click="Save_Click"
+                            Style="{StaticResource PrimaryButton}" Height="30"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

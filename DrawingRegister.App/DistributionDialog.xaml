@@ -6,31 +6,35 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         mc:Ignorable="d"
-        Title="Manage Distribution Companies" Height="460" Width="560"
+        Title="Manage Distribution Companies" Height="500" Width="560"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="Distribution Companies" Style="{StaticResource HeadingLarge}" Margin="4,0,0,16"/>
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <StackPanel>
+                    <TextBlock Text="Distribution Companies" Style="{StaticResource HeadingMedium}"/>
+                    <TextBlock Text="Manage the list of companies for document distributions" Style="{StaticResource CaptionText}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="Save_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
 
-        <!-- Companies List Card -->
-        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,12">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
 
-                <TextBlock Grid.Row="0" Text="Manage the list of companies that can receive document distributions"
-                           FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,12"/>
-
-                <ListView Grid.Row="1" x:Name="CompaniesList" SelectionMode="Single"
+            <!-- Companies List -->
+            <Grid Grid.Row="2" Margin="20,16,20,12">
+                <ListView x:Name="CompaniesList" SelectionMode="Single"
                           BorderThickness="1" BorderBrush="{StaticResource Slate200Brush}">
                     <ListView.View>
                         <GridView>
@@ -50,26 +54,28 @@
                     </ListView.GroupStyle>
                 </ListView>
             </Grid>
-        </Border>
 
-        <!-- Buttons -->
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
+            <!-- Footer -->
+            <Border Grid.Row="3" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,12,20,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <Button x:Name="AddCompanyButton" Content="Add Company" Click="AddCompany_Click"
-                        Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Height="32"/>
-                <Button x:Name="EditCompanyButton" Content="Edit Company" Click="EditCompany_Click"
-                        Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="32"/>
-                <Button x:Name="DeleteCompanyButton" Content="Delete Company" Click="DeleteCompany_Click"
-                        Style="{StaticResource DangerButton}" Height="32"/>
-            </StackPanel>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Button x:Name="AddCompanyButton" Content="Add Company" Click="AddCompany_Click"
+                                Style="{StaticResource SecondaryButton}" Margin="0,0,8,0" Height="36"/>
+                        <Button x:Name="EditCompanyButton" Content="Edit" Click="EditCompany_Click"
+                                Style="{StaticResource GhostButton}" Margin="0,0,8,0" Height="36"/>
+                        <Button x:Name="DeleteCompanyButton" Content="Delete" Click="DeleteCompany_Click"
+                                Style="{StaticResource DangerButton}" Height="36"/>
+                    </StackPanel>
 
-            <Button Grid.Column="1" x:Name="SaveButton" Content="Close" Click="Save_Click"
-                    Style="{StaticResource PrimaryButton}" Height="32"/>
+                    <Button Grid.Column="1" x:Name="SaveButton" Content="Close" Click="Save_Click"
+                            Style="{StaticResource PrimaryButton}" Height="36"/>
+                </Grid>
+            </Border>
         </Grid>
-    </Grid>
+    </Border>
 </Window>

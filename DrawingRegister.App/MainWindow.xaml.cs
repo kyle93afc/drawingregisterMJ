@@ -109,6 +109,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Update issue date filter options when documents change
         UpdateIssueDateFilterOptions();
         UpdateRevisionColumns();
+        UpdateStatusBar();
+    }
+
+    private void UpdateStatusBar()
+    {
+        var totalCount = DocumentGrid.Items.Count;
+        var selectedCount = DocumentGrid.SelectedItems.Count;
+        var statusText = $"Documents: {totalCount}";
+        if (selectedCount > 0)
+            statusText += $" | Selected: {selectedCount}";
+        StatusDocumentCount.Text = statusText;
     }
 
     private void InitializeDisciplineCombo()
@@ -203,7 +214,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void UpdateRevisionColumns()
     {
-        const double REVISION_COLUMN_WIDTH = 40; // Fixed width for revision columns
+        const double REVISION_COLUMN_WIDTH = 44; // Fixed width for revision columns
 
         // Get all unique issue dates from documents
         var issueDates = _project.Documents
@@ -221,29 +232,48 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             DocumentGrid.Columns.Remove(column);
         }
 
-        // Add a column for each issue date
+        // Add a column for each issue date with colored pill badges
         foreach (var date in issueDates)
         {
-            var elementStyle = new Style(typeof(TextBlock));
-            elementStyle.Setters.Add(new Setter(TextBlock.ForegroundProperty,
+            var revisionAtDateConverter = (IValueConverter)FindResource("RevisionAtDateConverter");
+            var revisionColorAtDateConverter = (IValueConverter)FindResource("RevisionColorAtDateConverter");
+
+            // Create a DataTemplate with a pill badge
+            var template = new DataTemplate();
+            var borderFactory = new FrameworkElementFactory(typeof(System.Windows.Controls.Border));
+            borderFactory.SetValue(System.Windows.Controls.Border.BackgroundProperty, FindResource("Slate50Brush"));
+            borderFactory.SetValue(System.Windows.Controls.Border.CornerRadiusProperty, new CornerRadius(3));
+            borderFactory.SetValue(System.Windows.Controls.Border.PaddingProperty, new Thickness(4, 1, 4, 1));
+            borderFactory.SetValue(System.Windows.Controls.Border.MarginProperty, new Thickness(2, 2, 2, 2));
+            borderFactory.SetValue(System.Windows.Controls.Border.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
+
+            var textBlockFactory = new FrameworkElementFactory(typeof(TextBlock));
+            textBlockFactory.SetBinding(TextBlock.TextProperty,
                 new Binding("RevisionHistory")
                 {
-                    Converter = (IValueConverter)FindResource("RevisionColorAtDateConverter"),
+                    Converter = revisionAtDateConverter,
                     ConverterParameter = date
-                }));
-            elementStyle.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.SemiBold));
+                });
+            textBlockFactory.SetValue(TextBlock.FontSizeProperty, 11.0);
+            textBlockFactory.SetValue(TextBlock.FontWeightProperty, FontWeights.SemiBold);
+            textBlockFactory.SetValue(TextBlock.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Center);
+            textBlockFactory.SetValue(TextBlock.VerticalAlignmentProperty, System.Windows.VerticalAlignment.Center);
+            textBlockFactory.SetBinding(TextBlock.ForegroundProperty,
+                new Binding("RevisionHistory")
+                {
+                    Converter = revisionColorAtDateConverter,
+                    ConverterParameter = date
+                });
 
-            var column = new DataGridTextColumn
+            borderFactory.AppendChild(textBlockFactory);
+            template.VisualTree = borderFactory;
+
+            var column = new DataGridTemplateColumn
             {
                 Header = date.ToString("dd/MM/yyyy"),
                 Width = new DataGridLength(REVISION_COLUMN_WIDTH),
                 HeaderStyle = (Style)FindResource("RotatedColumnHeader"),
-                Binding = new Binding("RevisionHistory")
-                {
-                    Converter = (IValueConverter)FindResource("RevisionAtDateConverter"),
-                    ConverterParameter = date
-                },
-                ElementStyle = elementStyle
+                CellTemplate = template
             };
             DocumentGrid.Columns.Add(column);
         }
@@ -940,6 +970,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             ShowPreviewPlaceholder("NO DOCUMENT SELECTED", "Select a document to preview");
         }
+        UpdateStatusBar();
     }
 
     private void DocumentGrid_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -1372,15 +1403,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         if (dep is DataGridRow row)
         {
-            // If the clicked row is already selected, don't change the selection
-            if (row.IsSelected)
+            if (!row.IsSelected)
             {
-                e.Handled = true;
-                // Manually show context menu
-                DocumentGrid.ContextMenu.PlacementTarget = DocumentGrid;
-                DocumentGrid.ContextMenu.IsOpen = true;
+                // Select the right-clicked row
+                DocumentGrid.SelectedItem = row.DataContext;
             }
-            // If not selected, let default behavior select just this row
+
+            e.Handled = true;
+            // Manually show context menu
+            DocumentGrid.ContextMenu.PlacementTarget = DocumentGrid;
+            DocumentGrid.ContextMenu.IsOpen = true;
         }
     }
 

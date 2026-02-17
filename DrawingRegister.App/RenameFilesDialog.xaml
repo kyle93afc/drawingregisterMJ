@@ -8,53 +8,68 @@
         Title="Rename Files" Height="460" Width="680"
         WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
         MinHeight="350" MinWidth="500"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="4,0,0,12" FontSize="13"
-                   Foreground="{StaticResource TextSecondaryBrush}">
-            The following files have names that don't match the standard naming convention. Select files to rename:
-        </TextBlock>
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <StackPanel>
+                    <TextBlock Text="Rename Files" Style="{StaticResource HeadingMedium}"/>
+                    <TextBlock Text="Files that don't match the naming convention" Style="{StaticResource CaptionText}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="SkipButton_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
 
-        <!-- Select All / Deselect All -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Content="Select All" Width="90" Height="28" Margin="0,0,8,0" Click="SelectAll_Click"
-                    Style="{StaticResource GhostButton}" Padding="8,4"/>
-            <Button Content="Deselect All" Width="100" Height="28" Click="DeselectAll_Click"
-                    Style="{StaticResource GhostButton}" Padding="8,4"/>
-        </StackPanel>
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
 
-        <!-- File list -->
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="0,0,0,12" Padding="0" ClipToBounds="True">
-            <ListView x:Name="RenameListView" FontSize="12" BorderThickness="0">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Width="30">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsSelected}" />
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                        <GridViewColumn Header="Current Name" Width="280" DisplayMemberBinding="{Binding CurrentName}"/>
-                        <GridViewColumn Header="Suggested Name" Width="280" DisplayMemberBinding="{Binding SuggestedName}"/>
-                    </GridView>
-                </ListView.View>
-            </ListView>
-        </Border>
+            <!-- Select All / Deselect All -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="20,12,20,8">
+                <Button Content="Select All" Width="90" Height="28" Margin="0,0,8,0" Click="SelectAll_Click"
+                        Style="{StaticResource GhostButton}" Padding="8,4"/>
+                <Button Content="Deselect All" Width="100" Height="28" Click="DeselectAll_Click"
+                        Style="{StaticResource GhostButton}" Padding="8,4"/>
+            </StackPanel>
 
-        <!-- Buttons -->
-        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Skip" Width="100" Height="32" Margin="0,0,8,0" Click="SkipButton_Click"
-                    Style="{StaticResource GhostButton}"/>
-            <Button Content="Rename Selected" Width="130" Height="32" Click="RenameButton_Click"
-                    Style="{StaticResource PrimaryButton}"/>
-        </StackPanel>
-    </Grid>
+            <!-- File list -->
+            <Border Grid.Row="3" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1"
+                    CornerRadius="6" Margin="20,0,20,12" ClipToBounds="True">
+                <ListView x:Name="RenameListView" FontSize="12" BorderThickness="0">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Width="30">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected}" />
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="Current Name" Width="260" DisplayMemberBinding="{Binding CurrentName}"/>
+                            <GridViewColumn Header="Suggested Name" Width="260" DisplayMemberBinding="{Binding SuggestedName}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Border>
+
+            <!-- Footer -->
+            <Border Grid.Row="4" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Skip" Width="100" Height="30" Margin="0,0,8,0" Click="SkipButton_Click"
+                            Style="{StaticResource GhostButton}"/>
+                    <Button Content="Rename Selected" Width="130" Height="30" Click="RenameButton_Click"
+                            Style="{StaticResource PrimaryButton}"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
 </Window>

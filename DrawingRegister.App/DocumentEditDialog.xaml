@@ -8,10 +8,32 @@
         mc:Ignorable="d"
         Title="Edit Document" SizeToContent="Height" Width="460"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Background="{StaticResource Slate50Brush}">
-    <Grid Margin="16">
-        <Border Style="{StaticResource CardStyle}" Padding="16">
-            <Grid>
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <StackPanel>
+                    <TextBlock Text="Edit Document" Style="{StaticResource HeadingMedium}"/>
+                    <TextBlock Text="Modify document properties" Style="{StaticResource CaptionText}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="CancelButton_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
+
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
+
+            <!-- Content -->
+            <Grid Grid.Row="2" Margin="20,16,20,12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -20,45 +42,33 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Dialog Title -->
-                <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="Edit Document" Style="{StaticResource HeadingMedium}" Margin="0,0,0,16"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Document No" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
+                <TextBox Grid.Row="0" Grid.Column="1" x:Name="DocumentNumberBox" Margin="0,0,0,10" Height="28"/>
 
-                <!-- Document Number -->
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Document No" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
-                <TextBox Grid.Row="1" Grid.Column="1" x:Name="DocumentNumberBox" Margin="0,0,0,10" Height="30"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Description" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
+                <TextBox Grid.Row="1" Grid.Column="1" x:Name="DescriptionBox" Margin="0,0,0,10" Height="28"/>
 
-                <!-- Description -->
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Description" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
-                <TextBox Grid.Row="2" Grid.Column="1" x:Name="DescriptionBox" Margin="0,0,0,10" Height="30"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Package" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
+                <TextBox Grid.Row="2" Grid.Column="1" x:Name="PackageBox" Margin="0,0,0,10" Height="28"/>
 
-                <!-- Package -->
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Package" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
-                <TextBox Grid.Row="3" Grid.Column="1" x:Name="PackageBox" Margin="0,0,0,10" Height="30"/>
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Type" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
+                <TextBox Grid.Row="3" Grid.Column="1" x:Name="DocumentTypeBox" Margin="0,0,0,10" Height="28"/>
 
-                <!-- Document Type -->
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="Type" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
-                <TextBox Grid.Row="4" Grid.Column="1" x:Name="DocumentTypeBox" Margin="0,0,0,10" Height="30"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Size" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
+                <TextBox Grid.Row="4" Grid.Column="1" x:Name="SizeBox" Margin="0,0,0,10" Height="28"/>
 
-                <!-- Size -->
-                <TextBlock Grid.Row="5" Grid.Column="0" Text="Size" Style="{StaticResource SectionLabel}" Margin="0,0,12,10"/>
-                <TextBox Grid.Row="5" Grid.Column="1" x:Name="SizeBox" Margin="0,0,0,10" Height="30"/>
+                <CheckBox Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" x:Name="UpdateFileCheckbox"
+                          Content="Update source file name to match" IsChecked="True" Margin="0,4,0,8" FontSize="12"/>
 
-                <!-- Update File Option -->
-                <CheckBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" x:Name="UpdateFileCheckbox"
-                          Content="Update source file name to match" IsChecked="True" Margin="0,8,0,8" FontSize="12"/>
-
-                <!-- Preview -->
-                <Border Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2"
+                <Border Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
                         Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}"
-                        BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,12">
+                        BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,4">
                     <StackPanel>
                         <TextBlock Text="File Name Preview" FontWeight="SemiBold" FontSize="11"
                                    Foreground="{StaticResource Slate600Brush}" Margin="0,0,0,4"/>
@@ -66,15 +76,17 @@
                                    Foreground="{StaticResource TextPrimaryBrush}"/>
                     </StackPanel>
                 </Border>
+            </Grid>
 
-                <!-- Buttons -->
-                <StackPanel Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="32" Margin="0,0,8,0"
+            <!-- Footer -->
+            <Border Grid.Row="3" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="20,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Content="Cancel" Width="100" Height="30" Margin="0,0,8,0"
                             Click="CancelButton_Click" Style="{StaticResource GhostButton}"/>
-                    <Button x:Name="SaveButton" Content="Save" Width="100" Height="32"
+                    <Button x:Name="SaveButton" Content="Save" Width="100" Height="30"
                             Click="SaveButton_Click" Style="{StaticResource PrimaryButton}"/>
                 </StackPanel>
-            </Grid>
-        </Border>
-    </Grid>
+            </Border>
+        </Grid>
+    </Border>
 </Window>
