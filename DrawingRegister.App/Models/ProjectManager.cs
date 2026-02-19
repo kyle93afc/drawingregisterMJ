@@ -213,10 +213,16 @@ public class ProjectManager : INotifyPropertyChanged
                         var latestRevisionEntry = metadata.RevisionHistory.OrderByDescending(kv => kv.Key).First();
                         metadata.FilePath = latestRevisionEntry.Value.FilePath;
                     }
+
+                    // Recalculate paper size if missing and file exists
+                    if (string.IsNullOrEmpty(metadata.Size) && !string.IsNullOrEmpty(metadata.FilePath) && File.Exists(metadata.FilePath))
+                    {
+                        metadata.Size = DetermineDrawingSize(metadata.FilePath);
+                    }
                 }
             }
         }
-        
+
         processedFolders = _currentStorage != null && _currentStorage.Projects != null
             ? new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath))
             : new HashSet<string>();
