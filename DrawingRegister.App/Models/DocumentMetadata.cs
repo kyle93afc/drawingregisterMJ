@@ -78,8 +78,23 @@ namespace DrawingRegister.App.Models
             RevisionHistory.Any() && 
             Revision == RevisionHistory.Max(r => r.Value.Revision);
 
-        public static string GenerateRevisionCode(string purpose, Dictionary<DateTime, RevisionInfo> revisionHistory)
+        public static string GenerateRevisionCode(string purpose, Dictionary<DateTime, RevisionInfo> revisionHistory, bool useNumericRevisions = false)
         {
+            // Numeric revision scheme (SSEN-style): revisions are plain numbers 1, 2, 3...
+            if (useNumericRevisions)
+            {
+                var numericRevs = revisionHistory.Values
+                    .Select(r => r.Revision)
+                    .Where(r => !string.IsNullOrEmpty(r) && r != "-" && r.All(char.IsDigit))
+                    .Select(r => int.Parse(r))
+                    .ToList();
+
+                if (!numericRevs.Any())
+                    return "1";
+
+                return (numericRevs.Max() + 1).ToString();
+            }
+
             // If no purpose specified, use alphabetical sequence
             if (string.IsNullOrEmpty(purpose))
                 return GetNextAlphabeticalRevision(revisionHistory);
@@ -100,8 +115,8 @@ namespace DrawingRegister.App.Models
 
             // Get existing revisions with this prefix
             var existingRevs = revisionHistory.Values
-                .Where(r => r.Revision != null && 
-                           r.Revision.TrimStart().StartsWith(prefix) && 
+                .Where(r => r.Revision != null &&
+                           r.Revision.TrimStart().StartsWith(prefix) &&
                            r.Purpose?.ToUpper() == purpose.ToUpper())
                 .Select(r => r.Revision.TrimStart())
                 .ToList();
@@ -111,7 +126,7 @@ namespace DrawingRegister.App.Models
 
             // Find highest number and increment
             int maxNum = existingRevs
-                .Select(r => 
+                .Select(r =>
                 {
                     if (r.Length <= 1) return 0;
                     var numStr = r[1..].TrimStart();

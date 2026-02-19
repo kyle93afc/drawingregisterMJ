@@ -18,6 +18,7 @@ public class ProjectInfo
     public string Discipline { get; set; } = string.Empty;
     public string RegisterNumber { get; set; } = string.Empty;
     public string ClientNumber { get; set; } = string.Empty;
+    public bool UseNumericRevisions { get; set; } = false;
 
     public static ProjectInfo Load(string baseFolderPath)
     {

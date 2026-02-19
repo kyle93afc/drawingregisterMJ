@@ -21,6 +21,7 @@ public class ProjectManager : INotifyPropertyChanged
     private string _discipline = string.Empty;
     private string _registerNumber = string.Empty;
     private string _clientNumber = string.Empty;
+    private bool _useNumericRevisions;
 
     public ObservableCollection<DocumentMetadata> Documents { get; } = new();
     public List<DateTime> IssueDates { get; } = new();
@@ -78,6 +79,16 @@ public class ProjectManager : INotifyPropertyChanged
         {
             _clientNumber = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ClientNumber)));
+        }
+    }
+
+    public bool UseNumericRevisions
+    {
+        get => _useNumericRevisions;
+        set
+        {
+            _useNumericRevisions = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UseNumericRevisions)));
         }
     }
 
@@ -140,7 +151,8 @@ public class ProjectManager : INotifyPropertyChanged
             Discipline = _projectInfo.Discipline;
             RegisterNumber = _projectInfo.RegisterNumber;
             ClientNumber = _projectInfo.ClientNumber;
-            Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} ===");
+            UseNumericRevisions = _projectInfo.UseNumericRevisions;
+            Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} (NumericRevisions={UseNumericRevisions}) ===");
         }
 
         if (isSpecificRescan)
@@ -411,7 +423,7 @@ public class ProjectManager : INotifyPropertyChanged
             sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
 
             // Updated regex pattern to better handle drawing numbers and revisions
-            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+)(?=[_\s-]|$))?(?:-\s*(?<revision>[A-Z]\d{2}|[A-Z])(?=[_\s-]|$))?(?:[_\s-]\s*(?<description>.+))?$");
+            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+)(?=[_\s-]|$))?(?:-\s*(?<revision>[A-Z]\d{2}|[A-Z]|\d+)(?=[_\s-]|$))?(?:[_\s-]\s*(?<description>.+))?$");
             var match = regex.Match(sanitizedFileName);
 
             if (!match.Success)
@@ -453,7 +465,7 @@ public class ProjectManager : INotifyPropertyChanged
             else
             {
                 // Look for revision in folder name
-                var folderRevMatch = Regex.Match(parentFolder ?? "", @"REV[_\s-]*([A-Z]\d{2}|[A-Z])$", RegexOptions.IgnoreCase);
+                var folderRevMatch = Regex.Match(parentFolder ?? "", @"REV[_\s-]*([A-Z]\d{2}|[A-Z]|\d+)$", RegexOptions.IgnoreCase);
                 if (folderRevMatch.Success)
                 {
                     revision = folderRevMatch.Groups[1].Value;
@@ -466,14 +478,17 @@ public class ProjectManager : INotifyPropertyChanged
 
             // Determine purpose based on revision code
             string purpose = DeterminePurpose(filePath);
-            if (revision.StartsWith("I") && revision.Length == 3)
-                purpose = "Information";
-            else if (revision.StartsWith("C") && revision.Length == 3)
-                purpose = "Construction";
-            else if (revision.StartsWith("T") && revision.Length == 3)
-                purpose = "Tender";
-            else if (revision.StartsWith("P") && revision.Length == 3)
-                purpose = "Planning";
+            if (revision.Length > 0 && char.IsLetter(revision[0]))
+            {
+                if (revision.StartsWith("I") && revision.Length == 3)
+                    purpose = "Information";
+                else if (revision.StartsWith("C") && revision.Length == 3)
+                    purpose = "Construction";
+                else if (revision.StartsWith("T") && revision.Length == 3)
+                    purpose = "Tender";
+                else if (revision.StartsWith("P") && revision.Length == 3)
+                    purpose = "Planning";
+            }
 
             // Get description - remove the revision letter if it's at the end
             string description = "";
@@ -604,6 +619,26 @@ public class ProjectManager : INotifyPropertyChanged
             }
         }
 
+        // Auto-detect numeric revision scheme:
+        // If any numeric-only revisions exist and NO letter-prefixed revisions exist, enable numeric mode
+        if (!UseNumericRevisions)
+        {
+            var allRevisions = Documents
+                .SelectMany(d => d.RevisionHistory.Values)
+                .Select(r => r.Revision)
+                .Where(r => !string.IsNullOrEmpty(r) && r != "-")
+                .ToList();
+
+            bool hasNumericRevisions = allRevisions.Any(r => r.All(char.IsDigit));
+            bool hasLetterPrefixedRevisions = allRevisions.Any(r => r.Length > 0 && char.IsLetter(r[0]));
+
+            if (hasNumericRevisions && !hasLetterPrefixedRevisions)
+            {
+                UseNumericRevisions = true;
+                Console.WriteLine("\n=== Auto-detected numeric revision scheme (SSEN-style) ===");
+            }
+        }
+
         // Rebuild IssueDates from all documents currently in the collection
         IssueDates.Clear();
         var uniqueDatesFromDocs = Documents
@@ -630,6 +665,7 @@ public class ProjectManager : INotifyPropertyChanged
         _projectInfo.Discipline = Discipline;
         _projectInfo.RegisterNumber = RegisterNumber;
         _projectInfo.ClientNumber = ClientNumber;
+        _projectInfo.UseNumericRevisions = UseNumericRevisions;
         _projectInfo.Save(_currentBasePath);
 
         // Save dynamic data only (static fields removed from ProjectStorage)

@@ -1025,7 +1025,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             button.DataContext is KeyValuePair<DateTime, RevisionInfo> revision &&
             SelectedDocument != null)
         {
-            var dialog = new RevisionEditDialog(SelectedDocument, revision.Key, revision.Value);
+            var dialog = new RevisionEditDialog(SelectedDocument, revision.Key, revision.Value, _project.UseNumericRevisions);
             dialog.Owner = this;
 
             if (dialog.ShowDialog() == true)

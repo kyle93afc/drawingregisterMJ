@@ -25,8 +25,14 @@ namespace DrawingRegister.App.Converters
 
                 if (revisionsOnLatestDate.Any())
                 {
-                    // Sort revisions alphanumerically in descending order
-                    // This ensures I02 comes before I01, C03 before C02, etc.
+                    // If all revisions are numeric, sort numerically; otherwise alphanumerically
+                    bool allNumeric = revisionsOnLatestDate.All(r => r.All(char.IsDigit));
+                    if (allNumeric)
+                    {
+                        return revisionsOnLatestDate
+                            .OrderByDescending(r => int.Parse(r))
+                            .First();
+                    }
                     return revisionsOnLatestDate
                         .OrderByDescending(r => r)
                         .First();

@@ -8,6 +8,7 @@ namespace DrawingRegister.App
     public partial class RevisionEditDialog : Window
     {
         private readonly DocumentMetadata _document;
+        private readonly bool _useNumericRevisions;
         public string DocumentNumber { get; set; } = string.Empty;
         public DateTime IssueDate { get; set; }
         public string Purpose { get; set; } = string.Empty;
@@ -15,12 +16,13 @@ namespace DrawingRegister.App
         public string IssuedBy { get; set; } = string.Empty;
         public string Revision { get; set; } = string.Empty;
 
-        public RevisionEditDialog(DocumentMetadata document, DateTime issueDate, RevisionInfo revisionInfo)
+        public RevisionEditDialog(DocumentMetadata document, DateTime issueDate, RevisionInfo revisionInfo, bool useNumericRevisions = false)
         {
             InitializeComponent();
             DataContext = this;
 
             _document = document;
+            _useNumericRevisions = useNumericRevisions;
             DocumentNumber = document.DocumentNumber;
             IssueDate = issueDate;
             Purpose = revisionInfo.Purpose;
@@ -62,7 +64,7 @@ namespace DrawingRegister.App
             if (PurposeCombo.SelectedItem != null)
             {
                 string selectedPurpose = ((ComboBoxItem)PurposeCombo.SelectedItem).Content.ToString()!;
-                Revision = DocumentMetadata.GenerateRevisionCode(selectedPurpose, _document.RevisionHistory);
+                Revision = DocumentMetadata.GenerateRevisionCode(selectedPurpose, _document.RevisionHistory, _useNumericRevisions);
             }
         }
 
@@ -72,7 +74,7 @@ namespace DrawingRegister.App
             {
                 Purpose = ((ComboBoxItem)PurposeCombo.SelectedItem).Content.ToString()!;
                 // Generate new revision code based on selected purpose
-                Revision = DocumentMetadata.GenerateRevisionCode(Purpose, _document.RevisionHistory);
+                Revision = DocumentMetadata.GenerateRevisionCode(Purpose, _document.RevisionHistory, _useNumericRevisions);
             }
 
             if (MethodCombo.SelectedItem != null)
