@@ -21,6 +21,9 @@ namespace DrawingRegister.App
         private Dictionary<DateTime, Dictionary<string, List<DocumentMetadata>>> _dateAndFolderDocuments = new();
         private ObservableCollection<DistributionCompanyViewModel> _distributionCompanies = new();
         private DateTime _selectedIssueDate;
+        private bool _userChangedPurpose;
+        private bool _userChangedMethod;
+        private bool _userChangedIssuedBy;
 
         public BatchEditDialog(ProjectManager project)
         {
@@ -28,19 +31,24 @@ namespace DrawingRegister.App
             {
                 InitializeComponent();
                 _project = project;
-                
+
+                // Wire up manual change tracking for edit fields
+                PurposeCombo.SelectionChanged += (s, e) => { if (IsLoaded) _userChangedPurpose = true; };
+                MethodCombo.SelectionChanged += (s, e) => { if (IsLoaded) _userChangedMethod = true; };
+                IssuedByTextBox.TextChanged += (s, e) => { if (IsLoaded) _userChangedIssuedBy = true; };
+
                 // Initialize date combo
                 PopulateIssueDates();
-                
+
                 // Initialize folder combo
                 PopulateSubfolders();
-                
+
                 // Initialize date and folder combo
                 PopulateDateAndFolderCombos();
-                
+
                 // Set initial filtered documents
                 UpdateFilteredDocuments();
-                
+
                 // Set default visibility
                 DateSelectionPanel.Visibility = Visibility.Visible;
                 FolderSelectionPanel.Visibility = Visibility.Collapsed;
@@ -894,8 +902,8 @@ namespace DrawingRegister.App
                     .OrderByDescending(g => g.Count())
                     .FirstOrDefault()?.Key;
 
-                // Set detected values in UI
-                if (!string.IsNullOrEmpty(commonPurpose) && PurposeCombo != null)
+                // Set detected values in UI only if the user hasn't manually changed them
+                if (!_userChangedPurpose && !string.IsNullOrEmpty(commonPurpose) && PurposeCombo != null)
                 {
                     foreach (ComboBoxItem item in PurposeCombo.Items)
                     {
@@ -906,8 +914,8 @@ namespace DrawingRegister.App
                         }
                     }
                 }
-                
-                if (!string.IsNullOrEmpty(commonMethod) && MethodCombo != null)
+
+                if (!_userChangedMethod && !string.IsNullOrEmpty(commonMethod) && MethodCombo != null)
                 {
                     foreach (ComboBoxItem item in MethodCombo.Items)
                     {
@@ -918,8 +926,8 @@ namespace DrawingRegister.App
                         }
                     }
                 }
-                
-                if (!string.IsNullOrEmpty(commonIssuedBy) && IssuedByTextBox != null)
+
+                if (!_userChangedIssuedBy && !string.IsNullOrEmpty(commonIssuedBy) && IssuedByTextBox != null)
                 {
                     IssuedByTextBox.Text = commonIssuedBy;
                 }
