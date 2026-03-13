@@ -188,6 +188,8 @@
                         <!-- Export Group -->
                         <Button Content="PDF Report" Click="GeneratePdfReport_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Button Content="Export CSV" Click="ExportCsv_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Button Content="Export PDFs" Click="ExportLatestPdfs_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"
+                                ToolTip="Copy all latest revision PDFs to a folder"/>
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
                         <!-- View Group -->

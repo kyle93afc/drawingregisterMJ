@@ -2629,6 +2629,104 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
+    private async void ExportLatestPdfs_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Get the currently displayed documents from the grid
+            var documentsToExport = DocumentGrid.ItemsSource as IEnumerable<Models.DocumentMetadata>;
+            if (documentsToExport == null || !documentsToExport.Any())
+            {
+                MessageBox.Show("No documents to export.", "Export PDFs", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Filter to documents that have a valid latest PDF file
+            var docsWithFiles = documentsToExport
+                .Where(d => !string.IsNullOrEmpty(d.FilePath) && File.Exists(d.FilePath))
+                .ToList();
+
+            if (!docsWithFiles.Any())
+            {
+                MessageBox.Show("No PDF files found for the current documents.", "Export PDFs", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Let the user pick a destination folder
+            using var folderDialog = new FolderBrowserDialog
+            {
+                Description = "Select destination folder for latest PDFs",
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = true
+            };
+
+            if (folderDialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+                return;
+
+            // Create a dated subfolder so exports don't overwrite each other
+            string exportFolder = Path.Combine(folderDialog.SelectedPath, $"LatestPDFs_{DateTime.Now:yyyyMMdd}");
+            Directory.CreateDirectory(exportFolder);
+
+            int copiedCount = 0;
+            int skippedCount = 0;
+            var errors = new List<string>();
+
+            foreach (var doc in docsWithFiles)
+            {
+                try
+                {
+                    string sourceFile = doc.FilePath;
+                    string destFile = Path.Combine(exportFolder, Path.GetFileName(sourceFile));
+
+                    // Handle duplicate filenames by appending a number
+                    if (File.Exists(destFile))
+                    {
+                        string nameWithoutExt = Path.GetFileNameWithoutExtension(sourceFile);
+                        string ext = Path.GetExtension(sourceFile);
+                        int counter = 2;
+                        do
+                        {
+                            destFile = Path.Combine(exportFolder, $"{nameWithoutExt}_{counter}{ext}");
+                            counter++;
+                        } while (File.Exists(destFile));
+                    }
+
+                    File.Copy(sourceFile, destFile);
+                    copiedCount++;
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{doc.DocumentNumber}: {ex.Message}");
+                    skippedCount++;
+                }
+            }
+
+            // Show result summary
+            string message = $"Exported {copiedCount} PDF(s) to:\n{exportFolder}";
+            if (skippedCount > 0)
+                message += $"\n\n{skippedCount} file(s) could not be copied:\n{string.Join("\n", errors.Take(5))}";
+
+            MessageBox.Show(message, "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // Offer to open the folder
+            var result = MessageBox.Show("Would you like to open the export folder?", "Open Folder",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = exportFolder,
+                    UseShellExecute = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error exporting PDFs: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private static string EscapeCsvField(string field)
     {
         if (string.IsNullOrEmpty(field))
