@@ -21,21 +21,12 @@ namespace DrawingRegister.App
         private Dictionary<DateTime, Dictionary<string, List<DocumentMetadata>>> _dateAndFolderDocuments = new();
         private ObservableCollection<DistributionCompanyViewModel> _distributionCompanies = new();
         private DateTime _selectedIssueDate;
-        private bool _userChangedPurpose;
-        private bool _userChangedMethod;
-        private bool _userChangedIssuedBy;
-
         public BatchEditDialog(ProjectManager project)
         {
             try
             {
                 InitializeComponent();
                 _project = project;
-
-                // Wire up manual change tracking for edit fields
-                PurposeCombo.SelectionChanged += (s, e) => { if (IsLoaded) _userChangedPurpose = true; };
-                MethodCombo.SelectionChanged += (s, e) => { if (IsLoaded) _userChangedMethod = true; };
-                IssuedByTextBox.TextChanged += (s, e) => { if (IsLoaded) _userChangedIssuedBy = true; };
 
                 // Initialize date combo
                 PopulateIssueDates();
@@ -631,19 +622,16 @@ namespace DrawingRegister.App
                             {
                                 System.Diagnostics.Debug.WriteLine($"Found matching revision for doc {doc.DocumentNumber}");
                                 
-                                // Make sure the document has the current values from the latest revision
-                                var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                                if (latestRevision.Value != null)
-                                {
-                                    doc.PurposeOfIssue = latestRevision.Value.Purpose;
-                                    doc.MethodOfIssue = latestRevision.Value.Method;
-                                    doc.IssuedBy = latestRevision.Value.IssuedBy;
-                                }
-                                
+                                // Use the values from the revision matching the selected date
+                                var matchingRevision = matchingRevisions.OrderByDescending(r => r.Key).First();
+                                doc.PurposeOfIssue = matchingRevision.Value.Purpose;
+                                doc.MethodOfIssue = matchingRevision.Value.Method;
+                                doc.IssuedBy = matchingRevision.Value.IssuedBy;
+
                                 _filteredDocuments.Add(doc);
                             }
                         }
-                        
+
                         System.Diagnostics.Debug.WriteLine($"Filtered documents count: {_filteredDocuments.Count}");
                     }
                     else
@@ -790,10 +778,10 @@ namespace DrawingRegister.App
                                                 if (string.Equals(revisionFolderPath, folderPath, StringComparison.OrdinalIgnoreCase))
                                                 {
                                                     System.Diagnostics.Debug.WriteLine($"  -> Match found: Doc {doc.DocumentNumber}, RevDate {revisionOnDate.Key}, RevPath {revisionOnDate.Value.FilePath}");
-                                                    var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).First();
-                                                    doc.PurposeOfIssue = latestRevision.Value.Purpose;
-                                                    doc.MethodOfIssue = latestRevision.Value.Method;
-                                                    doc.IssuedBy = latestRevision.Value.IssuedBy;
+                                                    // Use the values from the revision matching the selected date
+                                                    doc.PurposeOfIssue = revisionOnDate.Value.Purpose;
+                                                    doc.MethodOfIssue = revisionOnDate.Value.Method;
+                                                    doc.IssuedBy = revisionOnDate.Value.IssuedBy;
                                                     _filteredDocuments.Add(doc);
                                                 }
                                             }
@@ -902,8 +890,8 @@ namespace DrawingRegister.App
                     .OrderByDescending(g => g.Count())
                     .FirstOrDefault()?.Key;
 
-                // Set detected values in UI only if the user hasn't manually changed them
-                if (!_userChangedPurpose && !string.IsNullOrEmpty(commonPurpose) && PurposeCombo != null)
+                // Set detected values in UI
+                if (!string.IsNullOrEmpty(commonPurpose) && PurposeCombo != null)
                 {
                     foreach (ComboBoxItem item in PurposeCombo.Items)
                     {
@@ -915,7 +903,7 @@ namespace DrawingRegister.App
                     }
                 }
 
-                if (!_userChangedMethod && !string.IsNullOrEmpty(commonMethod) && MethodCombo != null)
+                if (!string.IsNullOrEmpty(commonMethod) && MethodCombo != null)
                 {
                     foreach (ComboBoxItem item in MethodCombo.Items)
                     {
@@ -927,7 +915,7 @@ namespace DrawingRegister.App
                     }
                 }
 
-                if (!_userChangedIssuedBy && !string.IsNullOrEmpty(commonIssuedBy) && IssuedByTextBox != null)
+                if (!string.IsNullOrEmpty(commonIssuedBy) && IssuedByTextBox != null)
                 {
                     IssuedByTextBox.Text = commonIssuedBy;
                 }
