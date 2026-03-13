@@ -346,22 +346,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     .OrderByDescending(g => g.Count())
                     .First().Key;
 
-                // Set the values in the UI
-                foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
+                // Set the values in the UI - map stored purpose to combo prefix
+                var purposePrefix = MapPurposeToPrefix(commonPurpose);
+                if (purposePrefix != null)
                 {
-                    if (item.Content.ToString().Contains(commonPurpose.Substring(0, 1)))
+                    foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
                     {
-                        PurposeOfIssueFilter.SelectedItem = item;
-                        break;
+                        if (item.Content.ToString().StartsWith(purposePrefix + " "))
+                        {
+                            PurposeOfIssueFilter.SelectedItem = item;
+                            break;
+                        }
                     }
                 }
 
-                foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
+                var methodPrefix = commonMethod?.Length > 0 ? commonMethod.Substring(0, 1).ToUpper() : null;
+                if (methodPrefix != null)
                 {
-                    if (item.Content.ToString().Contains(commonMethod.Substring(0, 1)))
+                    foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
                     {
-                        MethodOfIssueFilter.SelectedItem = item;
-                        break;
+                        if (item.Content.ToString().StartsWith(methodPrefix + " "))
+                        {
+                            MethodOfIssueFilter.SelectedItem = item;
+                            break;
+                        }
                     }
                 }
 
@@ -450,6 +458,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             SubfolderFilterCombo.SelectedIndex = 0; // Default to "All Subfolders"
         }
+    }
+
+    private string MapPurposeToPrefix(string purpose)
+    {
+        if (string.IsNullOrEmpty(purpose)) return null;
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "S", "S" }, { "Concept", "S" },
+            { "P", "P" }, { "Planning", "P" },
+            { "T", "T" }, { "Tender", "T" }, { "Tender Civil", "T" },
+            { "C", "C" }, { "Construction", "C" },
+            { "A", "A" }, { "Approval", "A" },
+            { "I", "I" }, { "Information", "I" },
+            { "W", "W" }, { "Warrant", "W" }, { "Warrant Civil", "W" },
+        };
+        return map.TryGetValue(purpose.Trim(), out var prefix) ? prefix : null;
     }
 
     private void UpdateIssueIndicators(string purpose, string method)
