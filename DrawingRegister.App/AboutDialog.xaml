@@ -51,7 +51,7 @@
                     </Hyperlink>
                 </TextBlock>
 
-                <TextBlock Text="Copyright (c) 2025 M+J Engineers"
+                <TextBlock Text="Copyright (c) 2026 M+J Engineers"
                            Style="{StaticResource CaptionText}"
                            HorizontalAlignment="Center"/>
             </StackPanel>
