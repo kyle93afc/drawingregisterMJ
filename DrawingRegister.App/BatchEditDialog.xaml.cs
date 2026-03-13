@@ -893,26 +893,16 @@ namespace DrawingRegister.App
                 // Set detected values in UI
                 if (!string.IsNullOrEmpty(commonPurpose) && PurposeCombo != null)
                 {
-                    foreach (ComboBoxItem item in PurposeCombo.Items)
-                    {
-                        if (item.Content?.ToString()?.StartsWith(commonPurpose.Substring(0, 1)) == true)
-                        {
-                            PurposeCombo.SelectedItem = item;
-                            break;
-                        }
-                    }
+                    var purposeItem = MapPurposeToComboItem(commonPurpose, PurposeCombo);
+                    if (purposeItem != null)
+                        PurposeCombo.SelectedItem = purposeItem;
                 }
 
                 if (!string.IsNullOrEmpty(commonMethod) && MethodCombo != null)
                 {
-                    foreach (ComboBoxItem item in MethodCombo.Items)
-                    {
-                        if (item.Content?.ToString()?.StartsWith(commonMethod.Substring(0, 1)) == true)
-                        {
-                            MethodCombo.SelectedItem = item;
-                            break;
-                        }
-                    }
+                    var methodItem = MapToComboItem(commonMethod, MethodCombo);
+                    if (methodItem != null)
+                        MethodCombo.SelectedItem = methodItem;
                 }
 
                 if (!string.IsNullOrEmpty(commonIssuedBy) && IssuedByTextBox != null)
@@ -926,6 +916,55 @@ namespace DrawingRegister.App
             }
         }
         
+        /// <summary>
+        /// Maps a stored purpose value (full word like "Construction" or single letter like "C")
+        /// to the matching ComboBoxItem.
+        /// </summary>
+        private ComboBoxItem MapPurposeToComboItem(string purpose, System.Windows.Controls.ComboBox combo)
+        {
+            // Mapping from stored purpose values to combo item prefixes
+            // DeterminePurpose() stores full words; ApplyButton_Click() stores single letters
+            var purposeToPrefix = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "S", "S" }, { "Concept", "S" },
+                { "P", "P" }, { "Planning", "P" },
+                { "T", "T" }, { "Tender", "T" }, { "Tender Civil", "T" },
+                { "C", "C" }, { "Construction", "C" },
+                { "A", "A" }, { "Approval", "A" },
+                { "I", "I" }, { "Information", "I" },
+                { "W", "W" }, { "Warrant", "W" }, { "Warrant Civil", "W" },
+            };
+
+            string prefix = null;
+            if (purposeToPrefix.TryGetValue(purpose.Trim(), out var mapped))
+                prefix = mapped;
+
+            if (prefix == null)
+                return null; // Unknown purpose (Draft, DSC, Review, etc.) — don't select anything
+
+            foreach (ComboBoxItem item in combo.Items)
+            {
+                if (item.Content?.ToString()?.StartsWith(prefix + " ") == true)
+                    return item;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Maps a stored method value to the matching ComboBoxItem by first letter.
+        /// </summary>
+        private ComboBoxItem MapToComboItem(string value, System.Windows.Controls.ComboBox combo)
+        {
+            if (string.IsNullOrEmpty(value)) return null;
+            string firstChar = value.Substring(0, 1).ToUpper();
+            foreach (ComboBoxItem item in combo.Items)
+            {
+                if (item.Content?.ToString()?.StartsWith(firstChar + " ") == true)
+                    return item;
+            }
+            return null;
+        }
+
         private void ApplyButton_Click(object sender, RoutedEventArgs e)
         {
             try
