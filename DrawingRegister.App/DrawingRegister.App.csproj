@@ -10,9 +10,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
 
     <!-- Version and Assembly Info -->
-    <Version>1.2.2</Version>
-    <AssemblyVersion>1.2.2.0</AssemblyVersion>
-    <FileVersion>1.2.2.0</FileVersion>
+    <Version>1.2.3</Version>
+    <AssemblyVersion>1.2.3.0</AssemblyVersion>
+    <FileVersion>1.2.3.0</FileVersion>
     <Product>Document and Drawing Register</Product>
     <Company>M+J Engineers</Company>
     <Copyright>Copyright (c) 2025 M+J Engineers</Copyright>
@@ -41,7 +41,7 @@
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
-    <PackageReference Include="Velopack" Version="0.0.942" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
   <ItemGroup>

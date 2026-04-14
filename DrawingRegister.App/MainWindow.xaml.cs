@@ -2520,6 +2520,64 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         aboutDialog.ShowDialog();
     }
 
+    private void CollectLatestPdfs_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_project._currentBasePath))
+            {
+                MessageBox.Show("No project loaded. Please scan a folder first.",
+                    "Collect Latest PDFs", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var documentsToExport = (DocumentGrid.ItemsSource as IEnumerable<Models.DocumentMetadata>)?.ToList();
+            if (documentsToExport == null || documentsToExport.Count == 0)
+            {
+                MessageBox.Show("No documents are currently visible in the grid.",
+                    "Collect Latest PDFs", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            using var dialog = new FolderBrowserDialog
+            {
+                Description = "Select where to create the latest drawings folder",
+                UseDescriptionForTitle = true
+            };
+
+            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
+            {
+                return;
+            }
+
+            var exportResult = Helpers.FileOperations.CollectLatestPdfs(documentsToExport, dialog.SelectedPath, DateTime.Now);
+            var summary = $"Copied {exportResult.CopiedCount} latest PDF(s) to:\n{exportResult.ExportFolderPath}";
+
+            if (exportResult.SkippedCount > 0)
+            {
+                var skippedList = exportResult.SkippedFiles
+                    .Take(20)
+                    .Select(file => $"  • {file.DocumentNumber}\n    {file.Reason}");
+
+                summary += $"\n\nSkipped {exportResult.SkippedCount} file(s):\n\n{string.Join("\n\n", skippedList)}";
+                if (exportResult.SkippedCount > 20)
+                {
+                    summary += $"\n\n... and {exportResult.SkippedCount - 20} more.";
+                }
+
+                MessageBox.Show(summary, "Collect Latest PDFs - With Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            MessageBox.Show(summary, "Collect Latest PDFs Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error collecting latest PDFs: {ex.Message}",
+                "Collect Latest PDFs", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void ExportCsv_Click(object sender, RoutedEventArgs e)
     {
         try
