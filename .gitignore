@@ -90,3 +90,6 @@ appsettings.*.json
 !appsettings.json
 !appsettings.Development.json
 secrets.json
+
+# Local git worktrees
+.worktrees/
