@@ -102,6 +102,13 @@ Title="DOCUMENT AND DRAWING REGISTER vX.Y.Z" Height="800" Width="1200"
 
 **Never commit, hardcode, or log the token.** The user provides it at release time. If the token is exposed in shell history or in a file, tell the user immediately so they can rotate it at https://github.com/settings/tokens.
 
+When using the GitHub CLI:
+
+- Prefer `gh auth login --web` when the user is present rather than asking them to paste a token into chat.
+- **Never run `gh auth token`** unless the user explicitly asks for it. That command prints the raw token to stdout.
+- Treat any command output containing a token as a security incident and tell the user to rotate it immediately.
+- `gh auth status` is safe for checking whether CLI auth is valid.
+
 If you're running unattended and can't prompt the user, **stop before the upload step** and surface a clear request for the token rather than trying to proceed without it.
 
 ### 6.3 Release steps (PowerShell, run from repo root)
@@ -141,26 +148,32 @@ git push origin working-version
 Run through this top to bottom — do not skip steps, do not reorder.
 
 - [ ] Confirm which commit on `working-version` contains the changes you are shipping
+- [ ] Cross-check the latest remote tag/release before bumping so you don't skip or duplicate a version (`git ls-remote --tags origin`, `gh release list`, or equivalent)
 - [ ] Pick the new version number (patch for fixes, minor for features, major for breaking changes)
+- [ ] Check `git status --short` and make sure unrelated untracked files are not accidentally included in the release commits
 - [ ] Edit `DrawingRegister.App.csproj` — `<Version>`, `<AssemblyVersion>`, `<FileVersion>`
 - [ ] Edit `MainWindow.xaml` — `Title="DOCUMENT AND DRAWING REGISTER vX.Y.Z ..."`
+- [ ] Commit the feature/fix work separately if useful, then commit the version bump in its own `release:` commit
 - [ ] `git commit` the bump with a `release: vX.Y.Z - ...` message
+- [ ] Push `working-version` before `vpk upload` so the remote tag points at a commit that already exists on GitHub
 - [ ] `dotnet publish DrawingRegister.App -c Release --self-contained -r win-x64 -o ./publish`
 - [ ] `vpk pack` with matching `--packVersion X.Y.Z`
-- [ ] Obtain the GitHub PAT from the user (do not guess, do not reuse a stale one)
+- [ ] Obtain valid GitHub auth for both `vpk` and `gh` (PAT or `gh auth login`; do not guess, do not reuse a stale token)
 - [ ] `vpk upload github` with matching `--tag vX.Y.Z`
 - [ ] `gh release edit vX.Y.Z --draft=false --title "vX.Y.Z" --notes "..."`
-- [ ] `git push origin working-version`
 - [ ] Verify the release is visible and marked Latest at https://github.com/kyle93afc/drawingregisterMJ/releases
-- [ ] Confirm Velopack assets (`DrawingRegister-X.Y.Z-full.nupkg`, `DrawingRegister-X.Y.Z-delta.nupkg`, `RELEASES`, `releases.win.json`, `DrawingRegister-win-Setup.exe`) are all attached to the release
+- [ ] Confirm Velopack assets (`DrawingRegister-X.Y.Z-full.nupkg`, `DrawingRegister-X.Y.Z-delta.nupkg`, `RELEASES`, `releases.win.json`, `DrawingRegister-win-Setup.exe`, `DrawingRegister-win-Portable.zip`) are all attached to the release
 
 ### 6.6 Release pitfalls to watch for
 
 - **Version drift.** If the csproj was previously bumped but the release didn't actually publish, you may find the working tree already at `X.Y.Z` while GitHub's latest is `X.Y.(Z-1)`, or the other way around. Always cross-check `git log`, the csproj `<Version>`, and `gh release list` before bumping.
+- **Remote vs local tags.** Local tags may be stale. Before picking the next version, check the remote tags/releases, not just `git tag`.
 - **Tag vs commit mismatch.** `vpk upload` creates the tag on GitHub. Make sure your local commit for the version bump is pushed before or right after the upload so `v X.Y.Z` on GitHub points at the intended commit.
 - **Full package size.** The `-full.nupkg` is roughly 80 MB. If your build output is dramatically smaller, something is wrong with the publish — check that `--self-contained` and `-r win-x64` were both passed.
 - **Draft releases.** `vpk upload` may leave the release as a draft. Always finish with `gh release edit --draft=false` or users won't see the update.
 - **`gh` auth.** `gh release edit` needs its own auth (`gh auth status`). That's separate from the PAT used by `vpk upload`. Don't assume one covers the other.
+- **Token exposure.** Avoid any command that prints credentials to stdout. If a token is revealed in terminal output, tell the user immediately and have them rotate it.
+- **Unrelated working tree noise.** This repo may contain user-owned untracked files or local instruction files. Do not stage or clean them unless the user explicitly asks.
 
 ## 7. What not to do
 
@@ -170,6 +183,7 @@ Run through this top to bottom — do not skip steps, do not reorder.
 - Don't push directly to `main` — this project ships from `working-version`.
 - Don't commit `publish/`, `bin/`, or `obj/` directories.
 - Don't hardcode, log, or commit the GitHub PAT, even in example commands.
+- Don't run `gh auth token` as part of a normal release flow.
 - Don't use `git push --force` or `git reset --hard` on shared branches without explicit user approval.
 
 ## 8. When in doubt
