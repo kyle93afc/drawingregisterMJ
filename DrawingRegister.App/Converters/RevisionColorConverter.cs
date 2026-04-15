@@ -17,13 +17,10 @@ namespace DrawingRegister.App.Converters
             // Handle Dictionary<DateTime, RevisionInfo> (from RevisionHistory binding)
             if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && revisionHistory.Any())
             {
-                var latestDate = revisionHistory.Keys.Max(dt => dt.Date);
                 revision = revisionHistory
-                    .Where(kvp => kvp.Key.Date == latestDate)
+                    .OrderByDescending(kvp => kvp.Key)
                     .Select(kvp => kvp.Value.Revision)
-                    .Where(r => !string.IsNullOrWhiteSpace(r))
-                    .OrderByDescending(r => r)
-                    .FirstOrDefault();
+                    .FirstOrDefault(r => !string.IsNullOrWhiteSpace(r));
             }
 
             var mode = (parameter as string)?.ToLower() ?? "bg";

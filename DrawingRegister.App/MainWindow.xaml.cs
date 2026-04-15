@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Threading.Tasks;
+using DrawingRegister.App.Helpers;
 using DrawingRegister.App.Models;
 using System.Collections.Generic;
 using MessageBox = System.Windows.MessageBox;
@@ -26,7 +27,6 @@ using Colors = QuestPDF.Helpers.Colors;
 using QuestPDF.Elements.Table;
 using System.Windows.Forms;
 using System.Windows.Threading;
-using System.Windows.Input;
 using Microsoft.Web.WebView2.Core;
 
 namespace DrawingRegister.App;
@@ -1654,6 +1654,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 try
                 {
+                    var outputPath = PdfReportFilePathResolver.GetWritablePath(saveDialog.FileName);
+
                     // Create and save the document
                     Document.Create(container =>
                     {
@@ -1676,14 +1678,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             });
                         });
                     })
-                    .GeneratePdf(saveDialog.FileName);
+                    .GeneratePdf(outputPath);
 
-                    MessageBox.Show($"PDF saved successfully to:\n{saveDialog.FileName}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var saveMessage = outputPath == saveDialog.FileName
+                        ? $"PDF saved successfully to:\n{outputPath}"
+                        : $"The selected PDF was open in another program, so the report was saved as:\n{outputPath}";
+
+                    MessageBox.Show(saveMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                     
                     // Open the PDF after saving
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {
-                        FileName = saveDialog.FileName,
+                        FileName = outputPath,
                         UseShellExecute = true
                     });
                 }
@@ -1850,11 +1856,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
             }
             
-            // Get last 3 issue dates in descending order (newest first)
-            var lastThreeDates = _project.IssueDates
-                .OrderByDescending(d => d)
-                .Take(3)
-                .ToList();
+            var fullRegisterRows = isTransmittal
+                ? Array.Empty<DrawingRegisterPdfReportBuilder.DrawingRegisterPdfReportRow>()
+                : DrawingRegisterPdfReportBuilder.BuildFullRegisterRows(documentsToDisplay);
 
             // Add transmittal-specific information section if this is a transmittal
             if (isTransmittal && selectedDate.HasValue)
@@ -2007,8 +2011,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 column.Item().PaddingBottom(10).Background("#f5f5f5").Padding(5).Text(text =>
                 {
                     text.Span("NOTE: ").Bold();
-                    text.Span("This document is a comprehensive Drawing Register containing all project drawings. ");
-                    text.Span("For specific drawing distributions, please refer to Transmittals.");
+                    text.Span(DrawingRegisterPdfReportBuilder.GetFullRegisterSummaryNote());
                 });
             }
 
@@ -2025,15 +2028,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     columns.RelativeColumn(0.6f);    // Size
                     columns.RelativeColumn(0.8f);    // Latest Rev
                     columns.RelativeColumn(1.2f);    // Latest Date
-                    
-                    // Add columns for last 3 dates (newest first) if this is a register
-                    // For transmittal, only show the current revision
+
                     if (!isTransmittal)
                     {
-                        foreach (var _ in lastThreeDates)
-                        {
-                            columns.RelativeColumn(1);
-                        }
+                        columns.RelativeColumn(3.2f);   // Revision Trail
+                        columns.RelativeColumn(1.4f);   // Status
                     }
                 });
 
@@ -2101,119 +2100,196 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignCenter()
                          .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("LATEST DATE");
+                         .Text(isTransmittal ? "LATEST DATE" : "LATEST ISSUE DATE");
                     });
 
                     if (!isTransmittal)
                     {
-                        // Add date headers in descending order for register view
-                        foreach (var date in lastThreeDates)
+                        header.Cell().Element(c =>
                         {
-                            header.Cell().Element(c =>
-                            {
-                                c.Background("#eb1845")
-                                 .Padding(5)
-                                 .AlignCenter()
-                                 .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                                 .Text(date.ToString("yyyy-MM-dd"));
-                            });
-                        }
+                            c.Background("#eb1845")
+                             .Padding(5)
+                             .AlignCenter()
+                             .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
+                             .Text("REVISION TRAIL");
+                        });
+
+                        header.Cell().Element(c =>
+                        {
+                            c.Background("#eb1845")
+                             .Padding(5)
+                             .AlignCenter()
+                             .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
+                             .Text("STATUS");
+                        });
                     }
                 });
 
                 // Add data rows with alternating background
                 bool isAlternate = false;
-                
-                foreach (var doc in documentsToDisplay)
+
+                if (isTransmittal)
                 {
-                    var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                    var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
+                    foreach (var doc in documentsToDisplay)
+                    {
+                        var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+                        var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
 
-                    // Create data cells with inline styling
-                    table.Cell().Element(c =>
-                    {
-                        c.Background(rowColor)
-                         .Padding(5)
-                         .AlignLeft()
-                         .AlignMiddle()
-                         .Text(doc.DocumentNumber.ToUpper());
-                    });
-                    
-                    table.Cell().Element(c =>
-                    {
-                        c.Background(rowColor)
-                         .Padding(5)
-                         .AlignLeft()
-                         .AlignMiddle()
-                         .Text(doc.Description.ToUpper());
-                    });
-                    
-                    table.Cell().Element(c =>
-                    {
-                        c.Background(rowColor)
-                         .Padding(5)
-                         .AlignLeft()
-                         .AlignMiddle()
-                         .Text(doc.Package.ToUpper());
-                    });
-                    
-                    table.Cell().Element(c =>
-                    {
-                        c.Background(rowColor)
-                         .Padding(5)
-                         .AlignLeft()
-                         .AlignMiddle()
-                         .Text(doc.DocumentType.ToUpper());
-                    });
-                    
-                    table.Cell().Element(c =>
-                    {
-                        c.Background(rowColor)
-                         .Padding(5)
-                         .AlignLeft()
-                         .AlignMiddle()
-                         .Text(doc.Size.ToUpper());
-                    });
-                    
-                    table.Cell().Element(c =>
-                    {
-                        c.Background(rowColor)
-                         .Padding(5)
-                         .AlignLeft()
-                         .AlignMiddle()
-                         .Text((latestRev.Value?.Revision ?? "").ToUpper());
-                    });
-                    
-                    table.Cell().Element(c =>
-                    {
-                        c.Background(rowColor)
-                         .Padding(5)
-                         .AlignLeft()
-                         .AlignMiddle()
-                         .Text(latestRev.Key.ToString("yyyy-MM-dd"));
-                    });
-
-                    if (!isTransmittal)
-                    {
-                        // Add historical revisions in descending order for register view
-                        foreach (var date in lastThreeDates)
+                        table.Cell().Element(c =>
                         {
-                            var revision = doc.RevisionHistory.TryGetValue(date, out var revInfo)
-                                ? revInfo.Revision
-                                : "";
-                                
-                            table.Cell().Element(c =>
-                            {
-                                c.Background(rowColor)
-                                 .Padding(5)
-                                 .AlignLeft()
-                                 .AlignMiddle()
-                                 .Text(revision.ToUpper());
-                            });
-                        }
-                    }
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(doc.DocumentNumber.ToUpper());
+                        });
 
-                    isAlternate = !isAlternate;
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(doc.Description.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(doc.Package.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(doc.DocumentType.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(doc.Size.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text((latestRev.Value?.Revision ?? "").ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(latestRev.Key.ToString("yyyy-MM-dd"));
+                        });
+
+                        isAlternate = !isAlternate;
+                    }
+                }
+                else
+                {
+                    foreach (var row in fullRegisterRows)
+                    {
+                        var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.DocumentNumber.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.Description.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.Package.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.DocumentType.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.Size.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.LatestRevision.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.LatestIssueDate?.ToString("dd/MM/yyyy") ?? "");
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.RevisionTrail.ToUpper());
+                        });
+
+                        table.Cell().Element(c =>
+                        {
+                            c.Background(rowColor)
+                             .Padding(5)
+                             .AlignLeft()
+                             .AlignMiddle()
+                             .Text(row.Status.ToUpper());
+                        });
+
+                        isAlternate = !isAlternate;
+                    }
                 }
             });
             

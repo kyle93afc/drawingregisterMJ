@@ -13,31 +13,10 @@ namespace DrawingRegister.App.Converters
         {
             if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && revisionHistory.Any())
             {
-                // Get the latest calendar date (ignoring time component)
-                var latestDate = revisionHistory.Keys.Max(dt => dt.Date);
-                
-                // Get all revisions from that calendar date
-                var revisionsOnLatestDate = revisionHistory
-                    .Where(kvp => kvp.Key.Date == latestDate)
-                    .Select(kvp => kvp.Value.Revision)
-                    .Where(r => !string.IsNullOrWhiteSpace(r))
-                    .ToList();
-
-                if (revisionsOnLatestDate.Any())
-                {
-                    // If all revisions are numeric, sort numerically; otherwise alphanumerically
-                    bool allNumeric = revisionsOnLatestDate.All(r => r.All(char.IsDigit));
-                    if (allNumeric)
-                    {
-                        return revisionsOnLatestDate
-                            .OrderByDescending(r => int.Parse(r))
-                            .First();
-                    }
-                    return revisionsOnLatestDate
-                        .OrderByDescending(r => r)
-                        .First();
-                }
-                return "-";
+                var latestEntry = revisionHistory.OrderByDescending(kvp => kvp.Key).First();
+                return string.IsNullOrWhiteSpace(latestEntry.Value.Revision)
+                    ? "-"
+                    : latestEntry.Value.Revision;
             }
             return "-";
         }
