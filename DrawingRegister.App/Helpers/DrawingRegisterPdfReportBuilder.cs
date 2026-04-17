@@ -35,9 +35,10 @@ internal static class DrawingRegisterPdfReportBuilder
             .OrderByDescending(entry => entry.Key)
             .ToList();
 
-        var latestEntry = orderedHistory.FirstOrDefault();
+        // Latest revision (excluding superseded entries) drives the register's current-state columns.
+        var latestEntry = orderedHistory.FirstOrDefault(e => !e.Value.IsSuperseded);
         var latestRevision = latestEntry.Value?.Revision ?? string.Empty;
-        var latestIssueDate = latestEntry.Equals(default(KeyValuePair<DateTime, RevisionInfo>))
+        var latestIssueDate = latestEntry.Value == null
             ? (DateTime?)null
             : latestEntry.Key.Date;
         var latestPurpose = string.IsNullOrWhiteSpace(latestEntry.Value?.Purpose)
@@ -59,7 +60,15 @@ internal static class DrawingRegisterPdfReportBuilder
     private static string FormatRevisionTrail(IEnumerable<KeyValuePair<DateTime, RevisionInfo>> orderedHistory)
     {
         return string.Join(Environment.NewLine,
-            orderedHistory.Select(entry => $"REV {GetRevisionCode(entry.Value)} - {entry.Key:dd/MM/yyyy}"));
+            orderedHistory.Select(entry =>
+            {
+                var line = $"REV {GetRevisionCode(entry.Value)} - {entry.Key:dd/MM/yyyy}";
+                if (entry.Value?.IsSuperseded == true)
+                {
+                    line += " (SUPERSEDED)";
+                }
+                return line;
+            }));
     }
 
     private static string GetRevisionCode(RevisionInfo? revisionInfo)

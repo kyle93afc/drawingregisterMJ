@@ -80,6 +80,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Initialize DisciplineCombo based on stored Discipline value
         InitializeDisciplineCombo();
+        InitializeRevisionSchemeCombo();
 
         // Subscribe to ProjectNumber changes to update RegisterNumber
         _project.PropertyChanged += Project_PropertyChanged;
@@ -162,6 +163,40 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private void DisciplineCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         UpdateRegisterNumber();
+    }
+
+    private bool _suppressRevisionSchemeChange;
+
+    private void InitializeRevisionSchemeCombo()
+    {
+        _suppressRevisionSchemeChange = true;
+        try
+        {
+            var target = _project.RevisionScheme.ToString();
+            foreach (ComboBoxItem item in RevisionSchemeCombo.Items)
+            {
+                if (item.Tag?.ToString() == target)
+                {
+                    RevisionSchemeCombo.SelectedItem = item;
+                    return;
+                }
+            }
+            RevisionSchemeCombo.SelectedIndex = 0;
+        }
+        finally
+        {
+            _suppressRevisionSchemeChange = false;
+        }
+    }
+
+    private void RevisionSchemeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressRevisionSchemeChange) return;
+        if (RevisionSchemeCombo.SelectedItem is ComboBoxItem item
+            && Enum.TryParse<RevisionScheme>(item.Tag?.ToString(), out var scheme))
+        {
+            _project.RevisionScheme = scheme;
+        }
     }
 
     private void UpdateRegisterNumber()
@@ -820,6 +855,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
                 var importResult = _project.ImportDocuments(dialog.SelectedPath);
                 InitializeDisciplineCombo();
+                InitializeRevisionSchemeCombo();
                 UpdateRegisterNumber();
                 UpdateIssueDateFilterOptions();
                 UpdateRevisionColumns();
@@ -867,6 +903,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
             // Re-initialize discipline combo and update register number
             InitializeDisciplineCombo();
+            InitializeRevisionSchemeCombo();
             UpdateRegisterNumber();
 
             // Clear all filters so user sees everything
@@ -947,6 +984,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 var importResult = _project.ImportDocuments(_project._currentBasePath, selectedFolder);
 
                 InitializeDisciplineCombo();
+                InitializeRevisionSchemeCombo();
                 UpdateRegisterNumber();
                 UpdateIssueDateFilterOptions();
                 UpdateRevisionColumns();
@@ -1049,7 +1087,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             button.DataContext is KeyValuePair<DateTime, RevisionInfo> revision &&
             SelectedDocument != null)
         {
-            var dialog = new RevisionEditDialog(SelectedDocument, revision.Key, revision.Value, _project.UseNumericRevisions);
+            var dialog = new RevisionEditDialog(SelectedDocument, revision.Key, revision.Value, _project.RevisionScheme);
             dialog.Owner = this;
 
             if (dialog.ShowDialog() == true)
@@ -1059,12 +1097,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 revision.Value.Method = dialog.Method;
                 revision.Value.IssuedBy = dialog.IssuedBy;
                 revision.Value.Revision = dialog.Revision;
+                revision.Value.IsSuperseded = dialog.IsSuperseded;
 
-                // Update the document's current values
-                SelectedDocument.PurposeOfIssue = dialog.Purpose;
-                SelectedDocument.MethodOfIssue = dialog.Method;
-                SelectedDocument.IssuedBy = dialog.IssuedBy;
-                SelectedDocument.Revision = dialog.Revision;
+                // Update the document's current values (reflect the latest non-superseded revision)
+                var currentLatest = SelectedDocument.LatestNonSupersededRevision;
+                if (currentLatest.HasValue)
+                {
+                    SelectedDocument.PurposeOfIssue = currentLatest.Value.Value.Purpose;
+                    SelectedDocument.MethodOfIssue = currentLatest.Value.Value.Method;
+                    SelectedDocument.IssuedBy = currentLatest.Value.Value.IssuedBy;
+                    SelectedDocument.Revision = currentLatest.Value.Value.Revision;
+                    SelectedDocument.FilePath = currentLatest.Value.Value.FilePath;
+                }
+                else
+                {
+                    SelectedDocument.PurposeOfIssue = dialog.Purpose;
+                    SelectedDocument.MethodOfIssue = dialog.Method;
+                    SelectedDocument.IssuedBy = dialog.IssuedBy;
+                    SelectedDocument.Revision = dialog.Revision;
+                }
 
                 // Save changes
                 _project.SaveProjectData();

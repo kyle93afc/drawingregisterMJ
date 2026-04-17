@@ -48,6 +48,7 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="6"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Line 1: Logo + Title | Search | About -->
@@ -145,6 +146,17 @@
                     <TextBlock Grid.Column="12" Text="Project" Style="{StaticResource SectionLabel}" FontSize="11"/>
                     <TextBox x:Name="ProjectNameBox" Grid.Column="13" Height="28" FontSize="12"/>
                 </Grid>
+
+                <!-- Line 3: Revision Scheme selector -->
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                    <TextBlock Text="Revision Scheme" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="RevisionSchemeCombo" Width="260" Height="26" FontSize="11" Margin="6,0,0,0"
+                              SelectionChanged="RevisionSchemeCombo_SelectionChanged">
+                        <ComboBoxItem Tag="Legacy" Content="Legacy (A, B, C / P01, C01, T01, I01)"/>
+                        <ComboBoxItem Tag="Numeric" Content="Numeric (1, 2, 3)"/>
+                        <ComboBoxItem Tag="SubLetterNumeric" Content="Sub-letter / Formal (1A, 1B → 1)"/>
+                    </ComboBox>
+                </StackPanel>
             </Grid>
         </Border>
 

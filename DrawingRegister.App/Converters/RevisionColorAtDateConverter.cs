@@ -15,6 +15,10 @@ namespace DrawingRegister.App.Converters
                 parameter is DateTime date &&
                 revisionHistory.TryGetValue(date, out var revInfo))
             {
+                // Superseded revisions are rendered in grey so they visually recede next to live
+                // issues without disappearing from the register.
+                if (revInfo.IsSuperseded)
+                    return System.Windows.Media.Brushes.Gray;
                 return RevisionColorConverter.GetForegroundBrush(revInfo.Revision);
             }
             return System.Windows.Media.Brushes.Transparent;

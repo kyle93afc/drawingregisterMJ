@@ -74,14 +74,33 @@ namespace DrawingRegister.App.Models
         // Revision History - Dictionary of date to revision info
         public Dictionary<DateTime, RevisionInfo> RevisionHistory { get; set; } = new();
 
-        public bool IsLatestRevision => 
-            RevisionHistory.Any() && 
-            Revision == RevisionHistory.Max(r => r.Value.Revision);
+        public bool IsLatestRevision =>
+            RevisionHistory.Any() &&
+            Revision == RevisionHistory
+                .Where(r => !r.Value.IsSuperseded)
+                .Select(r => r.Value.Revision)
+                .DefaultIfEmpty(string.Empty)
+                .Max();
+
+        /// <summary>
+        /// The most recently issued revision that has NOT been superseded. Used by the register,
+        /// the "Latest Revision" column, and Collect Latest PDFs so a withdrawn issue doesn't
+        /// masquerade as current.
+        /// </summary>
+        public KeyValuePair<DateTime, RevisionInfo>? LatestNonSupersededRevision =>
+            RevisionHistory
+                .Where(r => !r.Value.IsSuperseded)
+                .OrderByDescending(r => r.Key)
+                .Select(r => (KeyValuePair<DateTime, RevisionInfo>?)r)
+                .FirstOrDefault();
 
         public static string GenerateRevisionCode(string purpose, Dictionary<DateTime, RevisionInfo> revisionHistory, bool useNumericRevisions = false)
+            => GenerateRevisionCode(purpose, revisionHistory, useNumericRevisions ? RevisionScheme.Numeric : RevisionScheme.Legacy, isFormalIssue: false);
+
+        public static string GenerateRevisionCode(string purpose, Dictionary<DateTime, RevisionInfo> revisionHistory, RevisionScheme scheme, bool isFormalIssue = false)
         {
             // Numeric revision scheme (SSEN-style): revisions are plain numbers 1, 2, 3...
-            if (useNumericRevisions)
+            if (scheme == RevisionScheme.Numeric)
             {
                 var numericRevs = revisionHistory.Values
                     .Select(r => r.Revision)
@@ -94,6 +113,10 @@ namespace DrawingRegister.App.Models
 
                 return (numericRevs.Max() + 1).ToString();
             }
+
+            // Project 124660 procedure: internal drafts 1A, 1B, 1C... then formal issue drops letter to "1"
+            if (scheme == RevisionScheme.SubLetterNumeric)
+                return GetNextSubLetterRevision(revisionHistory, isFormalIssue);
 
             // If no purpose specified, use alphabetical sequence
             if (string.IsNullOrEmpty(purpose))
@@ -135,6 +158,72 @@ namespace DrawingRegister.App.Models
                 .Max();
 
             return $"{prefix}{(maxNum + 1):D2}";
+        }
+
+        private static string GetNextSubLetterRevision(Dictionary<DateTime, RevisionInfo> revisionHistory, bool isFormalIssue)
+        {
+            var parsed = revisionHistory.Values
+                .Select(r => r.Revision)
+                .Select(TryParseSubLetter)
+                .Where(p => p.HasValue)
+                .Select(p => p!.Value)
+                .ToList();
+
+            int maxFormal = parsed.Where(p => p.letter == null).Select(p => p.number).DefaultIfEmpty(0).Max();
+            int maxCycle = parsed.Select(p => p.number).DefaultIfEmpty(0).Max();
+
+            // Determine the "active" cycle. If every entry at maxCycle is already a formal issue
+            // (letter == null at that cycle), the next cycle is maxCycle + 1. Otherwise we're still
+            // iterating on maxCycle.
+            bool maxCycleFormalIssued = parsed.Any(p => p.number == maxCycle && p.letter == null);
+            int activeCycle = maxCycleFormalIssued ? maxCycle + 1 : Math.Max(maxCycle, maxFormal + 1);
+            if (activeCycle == 0) activeCycle = 1;
+
+            if (isFormalIssue)
+                return activeCycle.ToString();
+
+            // Internal draft: find the highest letter already used at activeCycle and increment.
+            var lettersAtCycle = parsed
+                .Where(p => p.number == activeCycle && p.letter.HasValue)
+                .Select(p => p.letter!.Value)
+                .ToList();
+
+            if (!lettersAtCycle.Any())
+                return $"{activeCycle}A";
+
+            char nextLetter = (char)(lettersAtCycle.Max() + 1);
+            return $"{activeCycle}{nextLetter}";
+        }
+
+        private static (int number, char? letter)? TryParseSubLetter(string? revision)
+        {
+            if (string.IsNullOrWhiteSpace(revision) || revision == "-")
+                return null;
+
+            var trimmed = revision.Trim();
+            int letterIndex = -1;
+            for (int i = 0; i < trimmed.Length; i++)
+            {
+                if (char.IsLetter(trimmed[i])) { letterIndex = i; break; }
+            }
+
+            if (letterIndex == 0)
+                return null; // legacy prefix revision like "C01" — skip
+
+            string numberPart = letterIndex < 0 ? trimmed : trimmed[..letterIndex];
+            if (!int.TryParse(numberPart, out int number))
+                return null;
+
+            char? letter = null;
+            if (letterIndex >= 0)
+            {
+                var letterPart = trimmed[letterIndex..];
+                if (letterPart.Length != 1 || !char.IsLetter(letterPart[0]))
+                    return null;
+                letter = char.ToUpperInvariant(letterPart[0]);
+            }
+
+            return (number, letter);
         }
 
         private static string GetNextAlphabeticalRevision(Dictionary<DateTime, RevisionInfo> revisionHistory)
@@ -219,12 +308,21 @@ namespace DrawingRegister.App.Models
 
     public class RevisionInfo
     {
+        public const string SupersededPurpose = "Superseded";
+
         public string Revision { get; set; } = string.Empty;
         public string Purpose { get; set; } = string.Empty;
         public string Method { get; set; } = string.Empty;
         public string IssuedBy { get; set; } = string.Empty;
         public bool IsDistributed { get; set; }
         public string FilePath { get; set; } = string.Empty;
+
+        /// <summary>
+        /// When true, this revision was issued in error (or otherwise withdrawn) and should not
+        /// count as the current revision. Kept as a bool for fast filtering; also derivable from
+        /// Purpose == "Superseded".
+        /// </summary>
+        public bool IsSuperseded { get; set; }
     }
 
     public class StakeholderInfo

@@ -22,6 +22,7 @@ public class ProjectManager : INotifyPropertyChanged
     private string _registerNumber = string.Empty;
     private string _clientNumber = string.Empty;
     private bool _useNumericRevisions;
+    private RevisionScheme _revisionScheme = RevisionScheme.Legacy;
 
     public ObservableCollection<DocumentMetadata> Documents { get; } = new();
     public List<DateTime> IssueDates { get; } = new();
@@ -92,6 +93,20 @@ public class ProjectManager : INotifyPropertyChanged
         }
     }
 
+    public RevisionScheme RevisionScheme
+    {
+        get => _revisionScheme;
+        set
+        {
+            _revisionScheme = value;
+            // Keep the legacy bool in sync so any callers (and the saved JSON) that still look at
+            // UseNumericRevisions see a consistent value.
+            _useNumericRevisions = value == RevisionScheme.Numeric;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RevisionScheme)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UseNumericRevisions)));
+        }
+    }
+
     public ImportResult ImportDocuments(string folderPath, string? specificFolderToRescanFullPath = null)
     {
         var importResult = new ImportResult();
@@ -151,8 +166,8 @@ public class ProjectManager : INotifyPropertyChanged
             Discipline = _projectInfo.Discipline;
             RegisterNumber = _projectInfo.RegisterNumber;
             ClientNumber = _projectInfo.ClientNumber;
-            UseNumericRevisions = _projectInfo.UseNumericRevisions;
-            Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} (NumericRevisions={UseNumericRevisions}) ===");
+            RevisionScheme = _projectInfo.RevisionScheme;
+            Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} (RevisionScheme={RevisionScheme}) ===");
         }
 
         if (isSpecificRescan)
@@ -429,7 +444,7 @@ public class ProjectManager : INotifyPropertyChanged
             sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
 
             // Updated regex pattern to better handle drawing numbers and revisions
-            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+)(?=[_\s-]|$))?(?:-\s*(?<revision>[A-Z]\d{2}|[A-Z]|\d+)(?=[_\s-]|$))?(?:[_\s-]\s*(?<description>.+))?$");
+            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+)(?=[_\s-]|$))?(?:-\s*(?<revision>[A-Z]\d{2}|\d+[A-Z]|[A-Z]|\d+)(?=[_\s-]|$))?(?:[_\s-]\s*(?<description>.+))?$");
             var match = regex.Match(sanitizedFileName);
 
             if (!match.Success)
@@ -471,7 +486,7 @@ public class ProjectManager : INotifyPropertyChanged
             else
             {
                 // Look for revision in folder name
-                var folderRevMatch = Regex.Match(parentFolder ?? "", @"REV[_\s-]*([A-Z]\d{2}|[A-Z]|\d+)$", RegexOptions.IgnoreCase);
+                var folderRevMatch = Regex.Match(parentFolder ?? "", @"REV[_\s-]*([A-Z]\d{2}|\d+[A-Z]|[A-Z]|\d+)$", RegexOptions.IgnoreCase);
                 if (folderRevMatch.Success)
                 {
                     revision = folderRevMatch.Groups[1].Value;
@@ -625,9 +640,10 @@ public class ProjectManager : INotifyPropertyChanged
             }
         }
 
-        // Auto-detect numeric revision scheme:
-        // If any numeric-only revisions exist and NO letter-prefixed revisions exist, enable numeric mode
-        if (!UseNumericRevisions)
+        // Auto-detect revision scheme when it hasn't been set explicitly (Legacy = default/unset).
+        // - If any revision matches \d+[A-Z] (e.g. 1A, 2B) → SubLetterNumeric
+        // - Else if numeric-only revisions exist and no letter-prefixed revisions → Numeric
+        if (RevisionScheme == RevisionScheme.Legacy)
         {
             var allRevisions = Documents
                 .SelectMany(d => d.RevisionHistory.Values)
@@ -635,12 +651,18 @@ public class ProjectManager : INotifyPropertyChanged
                 .Where(r => !string.IsNullOrEmpty(r) && r != "-")
                 .ToList();
 
+            bool hasSubLetterRevisions = allRevisions.Any(r => Regex.IsMatch(r, "^\\d+[A-Z]$"));
             bool hasNumericRevisions = allRevisions.Any(r => r.All(char.IsDigit));
             bool hasLetterPrefixedRevisions = allRevisions.Any(r => r.Length > 0 && char.IsLetter(r[0]));
 
-            if (hasNumericRevisions && !hasLetterPrefixedRevisions)
+            if (hasSubLetterRevisions)
             {
-                UseNumericRevisions = true;
+                RevisionScheme = RevisionScheme.SubLetterNumeric;
+                Console.WriteLine("\n=== Auto-detected sub-letter revision scheme (1A/1B → 1) ===");
+            }
+            else if (hasNumericRevisions && !hasLetterPrefixedRevisions)
+            {
+                RevisionScheme = RevisionScheme.Numeric;
                 Console.WriteLine("\n=== Auto-detected numeric revision scheme (SSEN-style) ===");
             }
         }
@@ -672,6 +694,7 @@ public class ProjectManager : INotifyPropertyChanged
         _projectInfo.RegisterNumber = RegisterNumber;
         _projectInfo.ClientNumber = ClientNumber;
         _projectInfo.UseNumericRevisions = UseNumericRevisions;
+        _projectInfo.RevisionScheme = RevisionScheme;
         _projectInfo.Save(_currentBasePath);
 
         // Save dynamic data only (static fields removed from ProjectStorage)

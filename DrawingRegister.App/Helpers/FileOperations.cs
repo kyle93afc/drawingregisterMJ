@@ -47,30 +47,41 @@ namespace DrawingRegister.App.Helpers
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(document.FilePath))
+                // Pick the latest revision that has NOT been superseded. A superseded revision
+                // should never be copied as "latest" — that's the whole reason the flag exists.
+                var latest = document.LatestNonSupersededRevision;
+                string sourcePath = latest?.Value.FilePath ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(sourcePath))
+                {
+                    sourcePath = document.FilePath;
+                }
+
+                if (string.IsNullOrWhiteSpace(sourcePath))
                 {
                     result.SkippedFiles.Add(new PdfExportSkippedFileInfo
                     {
                         DocumentNumber = document.DocumentNumber,
                         FilePath = string.Empty,
-                        Reason = "No PDF file path is recorded."
+                        Reason = document.RevisionHistory.Any() && latest == null
+                            ? "All revisions are superseded."
+                            : "No PDF file path is recorded."
                     });
                     continue;
                 }
 
-                if (!File.Exists(document.FilePath))
+                if (!File.Exists(sourcePath))
                 {
                     result.SkippedFiles.Add(new PdfExportSkippedFileInfo
                     {
                         DocumentNumber = document.DocumentNumber,
-                        FilePath = document.FilePath,
+                        FilePath = sourcePath,
                         Reason = "Source PDF not found."
                     });
                     continue;
                 }
 
-                var destinationFilePath = GetUniqueExportFilePath(exportFolderPath, Path.GetFileName(document.FilePath), document.DocumentNumber);
-                File.Copy(document.FilePath, destinationFilePath, overwrite: false);
+                var destinationFilePath = GetUniqueExportFilePath(exportFolderPath, Path.GetFileName(sourcePath), document.DocumentNumber);
+                File.Copy(sourcePath, destinationFilePath, overwrite: false);
                 result.CopiedCount++;
             }
 

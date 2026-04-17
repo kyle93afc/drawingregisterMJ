@@ -13,7 +13,14 @@ namespace DrawingRegister.App.Converters
         {
             if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && revisionHistory.Any())
             {
-                var latestEntry = revisionHistory.OrderByDescending(kvp => kvp.Key).First();
+                var latestEntry = revisionHistory
+                    .Where(kvp => !kvp.Value.IsSuperseded)
+                    .OrderByDescending(kvp => kvp.Key)
+                    .FirstOrDefault();
+                if (latestEntry.Value == null)
+                {
+                    return "-";
+                }
                 return string.IsNullOrWhiteSpace(latestEntry.Value.Revision)
                     ? "-"
                     : latestEntry.Value.Revision;
