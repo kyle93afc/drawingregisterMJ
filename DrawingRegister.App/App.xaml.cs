@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using DrawingRegister.App.Helpers;
 using DrawingRegister.App.Services;
 using Serilog;
 using Velopack;
@@ -15,6 +17,8 @@ namespace DrawingRegister.App;
 public partial class App : System.Windows.Application
 {
     private static UpdateService? _updateService;
+    // Process start → first visible frame. Read by MainWindow.ContentRendered.
+    public static readonly Stopwatch ProcessUptime = Stopwatch.StartNew();
 
     /// <summary>
     /// Custom entry point for the application.
@@ -25,9 +29,11 @@ public partial class App : System.Windows.Application
     {
         // IMPORTANT: This must be the first line in Main()
         VelopackApp.Build().Run();
+        PerfLog.Event("Startup.VelopackRun", ProcessUptime.ElapsedMilliseconds);
 
         var app = new App();
         app.InitializeComponent();
+        PerfLog.Event("Startup.AppInitialized", ProcessUptime.ElapsedMilliseconds);
         app.Run();
     }
 
@@ -59,6 +65,7 @@ public partial class App : System.Windows.Application
         try
         {
             Log.Information("OnStartup called");
+            PerfLog.Event("Startup.OnStartup.Begin", ProcessUptime.ElapsedMilliseconds);
             base.OnStartup(e);
 
             // Show "What's New" if version changed since last launch
@@ -68,6 +75,7 @@ public partial class App : System.Windows.Application
             _ = CheckForUpdatesOnStartupAsync();
 
             Log.Information("OnStartup completed");
+            PerfLog.Event("Startup.OnStartup.End", ProcessUptime.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {

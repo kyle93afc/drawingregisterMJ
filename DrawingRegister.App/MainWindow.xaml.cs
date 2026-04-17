@@ -8,6 +8,7 @@ using System.Windows.Data;
 using System.Threading.Tasks;
 using DrawingRegister.App.Helpers;
 using DrawingRegister.App.Models;
+using Serilog;
 using System.Collections.Generic;
 using MessageBox = System.Windows.MessageBox;
 using TextBox = System.Windows.Controls.TextBox;
@@ -37,6 +38,10 @@ namespace DrawingRegister.App;
 public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 {
     private readonly ProjectManager _project = new();
+    // Lock passed to BindingOperations.EnableCollectionSynchronization so that
+    // the import Task.Run can mutate _project.Documents without WPF throwing
+    // "collection changed from a thread different from the Dispatcher thread".
+    private readonly object _documentsCollectionLock = new();
     private bool _disposed;
     private string _searchText = string.Empty;
     private Models.DocumentMetadata? _selectedDocument;
@@ -69,6 +74,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     public MainWindow()
     {
+        using var _perf = PerfLog.Begin("MainWindow.ctor");
+        ContentRendered += (_, _) =>
+            PerfLog.Event("Startup.TimeToFirstPaint", App.ProcessUptime.ElapsedMilliseconds);
+
+        // Allow background-thread mutation of _project.Documents during scans.
+        BindingOperations.EnableCollectionSynchronization(_project.Documents, _documentsCollectionLock);
+
         InitializeComponent();
         DataContext = this;
 
@@ -111,6 +123,35 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         UpdateIssueDateFilterOptions();
         UpdateRevisionColumns();
         UpdateStatusBar();
+    }
+
+    // Detach Documents.CollectionChanged and null out DocumentGrid.ItemsSource
+    // for the duration of a bulk load. Without this, every Add during a 96-doc
+    // import fires the handler above -> UpdateRevisionColumns rebuilds all
+    // DataTemplates, etc. Nulling ItemsSource also makes it safe to mutate
+    // the ObservableCollection from a background thread (nothing is bound).
+    private IDisposable SuspendDocumentUpdates()
+    {
+        var previousItemsSource = DocumentGrid.ItemsSource;
+        DocumentGrid.ItemsSource = null;
+        _project.Documents.CollectionChanged -= Documents_CollectionChanged;
+        return new ActionDisposable(() =>
+        {
+            _project.Documents.CollectionChanged += Documents_CollectionChanged;
+            // Rebind; callers will overwrite via FilterDocuments() right after.
+            DocumentGrid.ItemsSource = previousItemsSource ?? _project.Documents;
+        });
+    }
+
+    private sealed class ActionDisposable : IDisposable
+    {
+        private Action? _action;
+        public ActionDisposable(Action action) => _action = action;
+        public void Dispose()
+        {
+            var a = System.Threading.Interlocked.Exchange(ref _action, null);
+            a?.Invoke();
+        }
     }
 
     private void UpdateStatusBar()
@@ -354,103 +395,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
             DocumentGrid.ItemsSource = docsForDate;
 
-            // Try to detect purpose, method, and issuer from the documents
-            var revisions = docsForDate
-                .SelectMany(d => d.RevisionHistory)
-                .Where(r => r.Key.Date == selectedDate.Date)
-                .Select(r => r.Value)
-                .ToList();
-
-            if (revisions.Any())
-            {
-                // Get the most common purpose
-                var commonPurpose = revisions
-                    .GroupBy(r => r.Purpose)
-                    .OrderByDescending(g => g.Count())
-                    .First().Key;
-
-                // Get the most common method
-                var commonMethod = revisions
-                    .GroupBy(r => r.Method)
-                    .OrderByDescending(g => g.Count())
-                    .First().Key;
-
-                // Get the most common issuer
-                var commonIssuer = revisions
-                    .GroupBy(r => r.IssuedBy)
-                    .OrderByDescending(g => g.Count())
-                    .First().Key;
-
-                // Set the values in the UI - map stored purpose to combo prefix
-                var purposePrefix = MapPurposeToPrefix(commonPurpose);
-                if (purposePrefix != null)
-                {
-                    foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
-                    {
-                        if (item.Content.ToString().StartsWith(purposePrefix + " "))
-                        {
-                            PurposeOfIssueFilter.SelectedItem = item;
-                            break;
-                        }
-                    }
-                }
-
-                var methodPrefix = commonMethod?.Length > 0 ? commonMethod.Substring(0, 1).ToUpper() : null;
-                if (methodPrefix != null)
-                {
-                    foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
-                    {
-                        if (item.Content.ToString().StartsWith(methodPrefix + " "))
-                        {
-                            MethodOfIssueFilter.SelectedItem = item;
-                            break;
-                        }
-                    }
-                }
-
-                IssuedByFilter.Text = commonIssuer;
-                
-                // Update the visual indicators
-                UpdateIssueIndicators(commonPurpose, commonMethod);
-            }
-            else
-            {
-                // Reset the filters if no data found
-                PurposeOfIssueFilter.SelectedIndex = 0;
-                MethodOfIssueFilter.SelectedIndex = 0;
-                IssuedByFilter.Text = string.Empty;
-                
-                // Clear the visual indicators
-                UpdateIssueIndicators(string.Empty, string.Empty);
-            }
-            
-            // Show distribution summary
-            string? currentSubfolderFilterPath = null;
-            if (SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
-            {
-                currentSubfolderFilterPath = folderPathTag;
-            }
-            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDate, currentSubfolderFilterPath);
-            DistributionSummaryText.Text = distributionSummary.GetFormattedSummary();
-            DistributionSummaryBorder.Visibility = distributionSummary.TotalRecipients > 0 ? Visibility.Visible : Visibility.Collapsed;
-            
-            // Update the distribution information display in the Issue Information section
             UpdateDistributionInfoDisplay(selectedDate);
 
-            // Populate subfolder filter and make it visible
+            // Populate subfolder filter. Auto-selecting the first item triggers
+            // SubfolderFilterCombo_SelectionChanged, which prefills Purpose / Method /
+            // Issued By from the matching revisions, refreshes the distribution summary,
+            // and re-runs FilterDocuments.
             PopulateSubfolderFilterForDate(selectedDate.Date);
-            SubfolderFilterLabel.Visibility = Visibility.Visible;
-            SubfolderFilterCombo.Visibility = Visibility.Visible;
 
-            FilterDocuments(); // Call filter documents after populating subfolder combo
+            // Hide the subfolder filter when there is only one (or zero) subfolder to pick from
+            bool hasMultipleSubfolders = SubfolderFilterCombo.Items.Count > 1;
+            SubfolderFilterLabel.Visibility = hasMultipleSubfolders ? Visibility.Visible : Visibility.Collapsed;
+            SubfolderFilterCombo.Visibility = hasMultipleSubfolders ? Visibility.Visible : Visibility.Collapsed;
+
+            // Ensure the grid reflects the current filters even when the subfolder combo
+            // ended up empty (no auto-selection fires in that case).
+            if (SubfolderFilterCombo.Items.Count == 0)
+                FilterDocuments();
         }
     }
 
     private void PopulateSubfolderFilterForDate(DateTime selectedDate)
     {
-        var subfolderItems = new ObservableCollection<ComboBoxItem>();
-        subfolderItems.Add(new ComboBoxItem { Content = "All Subfolders", Tag = "ALL" });
-
         var uniqueSubfolderPaths = new HashSet<string>();
 
         foreach (var doc in _project.Documents)
@@ -475,6 +441,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
         }
 
+        var subfolderItems = new ObservableCollection<ComboBoxItem>();
+
+        // Only offer the "All Subfolders" option when there is actually more than one subfolder.
+        if (uniqueSubfolderPaths.Count > 1)
+        {
+            subfolderItems.Add(new ComboBoxItem { Content = "All Subfolders", Tag = "ALL" });
+        }
+
         foreach (var fullPath in uniqueSubfolderPaths.OrderBy(p => new DirectoryInfo(p).Name))
         {
             string displayName = new DirectoryInfo(fullPath).Name;
@@ -491,7 +465,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         SubfolderFilterCombo.ItemsSource = subfolderItems;
         if (SubfolderFilterCombo.Items.Count > 0)
         {
-            SubfolderFilterCombo.SelectedIndex = 0; // Default to "All Subfolders"
+            SubfolderFilterCombo.SelectedIndex = 0;
         }
     }
 
@@ -591,7 +565,65 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (textBlock != null)
             textBlock.Foreground = System.Windows.Media.Brushes.Blue;
     }
-    
+
+    private void ApplyIssueFiltersFromRevisions(List<RevisionInfo> revisions)
+    {
+        if (revisions.Any())
+        {
+            var commonPurpose = revisions
+                .GroupBy(r => r.Purpose)
+                .OrderByDescending(g => g.Count())
+                .First().Key;
+
+            var commonMethod = revisions
+                .GroupBy(r => r.Method)
+                .OrderByDescending(g => g.Count())
+                .First().Key;
+
+            var commonIssuer = revisions
+                .GroupBy(r => r.IssuedBy)
+                .OrderByDescending(g => g.Count())
+                .First().Key;
+
+            var purposePrefix = MapPurposeToPrefix(commonPurpose);
+            if (purposePrefix != null)
+            {
+                foreach (ComboBoxItem item in PurposeOfIssueFilter.Items)
+                {
+                    if (item.Content.ToString().StartsWith(purposePrefix + " "))
+                    {
+                        PurposeOfIssueFilter.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+
+            var methodPrefix = commonMethod?.Length > 0 ? commonMethod.Substring(0, 1).ToUpper() : null;
+            if (methodPrefix != null)
+            {
+                foreach (ComboBoxItem item in MethodOfIssueFilter.Items)
+                {
+                    if (item.Content.ToString().StartsWith(methodPrefix + " "))
+                    {
+                        MethodOfIssueFilter.SelectedItem = item;
+                        break;
+                    }
+                }
+            }
+
+            IssuedByFilter.Text = commonIssuer;
+
+            UpdateIssueIndicators(commonPurpose, commonMethod);
+        }
+        else
+        {
+            PurposeOfIssueFilter.SelectedIndex = 0;
+            MethodOfIssueFilter.SelectedIndex = 0;
+            IssuedByFilter.Text = string.Empty;
+            UpdateIssueIndicators(string.Empty, string.Empty);
+        }
+    }
+
     private void PurposeOfIssueFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         FilterDocuments();
@@ -644,6 +676,37 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void SubfolderFilterCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (IssueDateFilter.SelectedItem is ComboBoxItem dateItem
+            && dateItem.Content?.ToString() is string dateContent
+            && dateContent != "All Dates"
+            && DateTime.TryParseExact(dateContent, "dd/MM/yyyy", null,
+                System.Globalization.DateTimeStyles.None, out var selectedDate))
+        {
+            string? subfolderPath = null;
+            if (SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem
+                && folderItem.Tag is string tag
+                && tag != "ALL")
+            {
+                subfolderPath = tag;
+            }
+
+            var revisions = _project.Documents
+                .SelectMany(d => d.RevisionHistory)
+                .Where(r =>
+                    r.Key.Date == selectedDate.Date &&
+                    (subfolderPath == null ||
+                        (!string.IsNullOrEmpty(r.Value.FilePath) &&
+                         string.Equals(Path.GetDirectoryName(r.Value.FilePath), subfolderPath, StringComparison.OrdinalIgnoreCase))))
+                .Select(r => r.Value)
+                .ToList();
+
+            ApplyIssueFiltersFromRevisions(revisions);
+
+            var distributionSummary = DistributionSummary.GenerateForDate(_project, selectedDate, subfolderPath);
+            DistributionSummaryText.Text = distributionSummary.GetFormattedSummary();
+            DistributionSummaryBorder.Visibility = distributionSummary.TotalRecipients > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
         FilterDocuments();
     }
 
@@ -672,6 +735,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void FilterDocuments()
     {
+        using var _perf = PerfLog.Begin("FilterDocuments");
         // Get the current filters
         string purposeFilter = "All";
         string methodFilter = "All";
@@ -824,7 +888,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         DocumentGrid.ItemsSource = filteredDocs.OrderBy(d => d.DocumentNumber).ToList();
     }
 
-    private void ImportDocuments_Click(object sender, RoutedEventArgs e)
+    private async void ImportDocuments_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
@@ -834,6 +898,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
+            using var _perf = PerfLog.Begin($"ImportDocuments_Click({System.IO.Path.GetFileName(dialog.SelectedPath)})");
             try
             {
                 // Open the progress window
@@ -853,7 +918,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     });
                 };
 
-                var importResult = _project.ImportDocuments(dialog.SelectedPath);
+                ImportResult importResult;
+                using (SuspendDocumentUpdates())
+                {
+                    var selectedPath = dialog.SelectedPath;
+                    importResult = await Task.Run(() => _project.ImportDocuments(selectedPath));
+                }
                 InitializeDisciplineCombo();
                 InitializeRevisionSchemeCombo();
                 UpdateRegisterNumber();
@@ -881,8 +951,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void RefreshView_Click(object sender, RoutedEventArgs e)
+    private async void RefreshView_Click(object sender, RoutedEventArgs e)
     {
+        using var _perf = PerfLog.Begin("RefreshView_Click");
         try
         {
             // Clear the selected document to return to full view
@@ -899,7 +970,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             }
 
             // Rescan the current folder
-            var importResult = _project.ImportDocuments(_project._currentBasePath);
+            ImportResult importResult;
+            using (SuspendDocumentUpdates())
+            {
+                var basePath = _project._currentBasePath;
+                importResult = await Task.Run(() => _project.ImportDocuments(basePath));
+            }
 
             // Re-initialize discipline combo and update register number
             InitializeDisciplineCombo();
@@ -955,7 +1031,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void RescanFolder_Click(object sender, RoutedEventArgs e)
+    private async void RescanFolder_Click(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -981,7 +1057,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 var selectedFolder = dialog.SelectedFolderPath;
 
-                var importResult = _project.ImportDocuments(_project._currentBasePath, selectedFolder);
+                ImportResult importResult;
+                using (SuspendDocumentUpdates())
+                {
+                    var basePath = _project._currentBasePath;
+                    importResult = await Task.Run(() => _project.ImportDocuments(basePath, selectedFolder));
+                }
 
                 InitializeDisciplineCombo();
                 InitializeRevisionSchemeCombo();

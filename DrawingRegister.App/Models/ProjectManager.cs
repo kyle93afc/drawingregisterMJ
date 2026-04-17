@@ -1,10 +1,13 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.ComponentModel;
 using System.Text.Json;
+using System.Threading;
+using DrawingRegister.App.Helpers;
 
 namespace DrawingRegister.App.Models;
 
@@ -15,6 +18,22 @@ public class ProjectManager : INotifyPropertyChanged
     private ProjectInfo? _projectInfo;
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    // Captured on whatever thread constructs ProjectManager (UI thread in
+    // practice). Used to marshal PropertyChanged back to the UI so that
+    // ImportDocuments can run on a background thread without WPF bindings
+    // throwing "calling thread cannot access this object".
+    private readonly SynchronizationContext? _syncContext = SynchronizationContext.Current;
+
+    private void RaisePropertyChanged(string name)
+    {
+        var handler = PropertyChanged;
+        if (handler == null) return;
+        if (_syncContext != null && _syncContext != SynchronizationContext.Current)
+            _syncContext.Post(_ => handler(this, new PropertyChangedEventArgs(name)), null);
+        else
+            handler(this, new PropertyChangedEventArgs(name));
+    }
 
     private string _projectNumber = string.Empty;
     private string _projectName = string.Empty;
@@ -39,7 +58,7 @@ public class ProjectManager : INotifyPropertyChanged
         set
         {
             _projectNumber = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ProjectNumber)));
+            RaisePropertyChanged(nameof(ProjectNumber));
         }
     }
 
@@ -49,7 +68,7 @@ public class ProjectManager : INotifyPropertyChanged
         set
         {
             _projectName = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ProjectName)));
+            RaisePropertyChanged(nameof(ProjectName));
         }
     }
 
@@ -59,7 +78,7 @@ public class ProjectManager : INotifyPropertyChanged
         set
         {
             _discipline = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Discipline)));
+            RaisePropertyChanged(nameof(Discipline));
         }
     }
 
@@ -69,7 +88,7 @@ public class ProjectManager : INotifyPropertyChanged
         set
         {
             _registerNumber = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RegisterNumber)));
+            RaisePropertyChanged(nameof(RegisterNumber));
         }
     }
 
@@ -79,7 +98,7 @@ public class ProjectManager : INotifyPropertyChanged
         set
         {
             _clientNumber = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ClientNumber)));
+            RaisePropertyChanged(nameof(ClientNumber));
         }
     }
 
@@ -89,7 +108,7 @@ public class ProjectManager : INotifyPropertyChanged
         set
         {
             _useNumericRevisions = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UseNumericRevisions)));
+            RaisePropertyChanged(nameof(UseNumericRevisions));
         }
     }
 
@@ -102,13 +121,14 @@ public class ProjectManager : INotifyPropertyChanged
             // Keep the legacy bool in sync so any callers (and the saved JSON) that still look at
             // UseNumericRevisions see a consistent value.
             _useNumericRevisions = value == RevisionScheme.Numeric;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(RevisionScheme)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(UseNumericRevisions)));
+            RaisePropertyChanged(nameof(RevisionScheme));
+            RaisePropertyChanged(nameof(UseNumericRevisions));
         }
     }
 
     public ImportResult ImportDocuments(string folderPath, string? specificFolderToRescanFullPath = null)
     {
+        using var _perf = PerfLog.Begin($"ProjectManager.ImportDocuments(specific={specificFolderToRescanFullPath != null})");
         var importResult = new ImportResult();
         bool isSpecificRescan = !string.IsNullOrEmpty(specificFolderToRescanFullPath);
 
@@ -139,6 +159,20 @@ public class ProjectManager : INotifyPropertyChanged
         if (_currentStorage == null)
         {
             _currentStorage = new ProjectStorage { BaseFolderPath = folderPath, Projects = new List<DrawingProject>() };
+        }
+
+        // Build the paper-size cache from the ORIGINAL storage before the
+        // specific-rescan block below purges entries for the folder being
+        // rescanned. Without this, a "Rescan Folder" never hits the cache.
+        var knownSizes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var docInfo in _currentStorage.Documents)
+        {
+            if (string.IsNullOrEmpty(docInfo.Size)) continue;
+            foreach (var rev in docInfo.RevisionHistory.Values)
+            {
+                if (!string.IsNullOrEmpty(rev.FilePath))
+                    knownSizes[rev.FilePath] = docInfo.Size;
+            }
         }
 
         // Migration: if project_info is empty but project_data.json has legacy static fields
@@ -343,6 +377,15 @@ public class ProjectManager : INotifyPropertyChanged
 
         if (!isSpecificRescan && !dateDirectories.Any())
         {
+            // If we already have loaded projects, every date folder was skipped as
+            // already-processed — that's a valid "nothing new to scan" refresh, not
+            // an error. Only throw when the user pointed at a folder with no date
+            // subfolders at all and no prior scan.
+            if (_currentStorage?.Projects?.Count > 0)
+            {
+                Console.WriteLine("No new date folders found — all existing folders already processed.");
+                return importResult;
+            }
             throw new Exception("No valid new date folders found. Folders should start with a date in format YYYYMMDD.");
         }
 
@@ -359,6 +402,25 @@ public class ProjectManager : INotifyPropertyChanged
         {
             throw new Exception("No PDF files found in any of the processed date folders.");
         }
+
+        // Pre-compute paper sizes: knownSizes was populated from pre-purge storage
+        // above; anything not in it is genuinely new and needs PdfPig to open it.
+        // Parallel.ForEach brings cold-scan from ~75ms/file sequential down to
+        // whatever the disk + 4-8 cores can handle.
+        var pathsNeedingSize = pdfFiles.Where(fp => !knownSizes.ContainsKey(fp)).ToList();
+        var cacheHits = pdfFiles.Count - pathsNeedingSize.Count;
+        if (pathsNeedingSize.Count > 0)
+        {
+            var sizeScanSw = Stopwatch.StartNew();
+            var computed = new System.Collections.Concurrent.ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            Parallel.ForEach(pathsNeedingSize, fp =>
+            {
+                computed[fp] = DetermineDrawingSize(fp);
+            });
+            foreach (var kv in computed) knownSizes[kv.Key] = kv.Value;
+            PerfLog.Event("ProjectManager.PdfPig.ParallelScan", sizeScanSw.ElapsedMilliseconds, pathsNeedingSize.Count);
+        }
+        PerfLog.Event("ProjectManager.PdfPig.CacheHits", 0, cacheHits);
 
         // Try to detect project number from the first valid PDF name
         string? detectedProjectNo = null;
@@ -531,7 +593,7 @@ public class ProjectManager : INotifyPropertyChanged
                 Description = description,
                 Package = match.Groups["package"].Value,
                 DocumentType = match.Groups["docType"].Value,
-                Size = DetermineDrawingSize(filePath),
+                Size = knownSizes.TryGetValue(filePath, out var cachedSize) ? cachedSize : "A",
                 ProjectNumber = ProjectNumber,
                 ProjectName = ProjectName,
                 Discipline = Discipline,
@@ -677,6 +739,8 @@ public class ProjectManager : INotifyPropertyChanged
             .ToList();
         IssueDates.AddRange(uniqueDatesFromDocs);
 
+        PerfLog.Event("ProjectManager.Documents.Count", 0, Documents.Count);
+
         SaveProjectData();
 
         return importResult;
@@ -684,6 +748,7 @@ public class ProjectManager : INotifyPropertyChanged
 
     public void SaveProjectData()
     {
+        using var _perf = PerfLog.Begin("ProjectManager.SaveProjectData");
         if (string.IsNullOrEmpty(_currentBasePath) || _currentStorage == null) return;
 
         // Save static project info to separate file (project_info.json)
