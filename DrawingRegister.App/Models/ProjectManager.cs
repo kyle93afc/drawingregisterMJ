@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using System.Threading;
 using DrawingRegister.App.Helpers;
+using DrawingRegister.App.Services;
 
 namespace DrawingRegister.App.Models;
 
@@ -505,6 +506,84 @@ public class ProjectManager : INotifyPropertyChanged
             var sanitizedFileName = Regex.Replace(fileName, @"-{2,}", "-");
             sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
 
+            // SER Document Register files (DocReg-<projectNo>-<yyyyMMdd>.pdf) — short-circuit
+            // before the drawing regex. The SER process in Scotland requires this exact filename
+            // format; see docs/superpowers/specs/2026-04-24-docreg-document-support-design.md.
+            if (DocRegFilenameParser.TryParse(sanitizedFileName, out var docRegMatch))
+            {
+                if (docRegMatch.ProjectNumber != ProjectNumber)
+                {
+                    importResult.SkippedFiles.Add(new SkippedFileInfo
+                    {
+                        FileName = fileName,
+                        FilePath = filePath,
+                        Reason = $"Project number mismatch (expected {ProjectNumber}, found {docRegMatch.ProjectNumber})"
+                    });
+                    continue;
+                }
+
+                var docRegNumber = fileName; // DocumentNumber = full base filename (see spec)
+                var docRegPurpose = DeterminePurpose(filePath);
+                var docRegMethod = DetermineMethodOfIssue(filePath);
+                var docRegIssuedBy = DetermineIssuedBy(filePath);
+
+                var docRegMetadata = new DocumentMetadata
+                {
+                    DocumentNumber = docRegNumber,
+                    Description = "Document Register",
+                    Package = string.Empty,
+                    DocumentType = "DOCREG",
+                    Size = knownSizes.TryGetValue(filePath, out var docRegCachedSize) ? docRegCachedSize : "A",
+                    ProjectNumber = ProjectNumber,
+                    ProjectName = ProjectName,
+                    Discipline = string.Empty,
+                    RegisterNumber = RegisterNumber,
+                    ClientNumber = ClientNumber,
+                    PurposeOfIssue = docRegPurpose,
+                    MethodOfIssue = docRegMethod,
+                    IssuedBy = docRegIssuedBy
+                };
+
+                var docRegRevInfo = new RevisionInfo
+                {
+                    Revision = "-",
+                    Purpose = docRegPurpose,
+                    Method = docRegMethod,
+                    IssuedBy = docRegIssuedBy,
+                    IsDistributed = true,
+                    FilePath = filePath
+                };
+
+                var docRegParentFolder = Path.GetDirectoryName(filePath);
+                var docRegFolderHash = docRegParentFolder?.GetHashCode() ?? 0;
+                var docRegUniqueTicks = Math.Abs(docRegFolderHash) % TimeSpan.TicksPerDay;
+                var docRegRevisionKey = issueDate.Date.AddTicks(docRegUniqueTicks);
+
+                var existingDocReg = Documents.FirstOrDefault(d => d.DocumentNumber == docRegMetadata.DocumentNumber);
+                if (existingDocReg != null)
+                {
+                    if (!existingDocReg.RevisionHistory.ContainsKey(docRegRevisionKey))
+                    {
+                        existingDocReg.RevisionHistory[docRegRevisionKey] = docRegRevInfo;
+                    }
+
+                    var docRegLatest = existingDocReg.RevisionHistory.OrderByDescending(kv => kv.Key).First();
+                    existingDocReg.FilePath = docRegLatest.Value.FilePath;
+                    existingDocReg.PurposeOfIssue = docRegLatest.Value.Purpose;
+                    existingDocReg.MethodOfIssue = docRegLatest.Value.Method;
+                    existingDocReg.IssuedBy = docRegLatest.Value.IssuedBy;
+                }
+                else
+                {
+                    docRegMetadata.RevisionHistory[docRegRevisionKey] = docRegRevInfo;
+                    docRegMetadata.FilePath = filePath;
+                    Documents.Add(docRegMetadata);
+                }
+
+                importResult.SuccessfullyParsed++;
+                continue;
+            }
+
             // Updated regex pattern to better handle drawing numbers and revisions
             var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+)(?=[_\s-]|$))?(?:-\s*(?<revision>[A-Z]\d{2}|\d+[A-Z]|[A-Z]|\d+)(?=[_\s-]|$))?(?:[_\s-]\s*(?<description>.+))?$");
             var match = regex.Match(sanitizedFileName);
@@ -913,6 +992,7 @@ public class ProjectManager : INotifyPropertyChanged
             case "DR": return "DRAWING";
             case "SK": return "SKETCH";
             case "SP": return "SPECIFICATION";
+            case "DOCREG": return "DOCUMENT REGISTER";
             default: return type;
         }
     }
