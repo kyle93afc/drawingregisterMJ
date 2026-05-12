@@ -41,6 +41,7 @@ public class DocumentStorageInfo
     public string Package { get; set; } = string.Empty;
     public string DocumentType { get; set; } = string.Empty;
     public string Size { get; set; } = string.Empty;
+    public string ProjectNumber { get; set; } = string.Empty;
     public string FilePath { get; set; } = string.Empty;
     public Dictionary<DateTime, RevisionStorageInfo> RevisionHistory { get; set; } = new();
     public Dictionary<DateTime, List<string>> DistributionCompanyIds { get; set; } = new();

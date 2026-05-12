@@ -236,7 +236,7 @@ public class ProjectManager : INotifyPropertyChanged
                         Package = docStorageInfo.Package,
                         DocumentType = docStorageInfo.DocumentType,
                         Size = docStorageInfo.Size,
-                        ProjectNumber = this.ProjectNumber, // Use current ProjectManager's properties
+                        ProjectNumber = string.IsNullOrEmpty(docStorageInfo.ProjectNumber) ? this.ProjectNumber : docStorageInfo.ProjectNumber,
                         ProjectName = this.ProjectName,
                         Discipline = this.Discipline,
                         RegisterNumber = this.RegisterNumber,
@@ -423,27 +423,34 @@ public class ProjectManager : INotifyPropertyChanged
         }
         PerfLog.Event("ProjectManager.PdfPig.CacheHits", 0, cacheHits);
 
-        // Try to detect project number from the first valid PDF name
-        string? detectedProjectNo = null;
-        foreach (var pdf in pdfFiles)
-        {
-            var fileName = Path.GetFileNameWithoutExtension(pdf);
-            var regex = new Regex(@"^(?<projectNo>\d{5,6})-");
-            var match = regex.Match(fileName);
-            if (match.Success)
+        var detectedProjectNumbers = pdfFiles
+            .Select(pdf => new
             {
-                detectedProjectNo = match.Groups["projectNo"].Value;
-                break;
-            }
-        }
+                FilePath = pdf,
+                ProjectNumber = TryGetProjectNumberFromFileName(Path.GetFileNameWithoutExtension(pdf), out var projectNumber)
+                    ? projectNumber
+                    : string.Empty
+            })
+            .Where(item => !string.IsNullOrEmpty(item.ProjectNumber))
+            .ToList();
+
+        string? detectedProjectNo = detectedProjectNumbers.FirstOrDefault()?.ProjectNumber;
 
         if (string.IsNullOrEmpty(this.ProjectNumber) && !string.IsNullOrEmpty(detectedProjectNo))
         {
             ProjectNumber = detectedProjectNo;
         }
-        else if (!string.IsNullOrEmpty(detectedProjectNo) && ProjectNumber != detectedProjectNo)
+        else if (!string.IsNullOrEmpty(ProjectNumber) && detectedProjectNumbers.Any())
         {
-            throw new Exception($"Project number mismatch. Storage has {ProjectNumber} but found {detectedProjectNo} in PDF files.");
+            var hasMatchingProjectNumber = detectedProjectNumbers.Any(item => item.ProjectNumber == ProjectNumber);
+            var firstDisallowedMismatch = detectedProjectNumbers.FirstOrDefault(item =>
+                item.ProjectNumber != ProjectNumber &&
+                !IsSerProjectNumberExceptionPath(item.FilePath));
+
+            if (!hasMatchingProjectNumber && firstDisallowedMismatch != null)
+            {
+                throw new Exception($"Project number mismatch. Storage has {ProjectNumber} but found {firstDisallowedMismatch.ProjectNumber} in PDF files.");
+            }
         }
         var allIssueDates = dateDirectories
             .Select(dir => 
@@ -505,13 +512,14 @@ public class ProjectManager : INotifyPropertyChanged
             // Sanitize: collapse multiple consecutive hyphens to single, trim spaces around hyphens
             var sanitizedFileName = Regex.Replace(fileName, @"-{2,}", "-");
             sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
+            var allowSerProjectNumberMismatch = IsSerProjectNumberExceptionPath(filePath);
 
             // SER Document Register files (DocReg-<projectNo>-<yyyyMMdd>.pdf) — short-circuit
             // before the drawing regex. The SER process in Scotland requires this exact filename
             // format; see docs/superpowers/specs/2026-04-24-docreg-document-support-design.md.
             if (DocRegFilenameParser.TryParse(sanitizedFileName, out var docRegMatch))
             {
-                if (docRegMatch.ProjectNumber != ProjectNumber)
+                if (docRegMatch.ProjectNumber != ProjectNumber && !allowSerProjectNumberMismatch)
                 {
                     importResult.SkippedFiles.Add(new SkippedFileInfo
                     {
@@ -534,7 +542,7 @@ public class ProjectManager : INotifyPropertyChanged
                     Package = string.Empty,
                     DocumentType = "DOCREG",
                     Size = knownSizes.TryGetValue(filePath, out var docRegCachedSize) ? docRegCachedSize : "A",
-                    ProjectNumber = ProjectNumber,
+                    ProjectNumber = docRegMatch.ProjectNumber,
                     ProjectName = ProjectName,
                     Discipline = string.Empty,
                     RegisterNumber = RegisterNumber,
@@ -601,7 +609,7 @@ public class ProjectManager : INotifyPropertyChanged
 
             // Verify project number matches
             var fileProjectNo = match.Groups["projectNo"].Value;
-            if (fileProjectNo != ProjectNumber)
+            if (fileProjectNo != ProjectNumber && !allowSerProjectNumberMismatch)
             {
                 importResult.SkippedFiles.Add(new SkippedFileInfo
                 {
@@ -673,7 +681,7 @@ public class ProjectManager : INotifyPropertyChanged
                 Package = match.Groups["package"].Value,
                 DocumentType = match.Groups["docType"].Value,
                 Size = knownSizes.TryGetValue(filePath, out var cachedSize) ? cachedSize : "A",
-                ProjectNumber = ProjectNumber,
+                ProjectNumber = fileProjectNo,
                 ProjectName = ProjectName,
                 Discipline = Discipline,
                 RegisterNumber = RegisterNumber,
@@ -825,6 +833,38 @@ public class ProjectManager : INotifyPropertyChanged
         return importResult;
     }
 
+    private static bool TryGetProjectNumberFromFileName(string fileName, out string projectNumber)
+    {
+        var sanitizedFileName = Regex.Replace(fileName, @"-{2,}", "-");
+        sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
+
+        if (DocRegFilenameParser.TryParse(sanitizedFileName, out var docRegMatch))
+        {
+            projectNumber = docRegMatch.ProjectNumber;
+            return true;
+        }
+
+        var match = Regex.Match(sanitizedFileName, @"^(?<projectNo>\d{5,6})-");
+        if (match.Success)
+        {
+            projectNumber = match.Groups["projectNo"].Value;
+            return true;
+        }
+
+        projectNumber = string.Empty;
+        return false;
+    }
+
+    private static bool IsSerProjectNumberExceptionPath(string filePath)
+    {
+        var pathParts = filePath.Split(
+            new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
+
+        return pathParts.Any(part =>
+            Regex.IsMatch(part, @"(^|[^A-Z0-9])SER([^A-Z0-9]|$)", RegexOptions.IgnoreCase));
+    }
+
     public void SaveProjectData()
     {
         using var _perf = PerfLog.Begin("ProjectManager.SaveProjectData");
@@ -853,6 +893,7 @@ public class ProjectManager : INotifyPropertyChanged
             Package = d.Package,
             DocumentType = d.DocumentType,
             Size = d.Size,
+            ProjectNumber = d.ProjectNumber,
             // Ensure FilePath on the main DocumentStorageInfo is also the latest
             FilePath = d.RevisionHistory.Any() ? d.RevisionHistory.OrderByDescending(kv => kv.Key).First().Value.FilePath : string.Empty,
             RevisionHistory = d.RevisionHistory.ToDictionary(

@@ -102,6 +102,49 @@ public sealed class ProjectManagerDocRegImportTests : IDisposable
         Assert.Equal("DOCREG-124379-20260422", pm.Documents[0].DocumentNumber);
     }
 
+    [Fact]
+    public void ImportDocuments_accepts_mixed_project_numbers_in_SER_issue_folder()
+    {
+        PrimeProjectInfo("124400");
+        var dateFolder = Path.Combine(_basePath, "20260512-SER_DOC_REG");
+        Directory.CreateDirectory(dateFolder);
+
+        WriteMinimalA4Pdf(Path.Combine(dateFolder, "124400-M+J-V1-XX-DR-C-95-01-C01-SURFACING.pdf"));
+        WriteMinimalA4Pdf(Path.Combine(dateFolder, "16264-M+J-S1-XX-DR-A-00-02-C01-EXISTING SITE PLAN.pdf"));
+
+        var pm = new ProjectManager();
+        var result = pm.ImportDocuments(_basePath);
+
+        Assert.Equal(2, result.SuccessfullyParsed);
+        Assert.Empty(result.SkippedFiles);
+        Assert.Contains(pm.Documents, d =>
+            d.DocumentNumber == "124400-M+J-V1-XX-DR-C-95-01" &&
+            d.ProjectNumber == "124400");
+        Assert.Contains(pm.Documents, d =>
+            d.DocumentNumber == "16264-M+J-S1-XX-DR-A-00-02" &&
+            d.ProjectNumber == "16264");
+    }
+
+    [Fact]
+    public void ImportDocuments_skips_mixed_project_numbers_outside_SER_issue_folder()
+    {
+        PrimeProjectInfo("124400");
+        var dateFolder = Path.Combine(_basePath, "20260512-STRUCTURAL ISSUE");
+        Directory.CreateDirectory(dateFolder);
+
+        WriteMinimalA4Pdf(Path.Combine(dateFolder, "124400-M+J-V1-XX-DR-C-95-01-C01-SURFACING.pdf"));
+        WriteMinimalA4Pdf(Path.Combine(dateFolder, "16264-M+J-S1-XX-DR-A-00-02-C01-EXISTING SITE PLAN.pdf"));
+
+        var pm = new ProjectManager();
+        var result = pm.ImportDocuments(_basePath);
+
+        Assert.Equal(1, result.SuccessfullyParsed);
+        var skipped = Assert.Single(result.SkippedFiles);
+        Assert.Contains("Project number mismatch", skipped.Reason);
+        Assert.Contains("16264", skipped.Reason);
+        Assert.DoesNotContain(pm.Documents, d => d.DocumentNumber.StartsWith("16264-", StringComparison.Ordinal));
+    }
+
     /// <summary>
     /// <see cref="ProjectManager.ImportDocuments"/> reloads <see cref="ProjectInfo"/>
     /// from disk at the start of a full scan and overwrites <see cref="ProjectManager.ProjectNumber"/>
