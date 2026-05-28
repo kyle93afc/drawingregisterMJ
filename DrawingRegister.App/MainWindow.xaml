@@ -249,6 +249,19 @@
                 <!-- Bottom strip: All filters in a single compact row -->
                 <WrapPanel Margin="0,4,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                        <TextBlock Text="Report" Style="{StaticResource SectionLabel}" FontSize="11"/>
+                        <ComboBox x:Name="ReportModeCombo" Width="110" Height="26" FontSize="12">
+                            <ComboBoxItem Content="Transmittal" Tag="Transmittal"/>
+                            <ComboBoxItem Content="DocReg" Tag="DocReg"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                        <TextBlock Text="Report Date" Style="{StaticResource SectionLabel}" FontSize="11"/>
+                        <DatePicker x:Name="ReportDatePicker" Width="120" Height="26" FontSize="11"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                         <TextBlock Text="Issue Date" Style="{StaticResource SectionLabel}" FontSize="11"/>
                         <ComboBox x:Name="IssueDateFilter" Width="130" Height="26" FontSize="12" SelectionChanged="IssueDateFilter_SelectionChanged">
                             <ComboBoxItem Content="All Dates"/>

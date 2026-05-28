@@ -102,6 +102,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Initialize search type combo
         SearchTypeCombo.SelectedIndex = 0;
+        ReportModeCombo.SelectedIndex = 0;
+        ReportDatePicker.SelectedDate = DateTime.Today;
         PurposeOfIssueFilter.SelectedIndex = 0;
         MethodOfIssueFilter.SelectedIndex = 0;
 
@@ -1759,20 +1761,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Enable QuestPDF debugging to get more detailed error information
             QuestPDF.Settings.EnableDebugging = true;
 
-            // Determine if we're generating a transmittal (specific date) or full register
-            bool isTransmittal = IssueDateFilter.SelectedItem is ComboBoxItem selectedItem && 
-                                selectedItem.Content.ToString() != "All Dates";
+            var reportDate = GetSelectedReportDate();
+            var reportMode = GetSelectedPdfReportMode();
+            var reportIdentity = PdfReportIdentityBuilder.Create(
+                reportMode,
+                _project.ProjectNumber,
+                _project.RegisterNumber,
+                reportDate);
 
-            string selectedSubfolderPathForReport = null;
-            if (isTransmittal && SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
+            string? selectedSubfolderPathForReport = null;
+            if (reportIdentity.IsTransmittal && SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
             {
                 selectedSubfolderPathForReport = folderPathTag;
             }
 
-            string fileNamePrefix = isTransmittal 
-                ? $"Transmittal_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}" 
-                : $"Register_{_project.RegisterNumber}_{DateTime.Now:yyyyMMdd}";
-            if (isTransmittal && !string.IsNullOrEmpty(selectedSubfolderPathForReport))
+            string fileNamePrefix = reportIdentity.FileNamePrefix;
+            if (reportIdentity.IsTransmittal && !string.IsNullOrEmpty(selectedSubfolderPathForReport))
                 fileNamePrefix += $"_{new DirectoryInfo(selectedSubfolderPathForReport).Name.Replace(" ", "_")}";
 
             var saveDialog = new SaveFileDialog
@@ -1798,8 +1802,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                             page.DefaultTextStyle(x => x.FontSize(9));
 
                             // Use a single Element call for each section
-                            page.Header().Element(header => ComposeHeader(header, isTransmittal));
-                            page.Content().Element(content => ComposeContent(content, isTransmittal, selectedSubfolderPathForReport));
+                            page.Header().Element(header => ComposeHeader(header, reportIdentity));
+                            page.Content().Element(content => ComposeContent(content, reportMode, selectedSubfolderPathForReport));
                             
                             // Only add page numbers in the footer, no transmittal confirmation here
                             page.Footer().AlignCenter().Text(text =>
@@ -1840,17 +1844,46 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void ComposeHeader(IContainer container, bool isTransmittal = false)
+    private DateTime GetSelectedReportDate()
+    {
+        return ReportDatePicker.SelectedDate?.Date ?? DateTime.Today;
+    }
+
+    private PdfReportMode GetSelectedPdfReportMode()
+    {
+        if (ReportModeCombo.SelectedItem is ComboBoxItem modeItem &&
+            string.Equals(modeItem.Tag?.ToString(), "DocReg", StringComparison.OrdinalIgnoreCase))
+        {
+            return PdfReportMode.DocReg;
+        }
+
+        return HasSelectedIssueDate()
+            ? PdfReportMode.Transmittal
+            : PdfReportMode.Register;
+    }
+
+    private bool HasSelectedIssueDate()
+    {
+        return IssueDateFilter.SelectedItem is ComboBoxItem selectedItem &&
+            selectedItem.Content.ToString() != "All Dates";
+    }
+
+    private List<Models.DocumentMetadata> GetCurrentGridDocuments()
+    {
+        return (DocumentGrid.ItemsSource as IEnumerable<Models.DocumentMetadata>)?
+            .OrderBy(d => d.DocumentNumber)
+            .ToList()
+            ?? _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
+    }
+
+    private void ComposeHeader(IContainer container, PdfReportIdentity reportIdentity)
     {
         container.Padding(10).Column(column =>
         {
             // Title Row with logo
             column.Item().Row(row =>
             {
-                // Use appropriate title based on whether this is a transmittal or register
-                string title = isTransmittal ? "TRANSMITTAL" : "DOCUMENT AND DRAWING REGISTER";
-                
-                row.RelativeItem(3).Text(title)
+                row.RelativeItem(3).Text(reportIdentity.Title)
                     .FontSize(18)
                     .Bold()
                     .FontColor("#000000");
@@ -1923,7 +1956,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     rightCol.Item().Row(r =>
                     {
                         r.RelativeItem().AlignLeft().Text("REG NO:").Bold();
-                        r.RelativeItem(3).AlignLeft().Text((_project.RegisterNumber ?? "").ToUpper());
+                        r.RelativeItem(3).AlignLeft().Text(reportIdentity.HeaderRegisterNumber);
                     });
 
                     rightCol.Item().Row(r =>
@@ -1933,14 +1966,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     });
                     
                     // Add transmittal number if this is a transmittal
-                    if (isTransmittal)
+                    if (reportIdentity.IsTransmittal && !string.IsNullOrWhiteSpace(reportIdentity.TransmittalNumber))
                     {
                         rightCol.Item().Row(r =>
                         {
                             r.RelativeItem().AlignLeft().Text("TRANSMITTAL NO:").Bold();
-                            // Generate a transmittal number based on register number and date
-                            string transmittalNo = $"{_project.RegisterNumber}-T{DateTime.Now:yyMMdd}";
-                            r.RelativeItem(3).AlignLeft().Text(transmittalNo.ToUpper());
+                            r.RelativeItem(3).AlignLeft().Text(reportIdentity.TransmittalNumber.ToUpper());
                         });
                     }
                 });
@@ -1951,10 +1982,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         });
     }
 
-    private void ComposeContent(IContainer container, bool isTransmittal = false, string selectedSubfolderPathForReport = null)
+    private void ComposeContent(IContainer container, PdfReportMode reportMode, string? selectedSubfolderPathForReport = null)
     {
         container.Column(column =>
         {
+            var isTransmittal = reportMode == PdfReportMode.Transmittal;
+            var isDocReg = reportMode == PdfReportMode.DocReg;
+
             // Get documents to display - either all or filtered by date
             List<Models.DocumentMetadata> documentsToDisplay;
             DateTime? selectedDate = null;
@@ -1982,6 +2016,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     documentsToDisplay = documentsToDisplay.OrderBy(d => d.DocumentNumber).ToList();
                 }
                 else { documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList(); } // Fallback
+            }
+            else if (isDocReg)
+            {
+                documentsToDisplay = GetCurrentGridDocuments();
             }
             else
             {
@@ -2137,16 +2175,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     });
                 });
             }
-            else if (!isTransmittal)
-            {
-                // For full register, add a note about what a register is
-                column.Item().PaddingBottom(10).Background("#f5f5f5").Padding(5).Text(text =>
-                {
-                    text.Span("NOTE: ").Bold();
-                    text.Span(DrawingRegisterPdfReportBuilder.GetFullRegisterSummaryNote());
-                });
-            }
-
             // Add the main document table
             column.Item().Table(table =>
             {
@@ -2160,12 +2188,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     columns.RelativeColumn(0.6f);    // Size
                     columns.RelativeColumn(0.8f);    // Latest Rev
                     columns.RelativeColumn(1.2f);    // Latest Date
-
-                    if (!isTransmittal)
-                    {
-                        columns.RelativeColumn(3.2f);   // Revision Trail
-                        columns.RelativeColumn(1.4f);   // Status
-                    }
                 });
 
                 // Add header row with styling
@@ -2232,29 +2254,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                          .Padding(5)
                          .AlignCenter()
                          .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text(isTransmittal ? "LATEST DATE" : "LATEST ISSUE DATE");
+                         .Text("LATEST DATE");
                     });
-
-                    if (!isTransmittal)
-                    {
-                        header.Cell().Element(c =>
-                        {
-                            c.Background("#eb1845")
-                             .Padding(5)
-                             .AlignCenter()
-                             .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                             .Text("REVISION TRAIL");
-                        });
-
-                        header.Cell().Element(c =>
-                        {
-                            c.Background("#eb1845")
-                             .Padding(5)
-                             .AlignCenter()
-                             .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                             .Text("STATUS");
-                        });
-                    }
                 });
 
                 // Add data rows with alternating background
@@ -2400,24 +2401,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                              .AlignLeft()
                              .AlignMiddle()
                              .Text(row.LatestIssueDate?.ToString("dd/MM/yyyy") ?? "");
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.RevisionTrail.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.Status.ToUpper());
                         });
 
                         isAlternate = !isAlternate;

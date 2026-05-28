@@ -6,7 +6,27 @@ namespace DrawingRegister.App.Tests.Helpers;
 public sealed class DrawingRegisterPdfReportBuilderTests
 {
     [Fact]
-    public void BuildFullRegisterRows_formats_revision_trail_newest_first()
+    public void Full_register_rows_do_not_expose_revision_trail_or_status_columns()
+    {
+        var documents = new[]
+        {
+            CreateDocument(
+                "DR-000",
+                ("1", "Information", new DateTime(2026, 4, 1)))
+        };
+
+        var row = DrawingRegisterPdfReportBuilder.BuildFullRegisterRows(documents).Single();
+        var propertyNames = row.GetType().GetProperties().Select(property => property.Name).ToList();
+
+        Assert.DoesNotContain("RevisionTrail", propertyNames);
+        Assert.DoesNotContain("Status", propertyNames);
+        Assert.Null(typeof(DrawingRegisterPdfReportBuilder).GetMethod(
+            "GetFullRegisterSummaryNote",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic));
+    }
+
+    [Fact]
+    public void BuildFullRegisterRows_uses_latest_revision_and_issue_date()
     {
         var documents = new[]
         {
@@ -21,10 +41,6 @@ public sealed class DrawingRegisterPdfReportBuilderTests
 
         Assert.Equal("3", row.LatestRevision);
         Assert.Equal(new DateTime(2026, 4, 14), row.LatestIssueDate);
-        Assert.Equal(
-            string.Join(Environment.NewLine, "REV 3 - 14/04/2026", "REV 2 - 01/04/2026", "REV 1 - 12/03/2026"),
-            row.RevisionTrail);
-        Assert.Equal("Construction", row.Status);
     }
 
     [Fact]
@@ -41,11 +57,11 @@ public sealed class DrawingRegisterPdfReportBuilderTests
         var row = DrawingRegisterPdfReportBuilder.BuildFullRegisterRows(documents).Single();
 
         Assert.Equal("1", row.LatestRevision);
-        Assert.Equal("Construction", row.Status);
+        Assert.Equal(new DateTime(2026, 4, 14), row.LatestIssueDate);
     }
 
     [Fact]
-    public void BuildFullRegisterRows_uses_latest_purpose_as_status_when_same_revision_is_reissued()
+    public void BuildFullRegisterRows_uses_latest_issue_date_when_same_revision_is_reissued()
     {
         var documents = new[]
         {
@@ -57,11 +73,12 @@ public sealed class DrawingRegisterPdfReportBuilderTests
 
         var row = DrawingRegisterPdfReportBuilder.BuildFullRegisterRows(documents).Single();
 
-        Assert.Equal("Construction", row.Status);
+        Assert.Equal("C01", row.LatestRevision);
+        Assert.Equal(new DateTime(2026, 4, 14), row.LatestIssueDate);
     }
 
     [Fact]
-    public void BuildFullRegisterRows_preserves_missing_revision_codes_in_trail()
+    public void BuildFullRegisterRows_preserves_missing_revision_codes()
     {
         var documents = new[]
         {
@@ -72,32 +89,7 @@ public sealed class DrawingRegisterPdfReportBuilderTests
 
         var row = DrawingRegisterPdfReportBuilder.BuildFullRegisterRows(documents).Single();
 
-        Assert.Equal("Information", row.Status);
-        Assert.Equal("REV - - 14/04/2026", row.RevisionTrail);
-    }
-
-    [Fact]
-    public void BuildFullRegisterRows_expands_coded_purpose_to_full_status_name()
-    {
-        var documents = new[]
-        {
-            CreateDocument(
-                "DR-005",
-                ("1", "I", new DateTime(2026, 4, 14)))
-        };
-
-        var row = DrawingRegisterPdfReportBuilder.BuildFullRegisterRows(documents).Single();
-
-        Assert.Equal("Information", row.Status);
-    }
-
-    [Fact]
-    public void GetFullRegisterSummaryNote_mentions_revision_trail_order()
-    {
-        var note = DrawingRegisterPdfReportBuilder.GetFullRegisterSummaryNote();
-
-        Assert.Contains("newest to oldest", note);
-        Assert.Contains("REVISION TRAIL", note);
+        Assert.Equal("-", row.LatestRevision);
     }
 
     private static DocumentMetadata CreateDocument(string documentNumber, params (string Revision, string Purpose, DateTime Date)[] history)
