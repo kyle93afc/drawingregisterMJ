@@ -261,6 +261,10 @@ public class ProjectManager : INotifyPropertyChanged
                             Method = rev.Value.Method,
                             IssuedBy = rev.Value.IssuedBy,
                             IsDistributed = rev.Value.IsDistributed,
+                            IsSuperseded = rev.Value.IsSuperseded || string.Equals(
+                                rev.Value.Purpose,
+                                RevisionInfo.SupersededPurpose,
+                                StringComparison.OrdinalIgnoreCase),
                             FilePath = rev.Value.FilePath
                         };
                     }
@@ -922,6 +926,7 @@ public class ProjectManager : INotifyPropertyChanged
                     Method = kv.Value.Method,
                     IssuedBy = kv.Value.IssuedBy,
                     IsDistributed = kv.Value.IsDistributed,
+                    IsSuperseded = kv.Value.IsSuperseded,
                     FilePath = kv.Value.FilePath
                 }),
             DistributionCompanyIds = d.DistributionCompanyIds

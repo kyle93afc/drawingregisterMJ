@@ -14,11 +14,11 @@ public partial class CheckingWindow : Window
     {
         InitializeComponent();
         _project = project;
-        DataContext = project;
         FolderPathBox.Text = project._currentStorage?.CheckingFolderPath ?? string.Empty;
+        var liveCount = RefreshQueue();
         ScanStatus.Text = project.CheckPrints.Count == 0
             ? "Select a checking folder to begin."
-            : $"Loaded {project.CheckPrints.Count} saved check print(s).";
+            : $"Loaded {project.CheckPrints.Count} saved check print(s); {liveCount} live.";
     }
 
     private void SelectFolder_Click(object sender, RoutedEventArgs e)
@@ -52,7 +52,8 @@ public partial class CheckingWindow : Window
             _project.StoreCheckPrintInventory(folderPath, result);
 
             var flagged = result.Facts.Count(fact => fact.IsFlagged);
-            ScanStatus.Text = $"Scanned {result.Facts.Count} PDF(s); {flagged} flagged.";
+            var liveCount = RefreshQueue();
+            ScanStatus.Text = $"Scanned {result.Facts.Count} PDF(s); {flagged} flagged; {liveCount} live.";
         }
         catch (Exception ex)
         {
@@ -63,5 +64,12 @@ public partial class CheckingWindow : Window
         {
             ScanButton.IsEnabled = true;
         }
+    }
+
+    private int RefreshQueue()
+    {
+        var rows = CheckPrintRegisterJoin.BuildLiveQueue(_project.CheckPrints, _project.Documents);
+        CheckGrid.ItemsSource = rows;
+        return rows.Count;
     }
 }

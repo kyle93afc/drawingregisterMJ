@@ -57,5 +57,6 @@ public class RevisionStorageInfo
     public string Method { get; set; } = string.Empty;
     public string IssuedBy { get; set; } = string.Empty;
     public bool IsDistributed { get; set; }
+    public bool IsSuperseded { get; set; }
     public string FilePath { get; set; } = string.Empty;
 } 

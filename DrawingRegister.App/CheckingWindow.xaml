@@ -30,21 +30,21 @@
             </Grid>
         </Border>
 
-        <DataGrid Grid.Row="1" ItemsSource="{Binding CheckPrints}" AutoGenerateColumns="False"
+        <DataGrid x:Name="CheckGrid" Grid.Row="1" AutoGenerateColumns="False"
                   IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single">
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsFlagged}" Value="True">
+                        <DataTrigger Binding="{Binding CheckPrint.IsFlagged}" Value="True">
                             <Setter Property="Background" Value="#FFF4E5"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Document Code" Binding="{Binding DocumentCode}" Width="240"/>
-                <DataGridTextColumn Header="Revision" Binding="{Binding Revision}" Width="70"/>
-                <DataGridTextColumn Header="CP" Binding="{Binding Cp}" Width="50"/>
+                <DataGridTextColumn Header="Document Code" Binding="{Binding CheckPrint.DocumentCode}" Width="240"/>
+                <DataGridTextColumn Header="Revision" Binding="{Binding CheckPrint.Revision}" Width="70"/>
+                <DataGridTextColumn Header="CP" Binding="{Binding CheckPrint.Cp}" Width="50"/>
                 <DataGridTemplateColumn Header="Check Status" Width="220">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
@@ -52,31 +52,38 @@
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CheckStatus.AWC}">
+                                            <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.AWC}">
                                                 <Setter Property="Background" Value="#FFFFE08A"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CheckStatus.APPD}">
+                                            <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.APPD}">
                                                 <Setter Property="Background" Value="#FFCDECCF"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CheckStatus.UNKNOWN}">
+                                            <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.UNKNOWN}">
                                                 <Setter Property="Background" Value="#FFFFC56D"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding Status}" Value="{x:Static models:CheckStatus.CONFLICT}">
+                                            <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.CONFLICT}">
                                                 <Setter Property="Background" Value="#FFFFA8A8"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding CheckPrint.StatusText}" FontWeight="SemiBold"/>
                             </Border>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridCheckBoxColumn Header="Back-drafted" Binding="{Binding BackDrafted}" Width="95"/>
-                <DataGridTextColumn Header="Markup author*" Binding="{Binding StampAuthor}" Width="120"/>
-                <DataGridTextColumn Header="Markup date*" Binding="{Binding StampDateText}" Width="145"/>
-                <DataGridTextColumn Header="Flag" Binding="{Binding Issue}" Width="2*"/>
-                <DataGridTextColumn Header="File" Binding="{Binding FilePath}" Width="2*"/>
+                <DataGridCheckBoxColumn Header="Back-drafted" Binding="{Binding CheckPrint.BackDrafted}" Width="95"/>
+                <DataGridTextColumn Header="Markup author*" Binding="{Binding CheckPrint.StampAuthor}" Width="120"/>
+                <DataGridTextColumn Header="Markup date*" Binding="{Binding CheckPrint.StampDateText}" Width="145"/>
+                <DataGridCheckBoxColumn Header="Current" Binding="{Binding IsCurrent}" Width="65"/>
+                <DataGridTextColumn Header="Distribution" Binding="{Binding DistributionText}" Width="105"/>
+                <DataGridTextColumn Header="Issue date" Binding="{Binding IssueDate, StringFormat={}{0:yyyy-MM-dd}}" Width="90"/>
+                <DataGridTextColumn Header="Issued by" Binding="{Binding RegisterRevision.IssuedBy}" Width="80"/>
+                <DataGridTextColumn Header="Purpose" Binding="{Binding RegisterRevision.Purpose}" Width="110"/>
+                <DataGridTextColumn Header="Method" Binding="{Binding RegisterRevision.Method}" Width="90"/>
+                <DataGridTextColumn Header="Queue reason" Binding="{Binding QueueReason}" Width="220"/>
+                <DataGridTextColumn Header="Scan flag" Binding="{Binding CheckPrint.Issue}" Width="180"/>
+                <DataGridTextColumn Header="File" Binding="{Binding CheckPrint.FilePath}" Width="240"/>
             </DataGrid.Columns>
         </DataGrid>
 
