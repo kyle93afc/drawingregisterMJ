@@ -4,12 +4,16 @@
 
 **Blocked by:** 03: Derive check verdict and attribution.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Check prints join to register documents by document code and revision only at display time.
-- [ ] Current-revision decisions use the latest non-superseded revision by issue-date key, never lexical revision sorting.
-- [ ] The view shows distribution, issue date, issued by, purpose, and method when a matching revision exists.
-- [ ] An `APPD` check print leaves the live view only when its matching revision is distributed.
-- [ ] `AWC`, `UNKNOWN`, `CONFLICT`, unmatched, superseded, and approved-but-not-distributed rows remain visible with an explicit reason.
-- [ ] Scanning and viewing check state never writes to register document or revision data.
-- [ ] Tests cover current, superseded, unmatched, distributed, and approved-but-unissued revisions.
+- [x] Check prints join to register documents by document code and revision only at display time.
+- [x] Current-revision decisions use the latest non-superseded revision by issue-date key, never lexical revision sorting.
+- [x] The view shows distribution, issue date, issued by, purpose, and method when a matching revision exists.
+- [x] An `APPD` check print leaves the live view only when its matching revision is distributed.
+- [x] `AWC`, `UNKNOWN`, `CONFLICT`, unmatched, superseded, and approved-but-not-distributed rows remain visible with an explicit reason.
+- [x] Scanning and viewing check state never writes to register document or revision data.
+- [x] Tests cover current, superseded, unmatched, distributed, and approved-but-unissued revisions.
+
+## Answer
+
+Implemented in commit `74e6fc3`. The checking window now renders a read-only live queue joined to register issue state, and the full test suite passes with 87 tests.
