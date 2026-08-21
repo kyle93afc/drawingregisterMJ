@@ -15,6 +15,8 @@ public class ProjectStorage
     public DateTime LastProcessedDate { get; set; }
     public List<DocumentStorageInfo> Documents { get; set; } = new();
     public List<DrawingProject> Projects { get; set; } = new();
+    public string CheckingFolderPath { get; set; } = string.Empty;
+    public List<CheckPrint> CheckPrints { get; set; } = new();
 
     public static ProjectStorage Load(string filePath)
     {
@@ -26,9 +28,10 @@ public class ProjectStorage
         return new ProjectStorage();
     }
 
-    public void Save(string filePath)
+    public void Save(string filePath, bool updateProcessedDate = true)
     {
-        LastProcessedDate = DateTime.Now;
+        if (updateProcessedDate)
+            LastProcessedDate = DateTime.Now;
         var json = JsonSerializer.Serialize(this);
         File.WriteAllText(filePath, json);
     }

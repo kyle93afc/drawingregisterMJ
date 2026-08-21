@@ -2704,6 +2704,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void OpenChecking_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_project._currentBasePath) || _project._currentStorage == null)
+        {
+            MessageBox.Show("Load a project before opening check prints.", "Check Prints", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new CheckingWindow(_project) { Owner = this }.Show();
+    }
+
     private void About_Click(object sender, RoutedEventArgs e)
     {
         var aboutDialog = new AboutDialog();

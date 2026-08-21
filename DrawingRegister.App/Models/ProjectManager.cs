@@ -45,6 +45,7 @@ public class ProjectManager : INotifyPropertyChanged
     private RevisionScheme _revisionScheme = RevisionScheme.Legacy;
 
     public ObservableCollection<DocumentMetadata> Documents { get; } = new();
+    public ObservableCollection<CheckPrint> CheckPrints { get; } = new();
     public List<DateTime> IssueDates { get; } = new();
 
     public ProjectStorage? _currentStorage;
@@ -160,6 +161,13 @@ public class ProjectManager : INotifyPropertyChanged
         if (_currentStorage == null)
         {
             _currentStorage = new ProjectStorage { BaseFolderPath = folderPath, Projects = new List<DrawingProject>() };
+        }
+
+        if (!isSpecificRescan)
+        {
+            CheckPrints.Clear();
+            foreach (var checkPrint in _currentStorage.CheckPrints ?? new List<CheckPrint>())
+                CheckPrints.Add(checkPrint);
         }
 
         // Build the paper-size cache from the ORIGINAL storage before the
@@ -857,6 +865,22 @@ public class ProjectManager : INotifyPropertyChanged
             Regex.IsMatch(part, @"(^|[^A-Z0-9])SER([^A-Z0-9]|$)", RegexOptions.IgnoreCase));
     }
 
+    public void StoreCheckPrintInventory(string folderPath, ApplyResult result)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folderPath);
+        ArgumentNullException.ThrowIfNull(result);
+        if (string.IsNullOrEmpty(_currentBasePath) || _currentStorage == null)
+            throw new InvalidOperationException("Load a project before scanning check prints.");
+
+        CheckPrints.Clear();
+        foreach (var fact in result.Facts)
+            CheckPrints.Add(fact);
+
+        _currentStorage.CheckingFolderPath = folderPath;
+        _currentStorage.CheckPrints = CheckPrints.ToList();
+        _currentStorage.Save(Path.Combine(_currentBasePath, STORAGE_FILENAME), updateProcessedDate: false);
+    }
+
     public void SaveProjectData()
     {
         using var _perf = PerfLog.Begin("ProjectManager.SaveProjectData");
@@ -878,6 +902,7 @@ public class ProjectManager : INotifyPropertyChanged
         _currentStorage.LastScanDate = DateTime.Now;
         _currentStorage.LastProcessedDate = DateTime.Now;
 
+        _currentStorage.CheckPrints = CheckPrints.ToList();
         _currentStorage.Documents = Documents.Select(d => new DocumentStorageInfo
         {
             DocumentNumber = d.DocumentNumber,

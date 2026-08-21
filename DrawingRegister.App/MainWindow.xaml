@@ -195,6 +195,7 @@
                         <!-- Edit Group -->
                         <Button Content="Batch Edit" Click="BatchEdit_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Button Content="Distribution" Click="ManageDistribution_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Button Content="Check Prints" Click="OpenChecking_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
                         <!-- Export Group -->
