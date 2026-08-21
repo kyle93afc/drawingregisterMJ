@@ -9,7 +9,9 @@ publish/
 
 # Documentation and templates
 xnotes/
-docs/
+docs/*
+!docs/agents/
+!docs/agents/*.md
 
 # Windows Zone.Identifier metadata streams
 *Zone.Identifier

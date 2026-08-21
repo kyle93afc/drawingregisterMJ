@@ -190,3 +190,17 @@ Run through this top to bottom — do not skip steps, do not reorder.
 
 - The canonical release procedure is Section 6 of this file. If `CLAUDE.md` or `RELEASE_INSTRUCTIONS.md` ever disagree with it, this file wins and the others should be updated to match.
 - If you encounter an unexpected repo state (detached HEAD, uncommitted changes you didn't make, a tag pointing at the wrong commit), **stop and ask the user** instead of trying to clean it up automatically.
+
+## 9. Agent skills
+
+### Issue tracker
+
+Issues are tracked as markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the five default canonical role names. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
