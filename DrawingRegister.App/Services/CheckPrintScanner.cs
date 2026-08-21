@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using DrawingRegister.App.Models;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Annotations;
+using UglyToad.PdfPig.Tokens;
+using UglyToad.PdfPig.Util;
 
 namespace DrawingRegister.App.Services;
 
@@ -51,14 +53,42 @@ public static partial class CheckPrintScanner
             entry.SourceHash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
 
             using var document = PdfDocument.Open(filePath);
-            var hasStamp = document.GetPages()
+            var stamps = document.GetPages()
                 .SelectMany(page => page.GetAnnotations())
-                .Any(annotation => annotation.Type == AnnotationType.Stamp);
+                .Where(annotation => annotation.Type == AnnotationType.Stamp)
+                .ToList();
 
-            if (hasStamp)
-                issues.Add("Stamp verdict analysis is not available in this scan.");
-            else
-                entry.Status = CheckStatus.FC;
+            var verdicts = stamps
+                .Select(GetVerdict)
+                .OfType<CheckStatus>()
+                .Distinct()
+                .ToList();
+
+            entry.Status = stamps.Count == 0
+                ? CheckStatus.FC
+                : verdicts.Count switch
+                {
+                    0 => CheckStatus.UNKNOWN,
+                    1 => verdicts[0],
+                    _ => CheckStatus.CONFLICT
+                };
+            entry.BackDrafted = stamps.Any(stamp =>
+                GetSubject(stamp).Equals("BACK DRAFTED", StringComparison.OrdinalIgnoreCase));
+
+            if (stamps.Count > 0)
+            {
+                var attribution = stamps
+                    .Select(stamp => new { Stamp = stamp, Date = GetStampDate(stamp) })
+                    .OrderByDescending(item => item.Date)
+                    .First();
+                entry.StampAuthor = NormalizeAuthor(GetString(attribution.Stamp, "T"));
+                entry.StampDate = attribution.Date;
+            }
+
+            if (entry.Status == CheckStatus.UNKNOWN)
+                issues.Add("Stamp annotations found, but no recognised verdict.");
+            else if (entry.Status == CheckStatus.CONFLICT)
+                issues.Add("Conflicting verdict stamps require review.");
         }
         catch (Exception ex)
         {
@@ -68,6 +98,37 @@ public static partial class CheckPrintScanner
         entry.Issue = string.Join(" ", issues);
         return entry;
     }
+
+    private static CheckStatus? GetVerdict(Annotation annotation)
+    {
+        var subject = GetSubject(annotation);
+        return subject switch
+        {
+            var value when value.Equals("Approved with Comments", StringComparison.OrdinalIgnoreCase) => CheckStatus.AWC,
+            var value when value.Equals("Approved", StringComparison.OrdinalIgnoreCase) => CheckStatus.APPD,
+            _ => null
+        };
+    }
+
+    private static string GetSubject(Annotation annotation) => GetString(annotation, "Subj");
+
+    private static string GetString(Annotation annotation, string key) =>
+        annotation.AnnotationDictionary.TryGet(NameToken.Create(key), out StringToken value)
+            ? value.Data.Trim()
+            : string.Empty;
+
+    private static DateTime? GetStampDate(Annotation annotation) =>
+        annotation.ModifiedDate is { } modifiedDate
+        && DateFormatHelper.TryParseDateTimeOffset(modifiedDate, out var date)
+            ? date.UtcDateTime
+            : null;
+
+    private static string NormalizeAuthor(string author) => author switch
+    {
+        var value when value.Equals("W.Bonfim", StringComparison.OrdinalIgnoreCase) => "W. Bonfim",
+        var value when value.Equals("h.mcarthur", StringComparison.OrdinalIgnoreCase) => "H. McArthur",
+        _ => author
+    };
 
     [GeneratedRegex(@"^CP[-_\s]?(?<cp>\d+)(?:[-_\s]|$)", RegexOptions.IgnoreCase)]
     private static partial Regex CheckPrintToken();

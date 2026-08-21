@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DrawingRegister.App\DrawingRegister.App.csproj" />
+    <Content Include="Fixtures\CheckPrints\*.pdf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

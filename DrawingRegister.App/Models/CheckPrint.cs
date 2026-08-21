@@ -28,9 +28,18 @@ public sealed class CheckPrint
     public bool IsFlagged => !string.IsNullOrEmpty(Issue);
 
     [JsonIgnore]
-    public string StatusText => Status == CheckStatus.FC
-        ? "FC — no stamp annotation found"
-        : Status?.ToString() ?? "Flagged";
+    public string StatusText => Status switch
+    {
+        CheckStatus.FC => "FC — no stamp annotation found",
+        CheckStatus.AWC => "AWC — approved with comments",
+        CheckStatus.APPD => "APPD — approved",
+        CheckStatus.UNKNOWN => "UNKNOWN — review required",
+        CheckStatus.CONFLICT => "CONFLICT — review required",
+        _ => "Flagged"
+    };
+
+    [JsonIgnore]
+    public string StampDateText => StampDate?.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? string.Empty;
 }
 
 public sealed record CheckPlan(IReadOnlyList<CheckPrint> Entries);
