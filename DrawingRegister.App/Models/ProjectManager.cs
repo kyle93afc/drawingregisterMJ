@@ -592,11 +592,7 @@ public class ProjectManager : INotifyPropertyChanged
                 continue;
             }
 
-            // Updated regex pattern to better handle drawing numbers and revisions
-            var regex = new Regex(@"^(?<projectNo>\d{5,6})-\s*(?<code1>[^-]+)-\s*(?<volume>[^-]+)-\s*(?<code2>[^-]+)-\s*(?<docType>[^-]+)-\s*(?<docDiscipline>[^-]+)-\s*(?<package>\d+)(?:-\s*(?<number>\d+)(?=[_\s-]|$))?(?:-\s*(?<revision>[A-Z]\d{2}|\d+[A-Z]|[A-Z]|\d+)(?=[_\s-]|$))?(?:[_\s-]\s*(?<description>.+))?$");
-            var match = regex.Match(sanitizedFileName);
-
-            if (!match.Success)
+            if (!DrawingFilenameParser.TryParse(sanitizedFileName, out var drawingIdentity))
             {
                 importResult.SkippedFiles.Add(new SkippedFileInfo
                 {
@@ -608,7 +604,7 @@ public class ProjectManager : INotifyPropertyChanged
             }
 
             // Verify project number matches
-            var fileProjectNo = match.Groups["projectNo"].Value;
+            var fileProjectNo = drawingIdentity.ProjectNumber;
             if (fileProjectNo != ProjectNumber && !allowSerProjectNumberMismatch)
             {
                 importResult.SkippedFiles.Add(new SkippedFileInfo
@@ -620,17 +616,13 @@ public class ProjectManager : INotifyPropertyChanged
                 continue;
             }
 
-            var documentNumber = $"{match.Groups["projectNo"].Value.Trim()}-{match.Groups["code1"].Value.Trim()}-{match.Groups["volume"].Value.Trim()}-{match.Groups["code2"].Value.Trim()}-{match.Groups["docType"].Value.Trim()}-{match.Groups["docDiscipline"].Value.Trim()}-{match.Groups["package"].Value.Trim()}";
-            if (match.Groups["number"].Success)
-            {
-                documentNumber += $"-{match.Groups["number"].Value.Trim()}";
-            }
+            var documentNumber = drawingIdentity.DocumentCode;
             
             // Get revision - if not in filename, try to detect from folder name
             string revision = "-";
-            if (match.Groups["revision"].Success)
+            if (!string.IsNullOrEmpty(drawingIdentity.Revision))
             {
-                revision = match.Groups["revision"].Value.Trim();
+                revision = drawingIdentity.Revision.Trim();
             }
             else
             {
@@ -662,9 +654,9 @@ public class ProjectManager : INotifyPropertyChanged
 
             // Get description - remove the revision letter if it's at the end
             string description = "";
-            if (match.Groups["description"].Success)
+            if (!string.IsNullOrEmpty(drawingIdentity.Description))
             {
-                description = match.Groups["description"].Value
+                description = drawingIdentity.Description
                     .Replace("-", " ")
                     .Replace("_", " ")
                     .Trim();
@@ -678,8 +670,8 @@ public class ProjectManager : INotifyPropertyChanged
             {
                 DocumentNumber = documentNumber,
                 Description = description,
-                Package = match.Groups["package"].Value,
-                DocumentType = match.Groups["docType"].Value,
+                Package = drawingIdentity.Package,
+                DocumentType = drawingIdentity.DocumentType,
                 Size = knownSizes.TryGetValue(filePath, out var cachedSize) ? cachedSize : "A",
                 ProjectNumber = fileProjectNo,
                 ProjectName = ProjectName,
