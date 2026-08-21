@@ -68,6 +68,48 @@ public partial class CheckingWindow : Window
         }
     }
 
+    private void CheckGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (CheckGrid.SelectedItem is not CheckPrintQueueRow row)
+            return;
+
+        DocumentCodeBox.Text = row.CheckPrint.DocumentCode;
+        RevisionBox.Text = row.CheckPrint.Revision;
+    }
+
+    private async void ReserveCp_Click(object sender, RoutedEventArgs e)
+    {
+        var documentCode = DocumentCodeBox.Text.Trim();
+        var revision = RevisionBox.Text.Trim();
+        if (string.IsNullOrEmpty(documentCode) || string.IsNullOrEmpty(revision))
+        {
+            MessageBox.Show("Enter a document code and revision first.", "Check Prints", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        ReserveButton.IsEnabled = false;
+        ScanStatus.Text = "Reserving the next CP number…";
+        try
+        {
+            var reservation = await Task.Run(() =>
+                CheckPrintAllocator.ReserveNext(_project._currentBasePath, documentCode, revision));
+            ScanStatus.Text = $"Reserved CP {reservation.Cp} for {reservation.DocumentCode} revision {reservation.Revision}.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"CP reservation failed: {ex.Message}\n\nNo CP number was reserved. Please try again.",
+                "Check Prints",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            ScanStatus.Text = "Reservation failed; please retry.";
+        }
+        finally
+        {
+            ReserveButton.IsEnabled = true;
+        }
+    }
+
     private void ExportCsv_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog
