@@ -4,12 +4,16 @@
 
 **Blocked by:** 02: Scan check prints into a separate checking inventory.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Applied stamp annotations are read from the PDF annotation structure rather than by searching raw PDF text.
-- [ ] No stamp yields `FC`; a non-verdict stamp yields `UNKNOWN`; approved-with-comments yields `AWC`; approved yields `APPD`; conflicting verdicts yield `CONFLICT`.
-- [ ] Back-drafted is derived independently and never replaces the verdict status.
-- [ ] `UNKNOWN` and `CONFLICT` remain non-mutating and clearly visible for human review.
-- [ ] Stamp author aliases are normalised at read time, while author and date are described as self-asserted workflow metadata.
-- [ ] `AWC` and `APPD` use unmistakably different text and styling in the checking window.
-- [ ] Tests cover every controlled and legacy stamp variant using approved real check-print fixtures, with synthetic PDFs limited to structural edge cases.
+- [x] Applied stamp annotations are read from the PDF annotation structure rather than by searching raw PDF text.
+- [x] No stamp yields `FC`; a non-verdict stamp yields `UNKNOWN`; approved-with-comments yields `AWC`; approved yields `APPD`; conflicting verdicts yield `CONFLICT`.
+- [x] Back-drafted is derived independently and never replaces the verdict status.
+- [x] `UNKNOWN` and `CONFLICT` remain non-mutating and clearly visible for human review.
+- [x] Stamp author aliases are normalised at read time, while author and date are described as self-asserted workflow metadata.
+- [x] `AWC` and `APPD` use unmistakably different text and styling in the checking window.
+- [x] Tests cover every controlled and legacy stamp variant using approved real check-print fixtures, with synthetic PDFs limited to structural edge cases.
+
+## Answer
+
+Implemented in commit `8a1ab97`. The scanner was also validated against all 321 PDFs in the approved checking folder, and the full test suite passes with 82 tests.
