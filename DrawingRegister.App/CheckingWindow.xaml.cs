@@ -2,6 +2,7 @@ using System.Windows;
 using DrawingRegister.App.Models;
 using DrawingRegister.App.Services;
 using FolderBrowserDialog = System.Windows.Forms.FolderBrowserDialog;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using MessageBox = System.Windows.MessageBox;
 
 namespace DrawingRegister.App;
@@ -9,6 +10,7 @@ namespace DrawingRegister.App;
 public partial class CheckingWindow : Window
 {
     private readonly ProjectManager _project;
+    private IReadOnlyList<CheckPrintQueueRow> _rows = [];
 
     public CheckingWindow(ProjectManager project)
     {
@@ -66,10 +68,34 @@ public partial class CheckingWindow : Window
         }
     }
 
+    private void ExportCsv_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export Check Print Status",
+            Filter = "CSV files (*.csv)|*.csv",
+            DefaultExt = ".csv",
+            AddExtension = true,
+            FileName = $"check-print-status-{DateTime.Today:yyyyMMdd}.csv"
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            CheckStatusReport.WriteCsv(_rows, dialog.FileName);
+            ScanStatus.Text = $"Exported {_rows.Count} row(s) to {dialog.FileName}.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"CSV export failed: {ex.Message}", "Check Prints", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private int RefreshQueue()
     {
-        var rows = CheckPrintRegisterJoin.BuildLiveQueue(_project.CheckPrints, _project.Documents);
-        CheckGrid.ItemsSource = rows;
-        return rows.Count;
+        _rows = CheckStatusReport.Render(new ApplyResult(_project.CheckPrints.ToList()), _project.Documents);
+        CheckGrid.ItemsSource = _rows;
+        return _rows.Count;
     }
 }

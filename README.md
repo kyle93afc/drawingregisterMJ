@@ -44,6 +44,22 @@ dotnet build
 dotnet run --project DrawingRegister.App
 ```
 
+## Scheduled check-print status report
+
+Run the headless report with the project folder, checking folder, and output CSV path:
+
+```powershell
+DrawingRegister.CheckPrintReport.exe "C:\Projects\17749" "C:\Projects\17749\Checking" "C:\Reports\17749-checks.csv"
+```
+
+From a source checkout, use:
+
+```powershell
+dotnet run --project DrawingRegister.CheckPrintReport -- "C:\Projects\17749" "C:\Projects\17749\Checking" "C:\Reports\17749-checks.csv"
+```
+
+For Windows Task Scheduler, set **Program/script** to the published `DrawingRegister.CheckPrintReport.exe` and **Add arguments** to the three quoted paths above. Exit code `0` means the CSV was written, `1` means the scan or export failed, and `2` means the arguments were invalid. The runner reads `project_data.json` and check-print PDFs without starting WPF or changing either input.
+
 ## License
 
 [Your License Here] 
