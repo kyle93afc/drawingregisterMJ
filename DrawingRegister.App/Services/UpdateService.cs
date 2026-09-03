@@ -34,7 +34,7 @@ public class UpdateService
 
     public UpdateService()
     {
-        var source = new GithubSource($"https://github.com/{GitHubOwner}/{GitHubRepo}", null, false);
+        var source = new SimpleWebSource($"https://github.com/{GitHubOwner}/{GitHubRepo}/releases/latest/download");
         _updateManager = new UpdateManager(source);
     }
 
