@@ -402,18 +402,19 @@ public class ProjectManager : INotifyPropertyChanged
             throw new Exception("No valid new date folders found. Folders should start with a date in format YYYYMMDD.");
         }
 
-        // Only get PDF files from date directories
+        // Only get PDF files from date directories (including any subdirectories within them)
         var pdfFiles = dateDirectories
-            .SelectMany(dir => Directory.GetFiles(dir, "*.pdf"))
+            .SelectMany(dir => Directory.GetFiles(dir, "*.pdf", SearchOption.AllDirectories))
             .ToList();
 
         importResult.TotalPdfFiles = pdfFiles.Count;
         Console.WriteLine($"\n=== PDF File Processing ===");
         Console.WriteLine($"Found {pdfFiles.Count} PDF files in date directories");
 
-        if (!isSpecificRescan && !pdfFiles.Any() && dateDirectories.Any()) // If there were date dirs but no PDFs in them (full scan)
+        if (!pdfFiles.Any())
         {
-            throw new Exception("No PDF files found in any of the processed date folders.");
+            Console.WriteLine("No PDF files found in any of the processed date folders.");
+            return importResult;
         }
 
         // Pre-compute paper sizes: knownSizes was populated from pre-purge storage
@@ -499,24 +500,25 @@ public class ProjectManager : INotifyPropertyChanged
             var fileInfo = new FileInfo(filePath);
             var fileName = Path.GetFileNameWithoutExtension(filePath);
 
-            // Get issue date from parent folder name or file date
+            // Get issue date from folder name (traverse up from file to find containing date folder)
             var parentFolder = Path.GetFileName(Path.GetDirectoryName(filePath));
-            var issueDate = DateTime.Now; // Default to now
-            
-            if (parentFolder != null)
+            var issueDate = DateTime.Now;
+            var foundDate = false;
+
+            var checkDir = new DirectoryInfo(Path.GetDirectoryName(filePath) ?? string.Empty);
+            while (checkDir != null && checkDir.FullName.Length >= folderPath.Length)
             {
-                var folderDatePart = parentFolder.Split(new[] { '_', ' ', '-' })[0];
-                if (!DateTime.TryParseExact(folderDatePart.Length >= 8 ? folderDatePart.Substring(0, 8) : folderDatePart, 
-                                          "yyyyMMdd", 
-                                          null, 
-                                          System.Globalization.DateTimeStyles.None, 
-                                          out issueDate))
+                var dirDateMatch = Regex.Match(checkDir.Name, @"(\d{8})");
+                if (dirDateMatch.Success && DateTime.TryParseExact(dirDateMatch.Groups[1].Value, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
                 {
-                    // If folder name doesn't have date, use file creation date
-                    issueDate = fileInfo.CreationTime;
+                    issueDate = parsedDate;
+                    foundDate = true;
+                    break;
                 }
+                checkDir = checkDir.Parent;
             }
-            else
+
+            if (!foundDate)
             {
                 issueDate = fileInfo.CreationTime;
             }

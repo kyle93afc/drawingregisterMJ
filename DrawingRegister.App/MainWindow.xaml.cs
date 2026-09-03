@@ -16,16 +16,9 @@ using Binding = System.Windows.Data.Binding;
 using System.Windows.Media;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
-using Microsoft.Win32;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
-using QuestPDF.Previewer;
 using Style = System.Windows.Style;
 using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
-using IContainer = QuestPDF.Infrastructure.IContainer;
-using Colors = QuestPDF.Helpers.Colors;
-using QuestPDF.Elements.Table;
+using DrawingRegister.App.Services;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using Microsoft.Web.WebView2.Core;
@@ -900,22 +893,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
             using var _perf = PerfLog.Begin($"ImportDocuments_Click({System.IO.Path.GetFileName(dialog.SelectedPath)})");
+            FolderProgressWindow? progressWindow = null;
             try
             {
                 // Open the progress window
-                var progressWindow = new FolderProgressWindow();
+                progressWindow = new FolderProgressWindow
+                {
+                    Owner = this
+                };
                 progressWindow.Show();
 
                 // Wire up the folder status callback
                 _project.OnFolderStatusUpdated = (folderName, status) =>
                 {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    Dispatcher.Invoke(() =>
                     {
-                        var existing = progressWindow.FolderStatuses.FirstOrDefault(fs => fs.FolderName == folderName);
-                        if (existing != null)
-                            existing.Status = status;
-                        else
-                            progressWindow.FolderStatuses.Add(new FolderStatusViewModel(folderName, status));
+                        if (progressWindow != null && progressWindow.IsLoaded)
+                        {
+                            var existing = progressWindow.FolderStatuses.FirstOrDefault(fs => fs.FolderName == folderName);
+                            if (existing != null)
+                                existing.Status = status;
+                            else
+                                progressWindow.FolderStatuses.Add(new FolderStatusViewModel(folderName, status));
+                        }
                     });
                 };
 
@@ -925,6 +925,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     var selectedPath = dialog.SelectedPath;
                     importResult = await Task.Run(() => _project.ImportDocuments(selectedPath));
                 }
+
+                _project.OnFolderStatusUpdated = null;
+                progressWindow.Close();
+                progressWindow = null;
+
                 InitializeDisciplineCombo();
                 InitializeRevisionSchemeCombo();
                 UpdateRegisterNumber();
@@ -932,7 +937,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 UpdateRevisionColumns();
                 FilterDocuments();
 
-                if (importResult.HasSkippedFiles)
+                var folderName = System.IO.Path.GetFileName(dialog.SelectedPath);
+                if (importResult.TotalPdfFiles == 0)
+                {
+                    MessageBox.Show($"No new PDF files were found in '{folderName}'.\n\nIf this folder has already been scanned, use 'Rescan Folder' on the toolbar to re-scan an existing date folder.",
+                        "Scan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else if (importResult.HasSkippedFiles)
                 {
                     var skippedList = importResult.SkippedFiles.Take(20)
                         .Select(f => $"  • {f.FileName}\n    Reason: {f.Reason}");
@@ -942,12 +953,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         message += $"\n\n... and {importResult.SkippedFiles.Count - 20} more.";
                     MessageBox.Show(message, "Import Warning - Skipped Files", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
+                else
+                {
+                    var message = $"Scan of '{folderName}' complete. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
+                    MessageBox.Show(message, "Scan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
 
                 HandleSuggestedRenames(importResult);
             }
             catch (Exception ex)
             {
+                progressWindow?.Close();
                 MessageBox.Show($"Error importing documents: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _project.OnFolderStatusUpdated = null;
+                progressWindow?.Close();
             }
         }
     }
@@ -1702,85 +1724,96 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         try
         {
-            // Initialize QuestPDF
-            QuestPDF.Settings.License = LicenseType.Community;
-            
-            // Enable QuestPDF debugging to get more detailed error information
-            QuestPDF.Settings.EnableDebugging = true;
-
-            var reportDate = GetSelectedReportDate();
+            var reportDate = DateTime.Today;
             var reportMode = GetSelectedPdfReportMode();
-            var reportIdentity = PdfReportIdentityBuilder.Create(
-                reportMode,
-                _project.ProjectNumber,
-                _project.RegisterNumber,
-                reportDate);
-
-            string? selectedSubfolderPathForReport = null;
-            if (reportIdentity.IsTransmittal && SubfolderFilterCombo.Visibility == Visibility.Visible && SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem && folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
+            DateTime? selectedIssueDate = null;
+            if (reportMode == RegisterReportMode.Transmittal &&
+                IssueDateFilter.SelectedItem is ComboBoxItem issueDateItem &&
+                DateTime.TryParseExact(issueDateItem.Content.ToString(), "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var parsedIssueDate))
             {
-                selectedSubfolderPathForReport = folderPathTag;
+                selectedIssueDate = parsedIssueDate;
             }
 
-            string fileNamePrefix = reportIdentity.FileNamePrefix;
-            if (reportIdentity.IsTransmittal && !string.IsNullOrEmpty(selectedSubfolderPathForReport))
-                fileNamePrefix += $"_{new DirectoryInfo(selectedSubfolderPathForReport).Name.Replace(" ", "_")}";
+            string? selectedSubfolderPath = null;
+            string? selectedSubfolderName = null;
+            if (reportMode == RegisterReportMode.Transmittal &&
+                SubfolderFilterCombo.Visibility == Visibility.Visible &&
+                SubfolderFilterCombo.SelectedItem is ComboBoxItem folderItem &&
+                folderItem.Tag is string folderPathTag && folderPathTag != "ALL")
+            {
+                selectedSubfolderPath = folderPathTag;
+                selectedSubfolderName = new DirectoryInfo(folderPathTag).Name;
+            }
+
+            var documents = reportMode == RegisterReportMode.DocReg
+                ? GetCurrentGridDocuments()
+                : _project.Documents.ToList();
+
+            string? distributionText = null;
+            if (reportMode == RegisterReportMode.Transmittal && selectedIssueDate.HasValue)
+            {
+                distributionText = GetDistributionTextForPdf(selectedIssueDate.Value, selectedSubfolderPath);
+            }
+
+            string? purpose = null;
+            if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem && purposeItem.Content.ToString() != "All")
+            {
+                purpose = purposeItem.Content.ToString();
+            }
+
+            string? method = null;
+            if (MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem && methodItem.Content.ToString() != "All")
+            {
+                method = methodItem.Content.ToString();
+            }
+
+            var request = new RegisterReportRequest(
+                Mode: reportMode,
+                ReportDate: reportDate,
+                ProjectNumber: _project.ProjectNumber,
+                ProjectName: _project.ProjectName,
+                Discipline: _project.Discipline,
+                RegisterNumber: _project.RegisterNumber,
+                ClientNumber: _project.ClientNumber,
+                Documents: documents,
+                SelectedIssueDate: selectedIssueDate,
+                SelectedSubfolderName: selectedSubfolderName,
+                SelectedSubfolderPath: selectedSubfolderPath,
+                DistributionText: distributionText,
+                PurposeOfIssue: purpose,
+                MethodOfIssue: method,
+                IssuedBy: IssuedByFilter?.Text);
 
             var saveDialog = new SaveFileDialog
             {
                 Filter = "PDF files (*.pdf)|*.pdf",
                 DefaultExt = "pdf",
-                FileName = fileNamePrefix
+                FileName = RegisterReportGenerator.GetSuggestedFileName(request)
             };
 
             if (saveDialog.ShowDialog() == true)
             {
                 try
                 {
-                    var outputPath = PdfReportFilePathResolver.GetWritablePath(saveDialog.FileName);
+                    var result = RegisterReportGenerator.Generate(request, saveDialog.FileName);
 
-                    // Create and save the document
-                    Document.Create(container =>
-                    {
-                        container.Page(page =>
-                        {
-                            page.Size(PageSizes.A4.Landscape());
-                            page.Margin(1, Unit.Centimetre);
-                            page.DefaultTextStyle(x => x.FontSize(9));
-
-                            // Use a single Element call for each section
-                            page.Header().Element(header => ComposeHeader(header, reportIdentity));
-                            page.Content().Element(content => ComposeContent(content, reportMode, selectedSubfolderPathForReport));
-                            
-                            // Only add page numbers in the footer, no transmittal confirmation here
-                            page.Footer().AlignCenter().Text(text =>
-                            {
-                                text.CurrentPageNumber();
-                                text.Span(" of ");
-                                text.TotalPages();
-                            });
-                        });
-                    })
-                    .GeneratePdf(outputPath);
-
-                    var saveMessage = outputPath == saveDialog.FileName
-                        ? $"PDF saved successfully to:\n{outputPath}"
-                        : $"The selected PDF was open in another program, so the report was saved as:\n{outputPath}";
+                    var saveMessage = result.ActualFilePath == saveDialog.FileName
+                        ? $"PDF saved successfully to:\n{result.ActualFilePath}"
+                        : $"The selected PDF was open in another program, so the report was saved as:\n{result.ActualFilePath}";
 
                     MessageBox.Show(saveMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    
-                    // Open the PDF after saving
+
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {
-                        FileName = outputPath,
+                        FileName = result.ActualFilePath,
                         UseShellExecute = true
                     });
                 }
                 catch (Exception docEx)
                 {
-                    MessageBox.Show($"Error generating PDF document: {docEx.Message}\n\nStack Trace:\n{docEx.StackTrace}", 
-                        "Document Error", 
-                        MessageBoxButton.OK, 
+                    MessageBox.Show($"Error generating PDF document: {docEx.Message}\n\nStack Trace:\n{docEx.StackTrace}",
+                        "Document Error",
+                        MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }
             }
@@ -1791,22 +1824,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private DateTime GetSelectedReportDate()
-    {
-        return DateTime.Today;
-    }
-
-    private PdfReportMode GetSelectedPdfReportMode()
+    private RegisterReportMode GetSelectedPdfReportMode()
     {
         if (ReportModeCombo.SelectedItem is ComboBoxItem modeItem &&
             string.Equals(modeItem.Tag?.ToString(), "DocReg", StringComparison.OrdinalIgnoreCase))
         {
-            return PdfReportMode.DocReg;
+            return RegisterReportMode.DocReg;
         }
 
         return HasSelectedIssueDate()
-            ? PdfReportMode.Transmittal
-            : PdfReportMode.Register;
+            ? RegisterReportMode.Transmittal
+            : RegisterReportMode.Register;
     }
 
     private bool HasSelectedIssueDate()
@@ -1821,590 +1849,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             .OrderBy(d => d.DocumentNumber)
             .ToList()
             ?? _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
-    }
-
-    private void ComposeHeader(IContainer container, PdfReportIdentity reportIdentity)
-    {
-        container.Padding(10).Column(column =>
-        {
-            // Title Row with logo
-            column.Item().Row(row =>
-            {
-                row.RelativeItem(3).Text(reportIdentity.Title)
-                    .FontSize(18)
-                    .Bold()
-                    .FontColor("#000000");
-
-                // Load logo with improved path resolution and error handling
-                try
-                {
-                    var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-                    using (var stream = assembly.GetManifestResourceStream("DrawingRegister.App.Resources.company-logo.png"))
-                    {
-                        if (stream != null)
-                        {
-                            row.RelativeItem().AlignRight().Height(35).Image(stream).FitHeight();
-                        }
-                        else
-                        {
-                            // Try alternate logo
-                            using (var altStream = assembly.GetManifestResourceStream("DrawingRegister.App.Resources.WHITE LOGO RED BACKGROUND.jpg"))
-                            {
-                                if (altStream != null)
-                                {
-                                    row.RelativeItem().AlignRight().Height(35).Image(altStream).FitHeight();
-                                }
-                                else
-                                {
-                                    System.Diagnostics.Debug.WriteLine("Could not load either logo resource");
-                                }
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"Error loading logo: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-                }
-            });
-
-            // Separator line
-            column.Item().PaddingTop(2).LineHorizontal(1).LineColor("#eb1845");
-
-            // Project Info section
-            column.Item().PaddingTop(2).Row(row =>
-            {
-                // Left side - Project info
-                row.RelativeItem(3).Column(leftCol =>
-                {
-                    leftCol.Item().Row(r =>
-                    {
-                        r.RelativeItem().AlignLeft().Text("DISCIPLINE:").Bold();
-                        r.RelativeItem(2).AlignLeft().Text((_project.Discipline ?? "").ToUpper());
-                    });
-
-                    leftCol.Item().Row(r =>
-                    {
-                        r.RelativeItem().AlignLeft().Text("PROJECT NO:").Bold();
-                        r.RelativeItem(2).AlignLeft().Text((_project.ProjectNumber ?? "").ToUpper());
-                    });
-
-                    leftCol.Item().Row(r =>
-                    {
-                        r.RelativeItem().AlignLeft().Text("PROJECT NAME:").Bold();
-                        r.RelativeItem(2).AlignLeft().Text((_project.ProjectName ?? "").ToUpper());
-                    });
-                });
-
-                // Right side - Registration info
-                row.RelativeItem(2).Column(rightCol =>
-                {
-                    rightCol.Item().Row(r =>
-                    {
-                        r.RelativeItem().AlignLeft().Text("REG NO:").Bold();
-                        r.RelativeItem(3).AlignLeft().Text(reportIdentity.HeaderRegisterNumber);
-                    });
-
-                    rightCol.Item().Row(r =>
-                    {
-                        r.RelativeItem().AlignLeft().Text("CLIENT NO:").Bold();
-                        r.RelativeItem(3).AlignLeft().Text((_project.ClientNumber ?? "").ToUpper());
-                    });
-                    
-                    // Add transmittal number if this is a transmittal
-                    if (reportIdentity.IsTransmittal && !string.IsNullOrWhiteSpace(reportIdentity.TransmittalNumber))
-                    {
-                        rightCol.Item().Row(r =>
-                        {
-                            r.RelativeItem().AlignLeft().Text("TRANSMITTAL NO:").Bold();
-                            r.RelativeItem(3).AlignLeft().Text(reportIdentity.TransmittalNumber.ToUpper());
-                        });
-                    }
-                });
-            });
-
-            // Bottom separator line
-            column.Item().PaddingTop(2).LineHorizontal(1).LineColor("#eb1845");
-        });
-    }
-
-    private void ComposeContent(IContainer container, PdfReportMode reportMode, string? selectedSubfolderPathForReport = null)
-    {
-        container.Column(column =>
-        {
-            var isTransmittal = reportMode == PdfReportMode.Transmittal;
-            var isDocReg = reportMode == PdfReportMode.DocReg;
-
-            // Get documents to display - either all or filtered by date
-            List<Models.DocumentMetadata> documentsToDisplay;
-            DateTime? selectedDate = null;
-            
-            if (isTransmittal && IssueDateFilter.SelectedItem is ComboBoxItem selectedItem)
-            {
-                if (DateTime.TryParseExact(selectedItem.Content.ToString(), "dd/MM/yyyy", null, 
-                    System.Globalization.DateTimeStyles.None, out var parsedDate))
-                {
-                    selectedDate = parsedDate;
-                    documentsToDisplay = _project.Documents
-                        .Where(d => d.RevisionHistory.Any(r => r.Key.Date == selectedDate.Value.Date))
-                        .ToList();
-
-                    if (!string.IsNullOrEmpty(selectedSubfolderPathForReport))
-                    {
-                        documentsToDisplay = documentsToDisplay
-                            .Where(d => d.RevisionHistory.Any(r => 
-                                r.Key.Date == selectedDate.Value.Date &&
-                                !string.IsNullOrEmpty(r.Value.FilePath) &&
-                                string.Equals(Path.GetDirectoryName(r.Value.FilePath), selectedSubfolderPathForReport, StringComparison.OrdinalIgnoreCase)
-                            ))
-                            .ToList();
-                    }
-                    documentsToDisplay = documentsToDisplay.OrderBy(d => d.DocumentNumber).ToList();
-                }
-                else { documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList(); } // Fallback
-            }
-            else if (isDocReg)
-            {
-                documentsToDisplay = GetCurrentGridDocuments();
-            }
-            else
-            {
-                documentsToDisplay = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
-            }
-            
-            var fullRegisterRows = isTransmittal
-                ? Array.Empty<DrawingRegisterPdfReportBuilder.DrawingRegisterPdfReportRow>()
-                : DrawingRegisterPdfReportBuilder.BuildFullRegisterRows(documentsToDisplay);
-
-            // Add transmittal-specific information section if this is a transmittal
-            if (isTransmittal && selectedDate.HasValue)
-            {
-                column.Item().PaddingBottom(10).Table(issueInfoTable =>
-                {
-                    // Define columns
-                    issueInfoTable.ColumnsDefinition(columns =>
-                    {
-                        columns.RelativeColumn(1);
-                        columns.RelativeColumn(8);
-                    });
-
-                    // Date of Issue row
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("");
-                    });
-                    
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .AlignRight()
-                         .Text("DATE OF ISSUE: " + selectedDate.Value.ToString("dd/MM/yyyy"));
-                    });
-                    
-                    // Distribution row
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff")
-                         .Padding(5)
-                         .AlignLeft()
-                         .Text(x => x.Span("DISTRIBUTION :").Bold());
-                    });
-                    
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff").Padding(5).Column(distributionColumn =>
-                        {
-                            // Get distribution text
-                            string distributionText = "NO RECIPIENTS SELECTED";
-                            if (selectedDate.HasValue)
-                            {
-                                distributionText = GetDistributionTextForPdf(selectedDate.Value, selectedSubfolderPathForReport).ToUpper();
-                            }
-                            
-                            // Split by lines and create a row for each category
-                            var distributionLines = distributionText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                            foreach (var line in distributionLines)
-                            {
-                                distributionColumn.Item().Text(line);
-                            }
-                        });
-                    });
-
-                    // Purpose of Issue row
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff")
-                         .Padding(5)
-                         .AlignLeft()
-                         .Text(x => x.Span("PURPOSE OF ISSUE :").Bold());
-                    });
-                    
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff").Padding(5).Table(purposeTable =>
-                        {
-                            purposeTable.ColumnsDefinition(columns =>
-                            {
-                                columns.RelativeColumn();
-                            });
-                            
-                            // Get the purpose from the UI
-                            string purpose = "NOT SPECIFIED";
-                            if (PurposeOfIssueFilter.SelectedItem is ComboBoxItem purposeItem && 
-                                purposeItem.Content.ToString() != "All")
-                            {
-                                purpose = purposeItem.Content.ToString().ToUpper();
-                            }
-                            
-                            purposeTable.Cell().Element(c => c.Text(purpose));
-                        });
-                    });
-
-                    // Method of Issue row
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff")
-                         .Padding(5)
-                         .AlignLeft()
-                         .Text(x => x.Span("METHOD OF ISSUE :").Bold());
-                    });
-                    
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff").Padding(5).Table(methodTable =>
-                        {
-                            methodTable.ColumnsDefinition(columns =>
-                            {
-                                columns.RelativeColumn();
-                            });
-                            
-                            // Get the method from the UI
-                            string method = "NOT SPECIFIED";
-                            if (MethodOfIssueFilter.SelectedItem is ComboBoxItem methodItem && 
-                                methodItem.Content.ToString() != "All")
-                            {
-                                method = methodItem.Content.ToString().ToUpper();
-                            }
-                            
-                            methodTable.Cell().Element(c => c.Text(method));
-                        });
-                    });
-
-                    // Issued By row
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff")
-                         .Padding(5)
-                         .AlignLeft()
-                         .Text(x => x.Span("ISSUED BY :").Bold());
-                    });
-                    
-                    issueInfoTable.Cell().Element(c =>
-                    {
-                        c.Background("#ffffff").Padding(5).Table(issuedByTable =>
-                        {
-                            issuedByTable.ColumnsDefinition(columns =>
-                            {
-                                columns.RelativeColumn();
-                            });
-                            
-                            string issuedByText = IssuedByFilter?.Text ?? "";
-                            issuedByTable.Cell().Element(c => c.AlignLeft().Text(issuedByText.ToUpper()));
-                        });
-                    });
-                });
-            }
-            // Add the main document table
-            column.Item().Table(table =>
-            {
-                // Define columns with better proportions
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(2.5f);    // Document No
-                    columns.RelativeColumn(3);       // Description
-                    columns.RelativeColumn(1);       // Package
-                    columns.RelativeColumn(0.8f);    // Type
-                    columns.RelativeColumn(0.6f);    // Size
-                    columns.RelativeColumn(0.8f);    // Latest Rev
-                    columns.RelativeColumn(1.2f);    // Latest Date
-                });
-
-                // Add header row with styling
-                table.Header(header =>
-                {
-                    // Create header cells with inline styling
-                    header.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("DOCUMENT NO");
-                    });
-                    
-                    header.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("DESCRIPTION");
-                    });
-                    
-                    header.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("PACKAGE");
-                    });
-                    
-                    header.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("TYPE");
-                    });
-                    
-                    header.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("SIZE");
-                    });
-                    
-                    header.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("LATEST REV");
-                    });
-                    
-                    header.Cell().Element(c =>
-                    {
-                        c.Background("#eb1845")
-                         .Padding(5)
-                         .AlignCenter()
-                         .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
-                         .Text("LATEST DATE");
-                    });
-                });
-
-                // Add data rows with alternating background
-                bool isAlternate = false;
-
-                if (isTransmittal)
-                {
-                    foreach (var doc in documentsToDisplay)
-                    {
-                        var latestRev = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                        var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(doc.DocumentNumber.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(doc.Description.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(doc.Package.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(doc.DocumentType.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(doc.Size.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text((latestRev.Value?.Revision ?? "").ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(latestRev.Key.ToString("yyyy-MM-dd"));
-                        });
-
-                        isAlternate = !isAlternate;
-                    }
-                }
-                else
-                {
-                    foreach (var row in fullRegisterRows)
-                    {
-                        var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.DocumentNumber.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.Description.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.Package.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.DocumentType.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.Size.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.LatestRevision.ToUpper());
-                        });
-
-                        table.Cell().Element(c =>
-                        {
-                            c.Background(rowColor)
-                             .Padding(5)
-                             .AlignLeft()
-                             .AlignMiddle()
-                             .Text(row.LatestIssueDate?.ToString("dd/MM/yyyy") ?? "");
-                        });
-
-                        isAlternate = !isAlternate;
-                    }
-                }
-            });
-            
-            // Add transmittal footer if this is a transmittal, but only on the last page
-            /*
-            if (isTransmittal)
-            {
-                column.Item().PageBreak();  // Force a page break before the confirmation
-                column.Item().PaddingTop(20).Row(row =>
-                {
-                    row.RelativeItem().Column(col =>
-                    {
-                        col.Item().Text("TRANSMITTAL CONFIRMATION").Bold();
-                        col.Item().PaddingTop(5).LineHorizontal(1);
-                        col.Item().PaddingTop(10).Text("RECEIVED BY: _______________________");
-                        col.Item().PaddingTop(10).Text("DATE: _______________________");
-                        col.Item().PaddingTop(10).Text("SIGNATURE: _______________________");
-                    });
-                    
-                    row.RelativeItem().Column(col =>
-                    {
-                        col.Item().Text("NOTES").Bold();
-                        col.Item().PaddingTop(5).LineHorizontal(1);
-                        col.Item().PaddingTop(5).Height(80).Border(1).BorderColor(Colors.Grey.Lighten2);
-                    });
-                });
-            }
-            */
-        });
-    }
-
-    private IContainer HeaderCell(IContainer container)
-    {
-        // Instead of returning the container, configure it directly
-        container.Background("#eb1845")
-            .Padding(5)
-            .Border(1)
-            .BorderColor("#d10835")
-            .AlignCenter()
-            .DefaultTextStyle(x => x.Bold().FontColor(Colors.White));
-            
-        // Return the container for method chaining
-        return container;
-    }
-
-    private void DataCell(IContainer container, string text, string backgroundColor)
-    {
-        // Configure the container directly
-        container.Background(backgroundColor)
-            .Padding(5)
-            .AlignLeft()
-            .AlignMiddle()
-            .Text(text);
     }
 
     private void IssuedByFilter_TextChanged(object sender, TextChangedEventArgs e)

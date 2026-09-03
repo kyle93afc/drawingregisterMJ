@@ -145,6 +145,43 @@ public sealed class ProjectManagerDocRegImportTests : IDisposable
         Assert.DoesNotContain(pm.Documents, d => d.DocumentNumber.StartsWith("16264-", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void ImportDocuments_finds_pdfs_in_nested_subfolders_and_assigns_date_from_containing_date_folder()
+    {
+        PrimeProjectInfo("124379");
+        var dateFolder = Path.Combine(_basePath, "20260424-WARRANT ISSUE");
+        var nestedFolder = Path.Combine(dateFolder, "Drawings", "Structural");
+        Directory.CreateDirectory(nestedFolder);
+
+        WriteMinimalA4Pdf(Path.Combine(nestedFolder, "124379-M+J-V1-XX-DR-S-16-01-T01-FOUNDATION PLAN.pdf"));
+
+        var pm = new ProjectManager();
+        var result = pm.ImportDocuments(_basePath);
+
+        Assert.Equal(1, result.SuccessfullyParsed);
+        Assert.Empty(result.SkippedFiles);
+
+        var doc = Assert.Single(pm.Documents);
+        Assert.Equal("124379-M+J-V1-XX-DR-S-16-01", doc.DocumentNumber);
+        var revisionEntry = Assert.Single(doc.RevisionHistory);
+        Assert.Equal(new DateTime(2026, 4, 24).Date, revisionEntry.Key.Date);
+    }
+
+    [Fact]
+    public void ImportDocuments_when_date_folders_have_no_pdfs_returns_empty_result_without_throwing()
+    {
+        PrimeProjectInfo("124379");
+        var dateFolder = Path.Combine(_basePath, "20260424-EMPTY ISSUE");
+        Directory.CreateDirectory(dateFolder);
+
+        var pm = new ProjectManager();
+        var result = pm.ImportDocuments(_basePath);
+
+        Assert.Equal(0, result.TotalPdfFiles);
+        Assert.Equal(0, result.SuccessfullyParsed);
+        Assert.Empty(pm.Documents);
+    }
+
     /// <summary>
     /// <see cref="ProjectManager.ImportDocuments"/> reloads <see cref="ProjectInfo"/>
     /// from disk at the start of a full scan and overwrites <see cref="ProjectManager.ProjectNumber"/>
