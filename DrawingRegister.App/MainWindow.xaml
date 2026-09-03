@@ -193,9 +193,8 @@
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
                         <!-- Edit Group -->
-                        <Button Content="Batch Edit" Click="BatchEdit_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Button Content="Distribution" Click="ManageDistribution_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
-                        <Button Content="Check Prints" Click="OpenChecking_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Button Content="Batch Edit" Click="BatchEdit_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
                         <!-- Export Group -->
@@ -208,6 +207,9 @@
                         <Button Content="Refresh" Click="RefreshView_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Button Content="Rescan Folder" Click="RescanFolder_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
+
+                        <!-- Review Group -->
+                        <Button Content="Check Prints" Click="OpenChecking_Click" Style="{StaticResource ToolbarButton}" Margin="2,0,4,0"/>
 
                         <!-- Preview Toggle -->
                         <ToggleButton x:Name="PreviewToggle" Content="Preview" Checked="PreviewToggle_Changed" Unchecked="PreviewToggle_Changed"
@@ -255,11 +257,6 @@
                             <ComboBoxItem Content="Transmittal" Tag="Transmittal"/>
                             <ComboBoxItem Content="DocReg" Tag="DocReg"/>
                         </ComboBox>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
-                        <TextBlock Text="Report Date" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                        <DatePicker x:Name="ReportDatePicker" Width="120" Height="26" FontSize="11"/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
@@ -343,17 +340,9 @@
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                         <TextBlock Text="Issued By" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                        <TextBox x:Name="IssuedByFilter" Width="60" Height="26" MaxLength="2" CharacterCasing="Upper" TextChanged="IssuedByFilter_TextChanged" FontSize="12"/>
-                    </StackPanel>
-
-                    <!-- Date Range -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,8,4">
-                        <TextBlock Text="Range" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                        <DatePicker x:Name="StartDatePicker" Width="120" Height="26" FontSize="11" Margin="0,0,4,0"/>
-                        <TextBlock Text="–" VerticalAlignment="Center" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,4,0" FontSize="11"/>
-                        <DatePicker x:Name="EndDatePicker" Width="120" Height="26" FontSize="11" Margin="0,0,4,0"/>
-                        <Button Content="Apply" Click="DateFilter_Click" Style="{StaticResource GhostButton}" Height="26" Padding="8,3" FontSize="11" Margin="0,0,2,0"/>
-                        <Button Content="Clear" Click="ClearDateFilter_Click" Style="{StaticResource ToolbarButton}" Height="26" Padding="8,3" FontSize="11"/>
+                        <TextBox x:Name="IssuedByFilter" Width="60" Height="26" MaxLength="2" CharacterCasing="Upper"
+                                 TextChanged="IssuedByFilter_TextChanged" FontSize="12"
+                                 Padding="4,1" VerticalContentAlignment="Center" TextAlignment="Center"/>
                     </StackPanel>
 
                     <Button Content="Save Issue Details" Click="SaveIssueDetails_Click" Height="26" Padding="10,3" FontSize="12"

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -103,7 +103,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Initialize search type combo
         SearchTypeCombo.SelectedIndex = 0;
         ReportModeCombo.SelectedIndex = 0;
-        ReportDatePicker.SelectedDate = DateTime.Today;
         PurposeOfIssueFilter.SelectedIndex = 0;
         MethodOfIssueFilter.SelectedIndex = 0;
 
@@ -986,8 +985,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
             // Clear all filters so user sees everything
             SearchBox.Text = "";
-            StartDatePicker.SelectedDate = null;
-            EndDatePicker.SelectedDate = null;
             if (IssueDateFilter.Items.Count > 0)
                 IssueDateFilter.SelectedIndex = 0; // "All Dates"
             if (PurposeOfIssueFilter.Items.Count > 0)
@@ -1621,56 +1618,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void DateFilter_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (StartDatePicker.SelectedDate == null || EndDatePicker.SelectedDate == null)
-            {
-                MessageBox.Show("Please select both start and end dates");
-                return;
-            }
-
-            var startDate = StartDatePicker.SelectedDate.Value.Date;
-            var endDate = EndDatePicker.SelectedDate.Value.Date;
-            
-            if (startDate > endDate)
-            {
-                MessageBox.Show("Start date cannot be after end date");
-                return;
-            }
-
-            // Filter documents that have revisions with exact issue dates in the range
-            var filteredDocuments = _project.Documents
-                .Where(d => d.RevisionHistory.Keys
-                    .Any(issueDate => issueDate.Date >= startDate && issueDate.Date <= endDate))
-                .OrderBy(d => d.DocumentNumber)
-                .ToList();
-
-            DocumentGrid.ItemsSource = filteredDocuments;
-            
-            // Show a message with the filter results
-            MessageBox.Show($"Showing {filteredDocuments.Count} documents issued between {startDate:dd/MM/yyyy} and {endDate:dd/MM/yyyy}", 
-                "Filter Applied", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Filter error: {ex.Message}");
-        }
-    }
-
-    private void ClearDateFilter_Click(object sender, RoutedEventArgs e)
-    {
-        StartDatePicker.SelectedDate = null;
-        EndDatePicker.SelectedDate = null;
-        
-        // Reset to show all documents
-        DocumentGrid.ItemsSource = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
-        
-        // Inform the user
-        MessageBox.Show("Date filter cleared. Showing all documents.", 
-            "Filter Cleared", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
 
     private void SaveIssueDetails_Click(object sender, RoutedEventArgs e)
     {
@@ -1846,7 +1793,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private DateTime GetSelectedReportDate()
     {
-        return ReportDatePicker.SelectedDate?.Date ?? DateTime.Today;
+        return DateTime.Today;
     }
 
     private PdfReportMode GetSelectedPdfReportMode()

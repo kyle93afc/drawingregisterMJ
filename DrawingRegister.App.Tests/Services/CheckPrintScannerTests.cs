@@ -41,6 +41,8 @@ public sealed class CheckPrintScannerTests : IDisposable
     [InlineData("legacy-approved-with-comments.pdf", CheckStatus.AWC, "AWC — approved with comments")]
     [InlineData("controlled-approved.pdf", CheckStatus.APPD, "APPD — approved")]
     [InlineData("legacy-approved.pdf", CheckStatus.APPD, "APPD — approved")]
+    [InlineData("checked.pdf", CheckStatus.AWC, "AWC — approved with comments")]
+    [InlineData("generic-stamp.pdf", CheckStatus.AWC, "AWC — approved with comments")]
     public void Plan_derives_controlled_and_legacy_verdict_stamps(string fixture, CheckStatus expected, string expectedText)
     {
         CopyFixture(fixture);
@@ -65,8 +67,6 @@ public sealed class CheckPrintScannerTests : IDisposable
     }
 
     [Theory]
-    [InlineData("generic-stamp.pdf", false)]
-    [InlineData("checked.pdf", false)]
     [InlineData("no-comments.pdf", false)]
     [InlineData("back-drafted.pdf", true)]
     public void Plan_keeps_non_verdict_stamps_visible_and_backdraft_independent(string fixture, bool backDrafted)
@@ -79,6 +79,51 @@ public sealed class CheckPrintScannerTests : IDisposable
         Assert.Equal("UNKNOWN — review required", fact.StatusText);
         Assert.Equal(backDrafted, fact.BackDrafted);
         Assert.True(fact.IsFlagged);
+    }
+
+    [Fact]
+    public void Plan_treats_architect_CHECKED_stamp_as_AWC()
+    {
+        WritePdfWithStamps(
+            Path.Combine(_folder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP01-PLAN.pdf"),
+            new StampAnnotation("CHECKED", "Steve Walker", "D:20260825113747Z"));
+
+        var fact = Assert.Single(CheckPrintScanner.Plan(_folder).Entries);
+
+        Assert.Equal(CheckStatus.AWC, fact.Status);
+        Assert.Equal("Steve Walker", fact.StampAuthor);
+        Assert.False(fact.IsFlagged);
+    }
+
+    [Fact]
+    public void Plan_lets_verdict_stamp_win_over_CHECKED()
+    {
+        WritePdfWithStamps(
+            Path.Combine(_folder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP01-PLAN.pdf"),
+            new StampAnnotation("CHECKED", "k.greig", "D:20260902155833Z"),
+            new StampAnnotation("Approved", "k.greig", "D:20260902155948Z"));
+
+        var fact = Assert.Single(CheckPrintScanner.Plan(_folder).Entries);
+
+        Assert.Equal(CheckStatus.APPD, fact.Status);
+        Assert.False(fact.IsFlagged);
+    }
+
+    [Theory]
+    [InlineData("Comments")]
+    [InlineData("Not Approved")]
+    [InlineData("Revise")]
+    public void Plan_treats_revise_style_stamps_as_COMMENTS(string subject)
+    {
+        WritePdfWithStamps(
+            Path.Combine(_folder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP01-PLAN.pdf"),
+            new StampAnnotation(subject, "Michael", "D:20260825113747Z"));
+
+        var fact = Assert.Single(CheckPrintScanner.Plan(_folder).Entries);
+
+        Assert.Equal(CheckStatus.COMMENTS, fact.Status);
+        Assert.Equal("COMMENTS — checked, technician action required", fact.StatusText);
+        Assert.False(fact.IsFlagged);
     }
 
     [Fact]
@@ -124,6 +169,39 @@ public sealed class CheckPrintScannerTests : IDisposable
         Assert.All(facts, fact => Assert.True(fact.IsFlagged));
         Assert.Contains(facts, fact => fact.Issue.Contains("filename", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(facts, fact => fact.Issue.Contains("PDF", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-GENERAL NOTES-CP01.pdf", "124997-M+J-S1-XX-DR-S-00-01", "T01", 1)]
+    [InlineData("124997-M+J-V1-XX-DR-S-20-01-P01-PROPOSED ROOF ALTERATIONS – GENERAL ARRANGEMENT SECTIONS & DETAILS-CP03.pdf", "124997-M+J-V1-XX-DR-S-20-01", "P01", 3)]
+    [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-GENERAL NOTES CP 2.pdf", "124997-M+J-S1-XX-DR-S-00-01", "T01", 2)]
+    [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-GENERAL NOTES_CP_04.pdf", "124997-M+J-S1-XX-DR-S-00-01", "T01", 4)]
+    [InlineData("124660-M+J-V1-XX-DR-A-01-02-1A-CP01-PLAN.pdf", "124660-M+J-V1-XX-DR-A-01-02", "1A", 1)]
+    public void Plan_reads_cp_token_before_or_after_description(string fileName, string documentCode, string revision, int cp)
+    {
+        WriteMinimalPdf(Path.Combine(_folder, fileName));
+
+        var fact = Assert.Single(CheckPrintScanner.Plan(_folder).Entries);
+
+        Assert.Equal(documentCode, fact.DocumentCode);
+        Assert.Equal(revision, fact.Revision);
+        Assert.Equal(cp, fact.Cp);
+        Assert.False(fact.IsFlagged);
+    }
+
+    [Theory]
+    [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-GENERAL NOTES.pdf")]
+    [InlineData("124997-M+J-S1-XX-DR-S-00-01-GENERAL NOTES-CP01.pdf")]
+    [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-SCOPE OF CP01 WORKS.pdf")]
+    public void Plan_warns_without_inventing_values_when_revision_or_cp_is_missing(string fileName)
+    {
+        WriteMinimalPdf(Path.Combine(_folder, fileName));
+
+        var fact = Assert.Single(CheckPrintScanner.Plan(_folder).Entries);
+
+        Assert.True(string.IsNullOrEmpty(fact.DocumentCode));
+        Assert.Equal(0, fact.Cp);
+        Assert.Equal("Filename does not match the check-print convention.", fact.Issue);
     }
 
     [Fact]

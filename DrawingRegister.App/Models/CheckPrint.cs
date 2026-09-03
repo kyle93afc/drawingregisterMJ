@@ -8,7 +8,8 @@ public enum CheckStatus
     AWC,
     APPD,
     UNKNOWN,
-    CONFLICT
+    CONFLICT,
+    COMMENTS // appended: Status is persisted as an int in project_data.json
 }
 
 public sealed class CheckPrint
@@ -33,6 +34,7 @@ public sealed class CheckPrint
         CheckStatus.FC => "FC — no stamp annotation found",
         CheckStatus.AWC => "AWC — approved with comments",
         CheckStatus.APPD => "APPD — approved",
+        CheckStatus.COMMENTS => "COMMENTS — checked, technician action required",
         CheckStatus.UNKNOWN => "UNKNOWN — review required",
         CheckStatus.CONFLICT => "CONFLICT — review required",
         _ => "Flagged"

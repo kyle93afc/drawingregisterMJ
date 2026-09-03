@@ -32,14 +32,15 @@ public sealed class CheckPrintRegisterJoinTests
     }
 
     [Fact]
-    public void BuildLiveQueue_removes_current_APPD_after_distribution()
+    public void BuildLiveQueue_keeps_current_APPD_after_distribution_with_reason()
     {
         var document = Document("DOC-01", "A", distributed: true);
         var check = new CheckPrint { DocumentCode = "DOC-01", Revision = "A", Status = CheckStatus.APPD };
 
-        var queue = CheckPrintRegisterJoin.BuildLiveQueue([check], [document]);
+        var row = Assert.Single(CheckPrintRegisterJoin.BuildLiveQueue([check], [document]));
 
-        Assert.Empty(queue);
+        Assert.True(row.IsCurrent);
+        Assert.Equal("Approved and distributed", row.QueueReason);
     }
 
     [Fact]

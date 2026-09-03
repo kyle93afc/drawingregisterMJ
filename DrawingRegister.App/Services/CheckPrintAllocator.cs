@@ -30,11 +30,12 @@ public static class CheckPrintAllocator
         documentCode = documentCode.Trim();
         revision = revision.Trim();
 
+        // CP numbers run per drawing across revisions (P01-CP01, T01-CP02, T01-CP03), so scope by document code only.
         var highestCp = (storage.CheckPrints ?? [])
-            .Where(check => IsSameScope(check.DocumentCode, check.Revision, documentCode, revision))
+            .Where(check => IsSameDrawing(check.DocumentCode, documentCode))
             .Select(check => check.Cp)
             .Concat(reservations
-                .Where(reservation => IsSameScope(reservation.DocumentCode, reservation.Revision, documentCode, revision))
+                .Where(reservation => IsSameDrawing(reservation.DocumentCode, documentCode))
                 .Select(reservation => reservation.Cp))
             .DefaultIfEmpty()
             .Max();
@@ -45,9 +46,8 @@ public static class CheckPrintAllocator
         return reservation;
     }
 
-    private static bool IsSameScope(string candidateCode, string candidateRevision, string documentCode, string revision) =>
-        string.Equals(candidateCode, documentCode, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(candidateRevision, revision, StringComparison.OrdinalIgnoreCase);
+    private static bool IsSameDrawing(string candidateCode, string documentCode) =>
+        string.Equals(candidateCode, documentCode, StringComparison.OrdinalIgnoreCase);
 
     private static List<CheckPrintReservation> Load(string path)
     {

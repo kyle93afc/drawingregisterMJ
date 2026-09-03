@@ -43,7 +43,7 @@ public sealed class CheckPrintAllocatorTests : IDisposable
     }
 
     [Fact]
-    public void Scanned_CP_sets_the_next_number_and_a_new_revision_resets_the_sequence()
+    public void Scanned_CP_sets_the_next_number_and_the_sequence_continues_across_revisions()
     {
         new ProjectStorage
         {
@@ -58,7 +58,8 @@ public sealed class CheckPrintAllocatorTests : IDisposable
         var newRevision = CheckPrintAllocator.ReserveNext(_folder, "DOC-01", "B");
 
         Assert.Equal(5, sameRevision.Cp);
-        Assert.Equal(1, newRevision.Cp);
+        Assert.Equal(6, newRevision.Cp);
+        Assert.Equal("B", newRevision.Revision);
     }
 
     [Fact]

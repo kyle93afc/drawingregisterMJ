@@ -30,13 +30,10 @@ public static class CheckPrintRegisterJoin
                     ? "No matching register revision"
                     : match.Value.Value.IsSuperseded
                         ? "Superseded revision"
-                        : checkPrint.Status == CheckStatus.APPD && !match.Value.Value.IsDistributed
-                            ? "Approved but not distributed"
+                        : checkPrint.Status == CheckStatus.APPD
+                            ? match.Value.Value.IsDistributed ? "Approved and distributed" : "Approved but not distributed"
                             : checkPrint.StatusText);
         })
-        .Where(row => row.CheckPrint.Status != CheckStatus.APPD ||
-                      !row.IsCurrent ||
-                      row.RegisterRevision?.IsDistributed != true)
         .ToList();
     }
 }

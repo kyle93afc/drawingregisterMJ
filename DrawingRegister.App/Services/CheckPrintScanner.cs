@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using DrawingRegister.App.Models;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Annotations;
+using UglyToad.PdfPig.Core;
+using UglyToad.PdfPig.Filters;
 using UglyToad.PdfPig.Tokens;
 using UglyToad.PdfPig.Util;
 
@@ -58,11 +60,12 @@ public static partial class CheckPrintScanner
                 .Where(annotation => annotation.Type == AnnotationType.Stamp)
                 .ToList();
 
-            var verdicts = stamps
-                .Select(GetVerdict)
-                .OfType<CheckStatus>()
-                .Distinct()
-                .ToList();
+            var subjects = stamps.Select(stamp => ResolveSubject(document, stamp)).ToList();
+            var verdicts = subjects.Select(GetVerdict).OfType<CheckStatus>().Distinct().ToList();
+            // A CHECKED stamp (architect's or the M+J custom one) only says someone checked it. Alone it counts as AWC,
+            // never APPD, so it cannot produce a false approval; beside a real verdict stamp, the verdict wins.
+            if (verdicts.Count == 0 && subjects.Any(subject => subject.Equals("CHECKED", StringComparison.OrdinalIgnoreCase)))
+                verdicts.Add(CheckStatus.AWC);
 
             entry.Status = stamps.Count == 0
                 ? CheckStatus.FC
@@ -99,13 +102,73 @@ public static partial class CheckPrintScanner
         return entry;
     }
 
-    private static CheckStatus? GetVerdict(Annotation annotation)
+    private static readonly string[] KnownSubjects =
+    [
+        "Approved with Comments", "Revise and Resubmit", "Not Approved", "For Comment",
+        "Approved", "Comments", "Revise", "Rejected", "CHECKED", "BACK DRAFTED"
+    ];
+
+    // Custom stamps (e.g. the M+J CHECKED stamp) carry the generic subject "Stamp"; their verdict is the text drawn in the appearance.
+    private static string ResolveSubject(PdfDocument document, Annotation annotation)
     {
         var subject = GetSubject(annotation);
+        if (!subject.Equals("Stamp", StringComparison.OrdinalIgnoreCase) && subject.Length > 0)
+            return subject;
+
+        var text = string.Join(" ", AppearanceText(document, annotation));
+        return KnownSubjects.FirstOrDefault(known => text.Contains(known, StringComparison.OrdinalIgnoreCase)) ?? subject;
+    }
+
+    private static IEnumerable<string> AppearanceText(PdfDocument document, Annotation annotation)
+    {
+        if (!annotation.AnnotationDictionary.TryGet(NameToken.Create("AP"), out IToken apToken)
+            || Resolve(document, apToken) is not DictionaryToken ap
+            || !ap.TryGet(NameToken.Create("N"), out IToken normal))
+            return [];
+        return FormText(document, normal, depth: 0);
+    }
+
+    // ponytail: literal-string Tj/TJ operators only; hex strings and deeper nesting than 4 are ignored.
+    private static IEnumerable<string> FormText(PdfDocument document, IToken token, int depth)
+    {
+        if (depth > 4 || Resolve(document, token) is not StreamToken stream)
+            yield break;
+
+        var data = stream.Data;
+        var filters = DefaultFilterProvider.Instance.GetFilters(stream.StreamDictionary);
+        for (var i = 0; i < filters.Count; i++)
+            data = filters[i].Decode(data, stream.StreamDictionary, DefaultFilterProvider.Instance, i);
+
+        foreach (Match match in ShownText().Matches(System.Text.Encoding.Latin1.GetString(data.Span)))
+            yield return match.Groups["t"].Value;
+
+        if (stream.StreamDictionary.TryGet(NameToken.Create("Resources"), out IToken resources)
+            && Resolve(document, resources) is DictionaryToken resourceDict
+            && resourceDict.TryGet(NameToken.Create("XObject"), out IToken xObjects)
+            && Resolve(document, xObjects) is DictionaryToken xObjectDict)
+        {
+            foreach (var child in xObjectDict.Data.Values)
+                foreach (var text in FormText(document, child, depth + 1))
+                    yield return text;
+        }
+    }
+
+    private static IToken? Resolve(PdfDocument document, IToken token) =>
+        token is IndirectReferenceToken reference ? document.Structure.GetObject(reference.Data)?.Data : token;
+
+    private static CheckStatus? GetVerdict(string subject)
+    {
         return subject switch
         {
             var value when value.Equals("Approved with Comments", StringComparison.OrdinalIgnoreCase) => CheckStatus.AWC,
             var value when value.Equals("Approved", StringComparison.OrdinalIgnoreCase) => CheckStatus.APPD,
+            // Checker has marked it up but not approved it; a technician must action the comments and re-issue a CP.
+            var value when value.Equals("Comments", StringComparison.OrdinalIgnoreCase)
+                        || value.Equals("For Comment", StringComparison.OrdinalIgnoreCase)
+                        || value.Equals("Not Approved", StringComparison.OrdinalIgnoreCase)
+                        || value.Equals("Revise", StringComparison.OrdinalIgnoreCase)
+                        || value.Equals("Revise and Resubmit", StringComparison.OrdinalIgnoreCase)
+                        || value.Equals("Rejected", StringComparison.OrdinalIgnoreCase) => CheckStatus.COMMENTS,
             _ => null
         };
     }
@@ -130,7 +193,11 @@ public static partial class CheckPrintScanner
         _ => author
     };
 
-    [GeneratedRegex(@"^CP[-_\s]?(?<cp>\d+)(?:[-_\s]|$)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"\((?<t>[^()\\]*)\)\s*Tj|\[(?<t>[^\]]*)\]\s*TJ")]
+    private static partial Regex ShownText();
+
+    // CP token at the start of the description ("CP01-PLAN") or after it ("GENERAL NOTES-CP01").
+    [GeneratedRegex(@"^CP[-_\s]?(?<cp>\d+)(?:[-_\s]|$)|[-_\s]CP[-_\s]?(?<cp>\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex CheckPrintToken();
 }
 

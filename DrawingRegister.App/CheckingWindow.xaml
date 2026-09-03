@@ -36,19 +36,31 @@
                         Style="{StaticResource SecondaryButton}" Margin="4,0,0,0"/>
 
                 <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="0,10,0,0">
-                    <TextBlock Text="Document Code" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBox x:Name="DocumentCodeBox" Width="320" VerticalContentAlignment="Center"/>
-                    <TextBlock Text="Revision" VerticalAlignment="Center" Margin="12,0,8,0"/>
-                    <TextBox x:Name="RevisionBox" Width="100" VerticalContentAlignment="Center"/>
-                    <Button x:Name="ReserveButton" Content="Reserve Next CP" Click="ReserveCp_Click"
-                            Style="{StaticResource PrimaryButton}" Margin="12,0,0,0"/>
+                    <Button x:Name="ReserveButton" Content="Next CP for selected drawing" Click="ReserveCp_Click"
+                            IsEnabled="False" Style="{StaticResource PrimaryButton}"/>
+                    <Button x:Name="CompareButton" Content="Compare with previous CP" Click="Compare_Click"
+                            IsEnabled="False" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
+                    <Button x:Name="BluebeamButton" Content="Open both in Bluebeam" Click="OpenInBluebeam_Click"
+                            IsEnabled="False" Style="{StaticResource SecondaryButton}" Margin="8,0,0,0"/>
+                    <TextBlock Text="Show" VerticalAlignment="Center" Margin="24,0,8,0"/>
+                    <ComboBox x:Name="FilterBox" Width="220" VerticalContentAlignment="Center" SelectedIndex="0"
+                              SelectionChanged="FilterBox_SelectionChanged">
+                        <ComboBoxItem Content="All check prints"/>
+                        <ComboBoxItem Content="Needs checking (FC)"/>
+                        <ComboBoxItem Content="Needs technician (COMMENTS)"/>
+                        <ComboBoxItem Content="Needs review (UNKNOWN / CONFLICT)"/>
+                        <ComboBoxItem Content="Checked (AWC / APPD)"/>
+                    </ComboBox>
+                    <TextBlock x:Name="ReserveHint" VerticalAlignment="Center" Margin="12,0,0,0"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               Text="Select a row for the next CP number. Double-click to open the PDF. Rescans automatically when the folder changes."/>
                 </StackPanel>
             </Grid>
         </Border>
 
         <DataGrid x:Name="CheckGrid" Grid.Row="1" AutoGenerateColumns="False"
                   IsReadOnly="True" CanUserAddRows="False" SelectionMode="Single"
-                  SelectionChanged="CheckGrid_SelectionChanged">
+                  SelectionChanged="CheckGrid_SelectionChanged" MouseDoubleClick="CheckGrid_MouseDoubleClick">
             <DataGrid.RowStyle>
                 <Style TargetType="DataGridRow">
                     <Style.Triggers>
@@ -69,11 +81,17 @@
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.FC}">
+                                                <Setter Property="Background" Value="#FFF3B6B6"/>
+                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.AWC}">
-                                                <Setter Property="Background" Value="#FFFFE08A"/>
+                                                <Setter Property="Background" Value="#FFD4F0D6"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.APPD}">
-                                                <Setter Property="Background" Value="#FFCDECCF"/>
+                                                <Setter Property="Background" Value="#FF7FD48A"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.COMMENTS}">
+                                                <Setter Property="Background" Value="#FFBBD9F7"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding CheckPrint.Status}" Value="{x:Static models:CheckStatus.UNKNOWN}">
                                                 <Setter Property="Background" Value="#FFFFC56D"/>
