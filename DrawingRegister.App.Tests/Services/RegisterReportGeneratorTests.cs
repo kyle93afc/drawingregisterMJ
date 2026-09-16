@@ -101,6 +101,43 @@ public sealed class RegisterReportGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void Generate_dcf_report_creates_pdf_with_dcf_branding()
+    {
+        var destination = Path.Combine(_tempDirectory, "dcf_register.pdf");
+        var docs = new[]
+        {
+            CreateDocument("12345-DCF-00-XX-DR-C-0001", ("P01", "Information", new DateTime(2026, 9, 1))),
+            CreateDocument("12345-DCF-00-XX-DR-C-0002", ("P02", "Construction", new DateTime(2026, 9, 10)))
+        };
+
+        var request = CreateRequest(
+            RegisterReportMode.Register,
+            new DateTime(2026, 9, 16),
+            projectNumber: "12345",
+            projectName: "Glasgow Warehouse",
+            discipline: "Civil",
+            registerNumber: "12345-DCF-00-XX-RE-C-00-01",
+            clientNumber: "DCF-CL-01",
+            documents: docs,
+            organization: OrganizationRegistry.DCF);
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.Equal(destination, result.ActualFilePath);
+        Assert.True(File.Exists(destination));
+        Assert.True(result.PageCount >= 1);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        Assert.Contains("DOCUMENT AND DRAWING REGISTER", pageText);
+        Assert.Contains("DCF (GLASGOW)", pageText);
+        Assert.Contains("GLASGOW WAREHOUSE", pageText);
+        Assert.Contains("12345-DCF-00-XX-RE-C-00-01", pageText);
+        Assert.Contains("12345-DCF-00-XX-DR-C-0001", pageText);
+    }
+
+    [Fact]
     public void Generate_transmittal_filters_by_issue_date_and_contains_transmittal_sections()
     {
         var destination = Path.Combine(_tempDirectory, "transmittal.pdf");
@@ -269,7 +306,8 @@ public sealed class RegisterReportGeneratorTests : IDisposable
         string? distributionText = null,
         string? purposeOfIssue = null,
         string? methodOfIssue = null,
-        string? issuedBy = null)
+        string? issuedBy = null,
+        OrganizationProfile? organization = null)
     {
         return new RegisterReportRequest(
             Mode: mode,
@@ -285,7 +323,8 @@ public sealed class RegisterReportGeneratorTests : IDisposable
             DistributionText: distributionText,
             PurposeOfIssue: purposeOfIssue,
             MethodOfIssue: methodOfIssue,
-            IssuedBy: issuedBy);
+            IssuedBy: issuedBy,
+            Organization: organization);
     }
 
     private static DocumentMetadata CreateDocument(string documentNumber, params (string Revision, string Purpose, DateTime Date)[] history)

@@ -37,7 +37,8 @@ public sealed record RegisterReportRequest(
     string? PurposeOfIssue = null,
     string? MethodOfIssue = null,
     string? IssuedBy = null,
-    string? TransmittalNumber = null);
+    string? TransmittalNumber = null,
+    OrganizationProfile? Organization = null);
 
 public sealed record RegisterReportResult(
     string ActualFilePath,
@@ -107,6 +108,9 @@ public static class RegisterReportGenerator
 
     private static void ComposeHeader(IContainer container, RegisterReportRequest request, ReportIdentity identity)
     {
+        var org = request.Organization ?? OrganizationRegistry.Default;
+        var brandColor = !string.IsNullOrWhiteSpace(org.BrandColorHex) ? org.BrandColorHex : "#eb1845";
+
         container.Padding(10).Column(column =>
         {
             column.Item().Row(row =>
@@ -118,13 +122,35 @@ public static class RegisterReportGenerator
 
                 try
                 {
-                    var assembly = Assembly.GetExecutingAssembly();
-                    using var stream = assembly.GetManifestResourceStream("DrawingRegister.App.Resources.company-logo.png")
-                                     ?? assembly.GetManifestResourceStream("DrawingRegister.App.Resources.WHITE LOGO RED BACKGROUND.jpg");
+                    Stream? stream = null;
+                    if (!string.IsNullOrEmpty(org.CustomLogoPath) && File.Exists(org.CustomLogoPath))
+                    {
+                        stream = File.OpenRead(org.CustomLogoPath);
+                    }
+                    else if (!string.IsNullOrEmpty(org.LogoResourceName))
+                    {
+                        var assembly = Assembly.GetExecutingAssembly();
+                        stream = assembly.GetManifestResourceStream(org.LogoResourceName)
+                              ?? assembly.GetManifestResourceStream("DrawingRegister.App.Resources.WHITE LOGO RED BACKGROUND.jpg");
+                    }
 
                     if (stream != null)
                     {
-                        row.RelativeItem().AlignRight().Height(35).Image(stream).FitHeight();
+                        using (stream)
+                        {
+                            row.RelativeItem().AlignRight().Height(35).Image(stream).FitHeight();
+                        }
+                    }
+                    else
+                    {
+                        row.RelativeItem().AlignRight().Column(c =>
+                        {
+                            c.Item().Border(1).BorderColor(brandColor).PaddingHorizontal(8).PaddingVertical(4)
+                                .Text(org.DisplayName.ToUpperInvariant())
+                                .FontColor(brandColor)
+                                .FontSize(12)
+                                .Bold();
+                        });
                     }
                 }
                 catch
@@ -133,7 +159,7 @@ public static class RegisterReportGenerator
                 }
             });
 
-            column.Item().PaddingTop(2).LineHorizontal(1).LineColor("#eb1845");
+            column.Item().PaddingTop(2).LineHorizontal(1).LineColor(brandColor);
 
             column.Item().PaddingTop(2).Row(row =>
             {
@@ -183,12 +209,15 @@ public static class RegisterReportGenerator
                 });
             });
 
-            column.Item().PaddingTop(2).LineHorizontal(1).LineColor("#eb1845");
+            column.Item().PaddingTop(2).LineHorizontal(1).LineColor(brandColor);
         });
     }
 
     private static void ComposeContent(IContainer container, RegisterReportRequest request, ReportIdentity identity)
     {
+        var org = request.Organization ?? OrganizationRegistry.Default;
+        var brandColor = !string.IsNullOrWhiteSpace(org.BrandColorHex) ? org.BrandColorHex : "#eb1845";
+
         container.Column(column =>
         {
             var isTransmittal = request.Mode == RegisterReportMode.Transmittal;
@@ -207,7 +236,7 @@ public static class RegisterReportGenerator
                     // Date of Issue row
                     issueInfoTable.Cell().Element(c =>
                     {
-                        c.Background("#eb1845")
+                        c.Background(brandColor)
                          .Padding(5)
                          .AlignCenter()
                          .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
@@ -216,7 +245,7 @@ public static class RegisterReportGenerator
 
                     issueInfoTable.Cell().Element(c =>
                     {
-                        c.Background("#eb1845")
+                        c.Background(brandColor)
                          .Padding(5)
                          .AlignCenter()
                          .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
@@ -313,7 +342,7 @@ public static class RegisterReportGenerator
                     {
                         header.Cell().Element(c =>
                         {
-                            c.Background("#eb1845")
+                            c.Background(brandColor)
                              .Padding(5)
                              .AlignCenter()
                              .DefaultTextStyle(x => x.Bold().FontColor(Colors.White))
