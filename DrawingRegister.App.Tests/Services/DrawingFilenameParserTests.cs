@@ -47,6 +47,24 @@ public sealed class DrawingFilenameParserTests
         Assert.Equal("1A", identity.Revision);
     }
 
+    [Fact]
+    public void TryParse_returns_drawing_identity_for_dcf_originator()
+    {
+        var parsed = DrawingFilenameParser.TryParse(
+            "12345-DCF-00-XX-DR-C-01-0001-P01_FOUNDATION_PLAN",
+            out var identity);
+
+        Assert.True(parsed);
+        Assert.Equal("12345-DCF-00-XX-DR-C-01-0001", identity.DocumentCode);
+        Assert.Equal("12345", identity.ProjectNumber);
+        Assert.Equal("DCF", identity.Originator);
+        Assert.Equal("P01", identity.Revision);
+        Assert.Equal("DR", identity.DocumentType);
+        Assert.Equal("C", identity.Discipline);
+        Assert.Equal("01", identity.Package);
+        Assert.Equal("FOUNDATION_PLAN", identity.Description);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("not-a-drawing")]

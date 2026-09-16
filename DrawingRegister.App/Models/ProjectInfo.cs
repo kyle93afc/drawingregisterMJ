@@ -20,6 +20,7 @@ public class ProjectInfo
     public string RegisterNumber { get; set; } = string.Empty;
     public string ClientNumber { get; set; } = string.Empty;
     public bool UseNumericRevisions { get; set; } = false;
+    public string OrganizationId { get; set; } = string.Empty;
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public RevisionScheme RevisionScheme { get; set; } = RevisionScheme.Legacy;
@@ -61,10 +62,18 @@ public class ProjectInfo
     /// </summary>
     private void MigrateLegacyFlags(string rawJson)
     {
-        if (rawJson.Contains("\"RevisionScheme\"", StringComparison.Ordinal))
-            return;
+        if (!rawJson.Contains("\"RevisionScheme\"", StringComparison.Ordinal))
+        {
+            RevisionScheme = UseNumericRevisions ? RevisionScheme.Numeric : RevisionScheme.Legacy;
+        }
 
-        RevisionScheme = UseNumericRevisions ? RevisionScheme.Numeric : RevisionScheme.Legacy;
+        if (string.IsNullOrEmpty(OrganizationId) && !string.IsNullOrEmpty(RegisterNumber))
+        {
+            if (RegisterNumber.Contains("-DCF-", StringComparison.OrdinalIgnoreCase))
+                OrganizationId = "DCF";
+            else if (RegisterNumber.Contains("-M+J-", StringComparison.OrdinalIgnoreCase) || RegisterNumber.Contains("-MJ-", StringComparison.OrdinalIgnoreCase))
+                OrganizationId = "MJ";
+        }
     }
 }
 

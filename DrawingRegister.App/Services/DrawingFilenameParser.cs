@@ -31,7 +31,8 @@ public static class DrawingFilenameParser
             DocumentType: match.Groups["docType"].Value,
             Discipline: match.Groups["docDiscipline"].Value,
             Package: match.Groups["package"].Value,
-            Description: match.Groups["description"].Value);
+            Description: match.Groups["description"].Value,
+            Originator: match.Groups["code1"].Value.Trim());
         return true;
     }
 }
@@ -43,4 +44,5 @@ public readonly record struct DrawingFilenameIdentity(
     string DocumentType,
     string Discipline,
     string Package,
-    string Description);
+    string Description,
+    string Originator = "");
