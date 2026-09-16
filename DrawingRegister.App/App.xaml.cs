@@ -31,6 +31,12 @@ public partial class App : System.Windows.Application
         VelopackApp.Build().Run();
         PerfLog.Event("Startup.VelopackRun", ProcessUptime.ElapsedMilliseconds);
 
+        // Programs launched from the register (Bluebeam, the PDF viewer) inherit
+        // our working directory and hold it open. If that is the Velopack
+        // "current" folder, Update.exe cannot swap it and the update silently
+        // rolls back, so move the working directory somewhere that never moves.
+        Directory.SetCurrentDirectory(Path.GetTempPath());
+
         var app = new App();
         app.InitializeComponent();
         PerfLog.Event("Startup.AppInitialized", ProcessUptime.ElapsedMilliseconds);
@@ -48,7 +54,8 @@ public partial class App : System.Windows.Application
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
 
-            Log.Information("Application starting up - Version {Version}", UpdateService.CurrentVersion);
+            Log.Information("Application starting up - Version {Version}, working directory {WorkingDirectory}",
+                UpdateService.CurrentVersion, Environment.CurrentDirectory);
         }
         catch (Exception ex)
         {
