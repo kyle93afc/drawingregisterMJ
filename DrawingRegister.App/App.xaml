@@ -30,6 +30,7 @@
             <!-- SolidColorBrushes -->
             <SolidColorBrush x:Key="BrandRedBrush" Color="{StaticResource BrandRedColor}"/>
             <SolidColorBrush x:Key="BrandRedHoverBrush" Color="{StaticResource BrandRedHoverColor}"/>
+            <SolidColorBrush x:Key="BrandRedPressedBrush" Color="{StaticResource BrandRedPressedColor}"/>
             <SolidColorBrush x:Key="BrandRedLightBrush" Color="{StaticResource BrandRedLightColor}"/>
 
             <SolidColorBrush x:Key="Slate50Brush" Color="{StaticResource Slate50Color}"/>
@@ -141,7 +142,7 @@
 
             <!-- Primary Button (Brand Red - used sparingly for main CTA) -->
             <Style x:Key="PrimaryButton" TargetType="Button">
-                <Setter Property="Background" Value="{StaticResource BrandRedBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource BrandRedBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Padding" Value="16,5"/>
@@ -167,24 +168,12 @@
                                                 Margin="{TemplateBinding Padding}"/>
                             </Border>
                             <ControlTemplate.Triggers>
-                                <EventTrigger RoutedEvent="MouseEnter">
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="border"
-                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                          To="{StaticResource BrandRedHoverColor}" Duration="0:0:0.15"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                                <EventTrigger RoutedEvent="MouseLeave">
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="border"
-                                                          Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                          To="{StaticResource BrandRedColor}" Duration="0:0:0.15"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource BrandRedHoverBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource BrandRedPressedBrush}"/>
+                                </Trigger>
                                 <EventTrigger RoutedEvent="PreviewMouseLeftButtonDown">
                                     <BeginStoryboard>
                                         <Storyboard>
@@ -205,9 +194,6 @@
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </EventTrigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="border" Property="Background" Value="#a8102f"/>
-                                </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter TargetName="border" Property="Background" Value="{StaticResource Slate300Brush}"/>
                                     <Setter Property="Foreground" Value="{StaticResource Slate500Brush}"/>
@@ -483,17 +469,17 @@
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Background" Value="White"/>
                 <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                <Setter Property="CaretBrush" Value="{StaticResource BrandRedBrush}"/>
-                <Setter Property="SelectionBrush" Value="{StaticResource BrandRedBrush}"/>
+                <Setter Property="CaretBrush" Value="{DynamicResource BrandRedBrush}"/>
+                <Setter Property="SelectionBrush" Value="{DynamicResource BrandRedBrush}"/>
                 <Style.Triggers>
                     <Trigger Property="IsMouseOver" Value="True">
                         <Setter Property="BorderBrush" Value="{StaticResource Slate400Brush}"/>
                     </Trigger>
                     <Trigger Property="IsKeyboardFocused" Value="True">
-                        <Setter Property="BorderBrush" Value="{StaticResource BrandRedBrush}"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource BrandRedBrush}"/>
                         <Setter Property="Effect">
                             <Setter.Value>
-                                <DropShadowEffect Color="{StaticResource BrandRedColor}" BlurRadius="6" ShadowDepth="0" Opacity="0.2"/>
+                                <DropShadowEffect Color="{DynamicResource BrandRedColor}" BlurRadius="6" ShadowDepth="0" Opacity="0.2"/>
                             </Setter.Value>
                         </Setter>
                     </Trigger>
@@ -579,7 +565,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Border x:Name="AccentBorder" Grid.Column="0" Width="0" Background="{StaticResource BrandRedBrush}"/>
+                                        <Border x:Name="AccentBorder" Grid.Column="0" Width="0" Background="{DynamicResource BrandRedBrush}"/>
                                         <SelectiveScrollingGrid Grid.Column="1">
                                             <SelectiveScrollingGrid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
@@ -590,14 +576,14 @@
                                                 <RowDefinition Height="Auto"/>
                                             </SelectiveScrollingGrid.RowDefinitions>
                                             <DataGridCellsPresenter Grid.Column="1"
-                                                                     ItemsPanel="{TemplateBinding ItemsPanel}"
-                                                                     SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                                    ItemsPanel="{TemplateBinding ItemsPanel}"
+                                                                    SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                                             <DataGridDetailsPresenter Grid.Column="1" Grid.Row="1"
-                                                                       SelectiveScrollingGrid.SelectiveScrollingOrientation="{Binding AreRowDetailsFrozen, ConverterParameter={x:Static SelectiveScrollingOrientation.Vertical}, Converter={x:Static DataGrid.RowDetailsScrollingConverter}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"
-                                                                       Visibility="{TemplateBinding DetailsVisibility}"/>
+                                                                      SelectiveScrollingGrid.SelectiveScrollingOrientation="{Binding AreRowDetailsFrozen, ConverterParameter={x:Static SelectiveScrollingOrientation.Vertical}, Converter={x:Static DataGrid.RowDetailsScrollingConverter}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"
+                                                                      Visibility="{TemplateBinding DetailsVisibility}"/>
                                             <DataGridRowHeader Grid.RowSpan="2"
-                                                                SelectiveScrollingGrid.SelectiveScrollingOrientation="Vertical"
-                                                                Visibility="{Binding HeadersVisibility, ConverterParameter={x:Static DataGridHeadersVisibility.Row}, Converter={x:Static DataGrid.HeadersVisibilityConverter}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"/>
+                                                               SelectiveScrollingGrid.SelectiveScrollingOrientation="Vertical"
+                                                               Visibility="{Binding HeadersVisibility, ConverterParameter={x:Static DataGridHeadersVisibility.Row}, Converter={x:Static DataGrid.HeadersVisibilityConverter}, RelativeSource={RelativeSource AncestorType={x:Type DataGrid}}}"/>
                                         </SelectiveScrollingGrid>
                                     </Grid>
                                 </Border>
@@ -607,10 +593,10 @@
                                     <Setter TargetName="RowBorder" Property="Background" Value="{StaticResource Slate50Brush}"/>
                                 </Trigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="RowBorder" Property="Background" Value="{StaticResource BrandRedLightBrush}"/>
+                                    <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource BrandRedLightBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter TargetName="RowBorder" Property="Background" Value="#FDE8EC"/>
+                                    <Setter TargetName="RowBorder" Property="Background" Value="{DynamicResource BrandRedLightBrush}"/>
                                     <Setter TargetName="AccentBorder" Property="Width" Value="3"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -835,7 +821,7 @@
             <Style TargetType="ProgressBar">
                 <Setter Property="Height" Value="6"/>
                 <Setter Property="Background" Value="{StaticResource Slate200Brush}"/>
-                <Setter Property="Foreground" Value="{StaticResource BrandRedBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrandRedBrush}"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -865,7 +851,7 @@
                             </Grid>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="line" Property="Background" Value="{StaticResource BrandRedBrush}"/>
+                                    <Setter TargetName="line" Property="Background" Value="{DynamicResource BrandRedBrush}"/>
                                     <Setter TargetName="line" Property="Width" Value="3"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -912,8 +898,8 @@
                                     <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource Slate700Brush}"/>
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource BrandRedBrush}"/>
-                                    <Setter TargetName="arrow" Property="Stroke" Value="{StaticResource BrandRedBrush}"/>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BrandRedBrush}"/>
+                                    <Setter TargetName="arrow" Property="Stroke" Value="{DynamicResource BrandRedBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter TargetName="border" Property="Background" Value="{StaticResource Slate50Brush}"/>
@@ -1044,8 +1030,8 @@
                                     <Setter TargetName="Border" Property="Background" Value="{StaticResource Slate100Brush}"/>
                                 </Trigger>
                                 <Trigger Property="IsSelected" Value="True">
-                                    <Setter TargetName="Border" Property="Background" Value="{StaticResource BrandRedLightBrush}"/>
-                                    <Setter Property="Foreground" Value="{StaticResource BrandRedBrush}"/>
+                                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrandRedLightBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource BrandRedBrush}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

@@ -26,6 +26,28 @@ public sealed class OrganizationProfileTests
         Assert.Equal("124660-DCF-00-XX-RE-C-00-01", regNo);
     }
 
+    [Fact]
+    public void OrganizationRegistry_DCF_has_green_branding_palette()
+    {
+        var dcf = OrganizationRegistry.DCF;
+        Assert.Equal("#00b282", dcf.BrandColorHex);
+        Assert.Equal("#009e74", dcf.BrandHoverColorHex);
+        Assert.Equal("#008a65", dcf.BrandPressedColorHex);
+        Assert.Equal("#E6F7F2", dcf.BrandLightColorHex);
+        Assert.Equal("DrawingRegister.App.Resources.dcf-logo.png", dcf.LogoResourceName);
+    }
+
+    [Fact]
+    public void OrganizationRegistry_MJ_has_red_branding_palette()
+    {
+        var mj = OrganizationRegistry.MJ;
+        Assert.Equal("#eb1845", mj.BrandColorHex);
+        Assert.Equal("#c91438", mj.BrandHoverColorHex);
+        Assert.Equal("#a8102f", mj.BrandPressedColorHex);
+        Assert.Equal("#FEF2F4", mj.BrandLightColorHex);
+        Assert.Equal("DrawingRegister.App.Resources.company-logo.png", mj.LogoResourceName);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

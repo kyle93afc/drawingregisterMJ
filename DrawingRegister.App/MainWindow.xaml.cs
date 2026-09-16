@@ -321,8 +321,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         finally
         {
             _suppressOrganizationChange = false;
-            UpdateCompanyLogo();
+            UpdateOrganizationBranding();
         }
+    }
+
+    private void UpdateOrganizationBranding()
+    {
+        OrganizationThemeManager.ApplyTheme(_project.Organization);
+        UpdateCompanyLogo();
     }
 
     private void UpdateCompanyLogo()
@@ -330,7 +336,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (CompanyLogoImage == null) return;
         try
         {
-            var isDcf = _project.Organization.Id.Equals("DCF", StringComparison.OrdinalIgnoreCase);
+            var org = _project.Organization;
+            var resourceName = !string.IsNullOrEmpty(org.LogoResourceName)
+                ? org.LogoResourceName
+                : "DrawingRegister.App.Resources.company-logo.png";
+
+            var assembly = typeof(MainWindow).Assembly;
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream != null)
+            {
+                var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+                bitmap.BeginInit();
+                bitmap.StreamSource = stream;
+                bitmap.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze();
+                CompanyLogoImage.Source = bitmap;
+                return;
+            }
+
+            var isDcf = org.Id.Equals("DCF", StringComparison.OrdinalIgnoreCase);
             var packUri = isDcf
                 ? "pack://application:,,,/DrawingRegister.App;component/Resources/dcf-logo.png"
                 : "pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png";
@@ -348,7 +373,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (OrganizationCombo.SelectedItem is ComboBoxItem item)
         {
             _project.Organization = OrganizationRegistry.GetById(item.Tag?.ToString());
-            UpdateCompanyLogo();
+            UpdateOrganizationBranding();
             UpdateRegisterNumber();
             if (!string.IsNullOrEmpty(_project._currentBasePath))
             {

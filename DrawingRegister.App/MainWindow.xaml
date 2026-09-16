@@ -271,7 +271,7 @@
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsChecked" Value="True">
-                                                        <Setter Property="Background" Value="#eb1845"/>
+                                                        <Setter Property="Background" Value="{DynamicResource BrandRedBrush}"/>
                                                     </Trigger>
                                                     <Trigger Property="IsMouseOver" Value="True">
                                                         <Setter TargetName="border" Property="Opacity" Value="0.85"/>
@@ -524,7 +524,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- Preview Header -->
-                        <Border Grid.Row="0" Background="#eb1845" CornerRadius="7,7,0,0" Padding="10,6">
+                        <Border Grid.Row="0" Background="{DynamicResource BrandRedBrush}" CornerRadius="7,7,0,0" Padding="10,6">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -535,7 +535,7 @@
                                            TextTrimming="CharacterEllipsis"/>
                                 <Button x:Name="OpenExternalButton" Grid.Column="1" Content="OPEN" Click="OpenExternalPdf_Click"
                                         Padding="8,2" FontSize="10" FontWeight="SemiBold" Cursor="Hand"
-                                        Background="White" Foreground="#eb1845" BorderThickness="0">
+                                        Background="White" Foreground="{DynamicResource BrandRedBrush}" BorderThickness="0">
                                     <Button.Template>
                                         <ControlTemplate TargetType="Button">
                                             <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="4"
@@ -569,10 +569,10 @@
                         </Border>
 
                         <!-- Error Overlay -->
-                        <Border x:Name="PreviewError" Grid.Row="1" Background="#FFF5F5" Visibility="Collapsed">
+                        <Border x:Name="PreviewError" Grid.Row="1" Background="{DynamicResource BrandRedLightBrush}" Visibility="Collapsed">
                             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
                                 <TextBlock Text="FILE NOT FOUND" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="#eb1845" HorizontalAlignment="Center"/>
+                                           Foreground="{DynamicResource BrandRedBrush}" HorizontalAlignment="Center"/>
                                 <TextBlock x:Name="ErrorFilePath" Text="" FontSize="11"
                                            Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
                                            TextWrapping="Wrap" Margin="0,8,0,0" TextAlignment="Center"/>

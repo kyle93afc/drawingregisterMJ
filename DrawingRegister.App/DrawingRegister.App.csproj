@@ -22,13 +22,9 @@
 
     <!-- Custom entry point for Velopack -->
     <StartupObject>DrawingRegister.App.App</StartupObject>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
   </PropertyGroup>
 
-  <!-- Modify App.xaml build action for custom Main() -->
-  <ItemGroup>
-    <ApplicationDefinition Remove="App.xaml" />
-    <Page Include="App.xaml" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
@@ -56,8 +52,6 @@
 
   <ItemGroup>
     <Resource Include="Assets\icon.ico" />
-    <Resource Include="Resources/company-logo.png" />
-    <Resource Include="Resources/dcf-logo.png" />
   </ItemGroup>
 
   <ItemGroup>

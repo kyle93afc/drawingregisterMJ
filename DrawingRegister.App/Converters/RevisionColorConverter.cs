@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows.Data;
 using System.Windows.Media;
+using Application = System.Windows.Application;
 using DrawingRegister.App.Models;
 
 namespace DrawingRegister.App.Converters
@@ -39,8 +40,8 @@ namespace DrawingRegister.App.Converters
                 ('T', "fg") => BrushFromHex("#7C3AED"),
                 ('C', "bg") => BrushFromHex("#FEF3C7"),
                 ('C', "fg") => BrushFromHex("#D97706"),
-                (_, "bg")   => BrushFromHex("#FEF2F4"),
-                _           => BrushFromHex("#eb1845"),
+                (_, "bg")   => Application.Current?.TryFindResource("BrandRedLightBrush") as SolidColorBrush ?? BrushFromHex("#FEF2F4"),
+                _           => Application.Current?.TryFindResource("BrandRedBrush") as SolidColorBrush ?? BrushFromHex("#eb1845"),
             };
         }
 
@@ -58,7 +59,7 @@ namespace DrawingRegister.App.Converters
         public static SolidColorBrush GetForegroundBrush(string revision)
         {
             if (string.IsNullOrEmpty(revision))
-                return BrushFromHex("#eb1845");
+                return Application.Current?.TryFindResource("BrandRedBrush") as SolidColorBrush ?? BrushFromHex("#eb1845");
 
             return char.ToUpper(revision[0]) switch
             {
@@ -66,7 +67,7 @@ namespace DrawingRegister.App.Converters
                 'P' => BrushFromHex("#DC2626"),
                 'T' => BrushFromHex("#7C3AED"),
                 'C' => BrushFromHex("#D97706"),
-                _   => BrushFromHex("#eb1845"),
+                _   => Application.Current?.TryFindResource("BrandRedBrush") as SolidColorBrush ?? BrushFromHex("#eb1845"),
             };
         }
     }

@@ -215,6 +215,50 @@ public sealed class RegisterReportGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void Generate_transmittal_with_dcf_branding_includes_logo_and_dcf_metadata()
+    {
+        var destination = Path.Combine(_tempDirectory, "dcf_transmittal.pdf");
+        var issueDate = new DateTime(2026, 4, 14);
+
+        var doc1 = CreateDocument("12345-DCF-00-XX-DR-C-0001", ("P01", "Info", new DateTime(2026, 3, 1)), ("P02", "Construction", issueDate));
+        var doc2 = CreateDocument("12345-DCF-00-XX-DR-C-0002", ("P01", "Info", new DateTime(2026, 3, 1))); // Not on issue date
+
+        var request = CreateRequest(
+            RegisterReportMode.Transmittal,
+            new DateTime(2026, 9, 16),
+            projectNumber: "12345",
+            projectName: "Glasgow Warehouse",
+            discipline: "Civil",
+            registerNumber: "12345-DCF-00-XX-RE-C-00-01",
+            clientNumber: "DCF-CL-01",
+            documents: new[] { doc1, doc2 },
+            selectedIssueDate: issueDate,
+            distributionText: "CLIENT: GLASGOW LOGISTICS",
+            purposeOfIssue: "For Construction",
+            methodOfIssue: "Email",
+            issuedBy: "DCF Team",
+            organization: OrganizationRegistry.DCF);
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.Equal(destination, result.ActualFilePath);
+        Assert.True(File.Exists(destination));
+        Assert.True(result.PageCount >= 1);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        Assert.Contains("TRANSMITTAL", pageText);
+        Assert.Contains("GLASGOW WAREHOUSE", pageText);
+        Assert.Contains("12345-DCF-00-XX-RE-C-00-01", pageText);
+        Assert.Contains("DATE OF ISSUE: 14/04/2026", pageText);
+        Assert.Contains("CLIENT: GLASGOW LOGISTICS", pageText);
+        Assert.Contains("12345-DCF-00-XX-DR-C-0001", pageText);
+        Assert.DoesNotContain("12345-DCF-00-XX-DR-C-0002", pageText);
+        Assert.True(pdf.GetPages().First().GetImages().Any(), "Expected DCF logo embedded on transmittal");
+    }
+
+    [Fact]
     public void Generate_docreg_uses_ser_header_and_naming()
     {
         var destination = Path.Combine(_tempDirectory, "docreg.pdf");

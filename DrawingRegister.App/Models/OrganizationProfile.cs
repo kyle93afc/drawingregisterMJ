@@ -17,7 +17,10 @@ public record OrganizationProfile(
     string? LogoResourceName = null,
     string? CustomLogoPath = null,
     string CopyrightNotice = "",
-    string DefaultServerPath = "")
+    string DefaultServerPath = "",
+    string BrandHoverColorHex = "",
+    string BrandPressedColorHex = "",
+    string BrandLightColorHex = "")
 {
     public string FormatRegisterNumber(string? projectNumber, string? disciplineCode)
     {
@@ -37,6 +40,9 @@ public static class OrganizationRegistry
         ShortName: "M+J",
         OriginatorCode: "M+J",
         BrandColorHex: "#eb1845",
+        BrandHoverColorHex: "#c91438",
+        BrandPressedColorHex: "#a8102f",
+        BrandLightColorHex: "#FEF2F4",
         LogoResourceName: "DrawingRegister.App.Resources.company-logo.png",
         CopyrightNotice: "Copyright (c) 2026 M+J Engineers");
 
@@ -46,6 +52,9 @@ public static class OrganizationRegistry
         ShortName: "DCF",
         OriginatorCode: "DCF",
         BrandColorHex: "#00b282",
+        BrandHoverColorHex: "#009e74",
+        BrandPressedColorHex: "#008a65",
+        BrandLightColorHex: "#E6F7F2",
         LogoResourceName: "DrawingRegister.App.Resources.dcf-logo.png",
         CopyrightNotice: "Copyright (c) 2026 DCF Design Consultants");
 
