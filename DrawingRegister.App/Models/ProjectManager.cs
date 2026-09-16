@@ -392,14 +392,15 @@ public class ProjectManager : INotifyPropertyChanged
         {
             // If we already have loaded projects, every date folder was skipped as
             // already-processed — that's a valid "nothing new to scan" refresh, not
-            // an error. Only throw when the user pointed at a folder with no date
+            // an error. Only warn when the user pointed at a folder with no date
             // subfolders at all and no prior scan.
             if (_currentStorage?.Projects?.Count > 0)
             {
                 Console.WriteLine("No new date folders found — all existing folders already processed.");
                 return importResult;
             }
-            throw new Exception("No valid new date folders found. Folders should start with a date in format YYYYMMDD.");
+            importResult.Warning = "No valid new date folders found. Folders should start with a date in format YYYYMMDD.";
+            return importResult;
         }
 
         // Only get PDF files from date directories (including any subdirectories within them)

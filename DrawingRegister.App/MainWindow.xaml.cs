@@ -1020,7 +1020,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 FilterDocuments();
 
                 var folderName = System.IO.Path.GetFileName(dialog.SelectedPath);
-                if (importResult.TotalPdfFiles == 0)
+                if (importResult.Warning is not null)
+                {
+                    MessageBox.Show(importResult.Warning, "Nothing to scan", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else if (importResult.TotalPdfFiles == 0)
                 {
                     MessageBox.Show($"No new PDF files were found in '{folderName}'.\n\nIf this folder has already been scanned, use 'Rescan Folder' on the toolbar to re-scan an existing date folder.",
                         "Scan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -1108,7 +1112,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             DocumentGrid.Items.Refresh();
 
             var refreshMessage = $"Successfully refreshed {_project.Documents.Count} documents. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
-            if (importResult.HasSkippedFiles)
+            if (importResult.Warning is not null)
+            {
+                MessageBox.Show(importResult.Warning, "Nothing to scan", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else if (importResult.HasSkippedFiles)
             {
                 var skippedList = importResult.SkippedFiles.Take(20)
                     .Select(f => $"  • {f.FileName}\n    Reason: {f.Reason}");
