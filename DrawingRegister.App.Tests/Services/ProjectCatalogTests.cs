@@ -130,4 +130,20 @@ public sealed class ProjectCatalogTests
 
         Assert.Equal(new[] { "17373a", "A5982" }, results.Select(p => p.Code));
     }
+
+    [Theory]
+    [InlineData(@"W:\02-PROJECTS\124600\124615\02 - ENG\02 - DRAWINGS\03 - OUTGOING\01 - PDF", "124615")]
+    [InlineData(@"\\srmjfp01\data\02-PROJECTS\17300 - FILES\17373a\02 - ENG\02 - DRAWINGS", "17373a")]
+    [InlineData(@"C:\Temp\dr-test-abc\20260424-WARRANT ISSUE", null)]
+    public void CodeFromPath_takes_the_deepest_job_number_segment(string path, string? expected)
+    {
+        Assert.Equal(expected, ProjectCatalog.CodeFromPath(path));
+    }
+
+    [Fact]
+    public void TitleFor_matches_code_case_insensitively_and_returns_null_when_unknown()
+    {
+        Assert.Equal("Altens Waste and Recycling Centre - 8322", ProjectCatalog.TitleFor(Sample, "17373A"));
+        Assert.Null(ProjectCatalog.TitleFor(Sample, "124615"));
+    }
 }

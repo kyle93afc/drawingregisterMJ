@@ -80,6 +80,18 @@ public static class ProjectCatalog
             .ToList();
     }
 
+    public static string? TitleFor(IEnumerable<CrmProject> projects, string code) =>
+        projects.FirstOrDefault(p => p.Code.Equals(code, StringComparison.OrdinalIgnoreCase))?.Title;
+
+    // Deepest path segment that looks like a job number, so the bucket folder
+    // (124600) loses to the project folder (124615) beneath it.
+    public static string? CodeFromPath(string path) =>
+        path.Split('\\', '/')
+            .LastOrDefault(segment => ProjectCodePattern.IsMatch(segment));
+
+    private static readonly System.Text.RegularExpressions.Regex ProjectCodePattern =
+        new(@"^\d{5,6}[A-Za-z]?$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
     /// <summary>
     /// Cached view of the shared catalogue. Returns immediately with whatever is
     /// cached and refreshes in the background at most once every five minutes.

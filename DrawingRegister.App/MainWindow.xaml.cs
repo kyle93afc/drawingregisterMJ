@@ -193,6 +193,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         (ProjectPickerPopup.PlacementTarget as TextBox ?? ProjectNameBox).Focus();
     }
 
+    // After a scan the number comes from the PDFs, or failing that from the
+    // project folder in the path; the title then comes from the CMap catalogue.
+    private void FillProjectDetailsFromCatalog(string? folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(_project.ProjectNumber) && folderPath is not null)
+            _project.ProjectNumber = ProjectCatalog.CodeFromPath(folderPath) ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_project.ProjectName) && !string.IsNullOrWhiteSpace(_project.ProjectNumber))
+            _project.ProjectName = ProjectCatalog.TitleFor(ProjectCatalog.Projects(), _project.ProjectNumber) ?? string.Empty;
+    }
+
     private void Documents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
         // Update issue date filter options when documents change
@@ -1012,6 +1023,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 progressWindow.Close();
                 progressWindow = null;
 
+                FillProjectDetailsFromCatalog(dialog.SelectedPath);
                 InitializeDisciplineCombo();
                 InitializeRevisionSchemeCombo();
                 UpdateRegisterNumber();
@@ -1086,6 +1098,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 importResult = await Task.Run(() => _project.ImportDocuments(basePath));
             }
 
+            FillProjectDetailsFromCatalog(_project._currentBasePath);
             // Re-initialize discipline combo and update register number
             InitializeDisciplineCombo();
             InitializeRevisionSchemeCombo();
