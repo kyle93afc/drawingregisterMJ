@@ -37,6 +37,15 @@ A WPF application for managing and tracking engineering drawings and documents w
 4. Use search and date filters to find specific documents
 5. Generate PDF reports as needed
 
+### Picking a CMap project
+
+Typing in **Project No** or **Project** searches the office-wide CMap project list published by the
+timesheet catalogue. Pick a result and both fields are filled in; both stay editable, so a project
+that isn't in the list can still be typed by hand.
+
+The list is refreshed by dragging a CMap **Export Projects** CSV onto
+`W:\05-LIBRARY\SOFTWARE\MJ SCRIPTS\Timesheet\Update projects.bat`.
+
 ## Building
 
 ```powershell

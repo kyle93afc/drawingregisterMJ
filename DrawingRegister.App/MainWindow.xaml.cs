@@ -41,6 +41,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     private bool _webView2Initialized = false;
     private string? _currentPreviewFilePath = null;
     private bool _isPreviewVisible = false;
+    private bool _applyingProjectPick;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -83,6 +84,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         RegNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.RegisterNumber)) { Source = _project });
         ClientNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ClientNumber)) { Source = _project });
 
+        // Warm the shared CMap catalogue so the first keystroke has something to match.
+        ProjectCatalog.Projects();
+
         // Initialize DisciplineCombo based on stored Discipline value
         InitializeDisciplineCombo();
         InitializeRevisionSchemeCombo();
@@ -109,6 +113,84 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         
         // Add keyboard shortcut for editing documents
         DocumentGrid.KeyDown += DocumentGrid_KeyDown;
+    }
+
+    private void ProjectPicker_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        // A register load rewrites both boxes through the bindings; only a human
+        // typing in the box should open the picker.
+        if (_applyingProjectPick || sender is not TextBox box || !box.IsKeyboardFocusWithin)
+            return;
+
+        var matches = ProjectCatalog.Search(ProjectCatalog.Projects(), box.Text);
+        if (matches.Count == 0)
+        {
+            ProjectPickerPopup.IsOpen = false;
+            return;
+        }
+
+        ProjectPickerList.ItemsSource = matches;
+        ProjectPickerList.SelectedIndex = -1;
+        ProjectPickerPopup.PlacementTarget = box;
+        ProjectPickerPopup.Width = Math.Max(box.ActualWidth, 360);
+        ProjectPickerPopup.IsOpen = true;
+    }
+
+    private void ProjectPicker_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!ProjectPickerPopup.IsOpen)
+            return;
+
+        switch (e.Key)
+        {
+            case Key.Down:
+                ProjectPickerList.SelectedIndex = Math.Min(ProjectPickerList.SelectedIndex + 1, ProjectPickerList.Items.Count - 1);
+                break;
+            case Key.Up:
+                ProjectPickerList.SelectedIndex = Math.Max(ProjectPickerList.SelectedIndex - 1, 0);
+                break;
+            case Key.Enter:
+                var pick = ProjectPickerList.SelectedItem as CrmProject
+                           ?? ProjectPickerList.Items.OfType<CrmProject>().FirstOrDefault();
+                if (pick is not null)
+                    ApplyProjectPick(pick);
+                e.Handled = true;
+                return;
+            case Key.Escape:
+                ProjectPickerPopup.IsOpen = false;
+                e.Handled = true;
+                return;
+            default:
+                return;
+        }
+
+        ProjectPickerList.ScrollIntoView(ProjectPickerList.SelectedItem);
+        e.Handled = true;
+    }
+
+    private void ProjectPickerList_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (ProjectPickerList.SelectedItem is CrmProject pick)
+            ApplyProjectPick(pick);
+    }
+
+    private void ApplyProjectPick(CrmProject pick)
+    {
+        _applyingProjectPick = true;
+        try
+        {
+            // ProjectNameBox updates its source on LostFocus, but writing the source
+            // property still pushes straight into the box.
+            _project.ProjectNumber = pick.Code;
+            _project.ProjectName = pick.Title;
+        }
+        finally
+        {
+            _applyingProjectPick = false;
+        }
+
+        ProjectPickerPopup.IsOpen = false;
+        (ProjectPickerPopup.PlacementTarget as TextBox ?? ProjectNameBox).Focus();
     }
 
     private void Documents_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)

@@ -135,7 +135,9 @@
                     </ComboBox>
 
                     <TextBlock Grid.Column="3" Text="Project No" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                    <TextBox x:Name="ProjectNoBox" Grid.Column="4" Height="28" FontSize="12"/>
+                    <TextBox x:Name="ProjectNoBox" Grid.Column="4" Height="28" FontSize="12"
+                             TextChanged="ProjectPicker_TextChanged"
+                             PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
 
                     <TextBlock Grid.Column="6" Text="Client No" Style="{StaticResource SectionLabel}" FontSize="11"/>
                     <TextBox x:Name="ClientNoBox" Grid.Column="7" Height="28" FontSize="12"/>
@@ -144,7 +146,33 @@
                     <TextBox x:Name="RegNoBox" Grid.Column="10" Height="28" IsReadOnly="True" FontSize="12"/>
 
                     <TextBlock Grid.Column="12" Text="Project" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                    <TextBox x:Name="ProjectNameBox" Grid.Column="13" Height="28" FontSize="12"/>
+                    <TextBox x:Name="ProjectNameBox" Grid.Column="13" Height="28" FontSize="12"
+                             TextChanged="ProjectPicker_TextChanged"
+                             PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
+
+                    <!-- CMap project picker. PlacementTarget and Width come from
+                         code-behind so it sits under whichever box is being typed in. -->
+                    <Popup x:Name="ProjectPickerPopup" Placement="Bottom" StaysOpen="False"
+                           AllowsTransparency="True" PopupAnimation="Fade">
+                        <Border Background="White" BorderBrush="{StaticResource InputBorderBrush}"
+                                BorderThickness="1" CornerRadius="6" Margin="0,2,10,10"
+                                Effect="{StaticResource PopupShadow}">
+                            <ListBox x:Name="ProjectPickerList" MaxHeight="280" BorderThickness="0"
+                                     Background="Transparent" FontSize="12"
+                                     HorizontalContentAlignment="Stretch"
+                                     MouseLeftButtonUp="ProjectPickerList_MouseLeftButtonUp">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Code}" FontSize="12" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Title}" FontSize="12" Margin="8,0,0,0"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+                    </Popup>
                 </Grid>
 
                 <!-- Line 3: Revision Scheme selector -->
