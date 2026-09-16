@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window x:Class="DrawingRegister.App.OrganizationSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Organization &amp; Server Settings" Height="400" Width="520"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Background="White" WindowStyle="None" AllowsTransparency="True">
+    <Border BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="10" Background="White"
+            Effect="{StaticResource ElevatedShadow}" ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="20,14,14,10" MouseLeftButtonDown="Header_DragMove">
+                <StackPanel>
+                    <TextBlock Text="Organization &amp; Server Settings" Style="{StaticResource HeadingMedium}"/>
+                    <TextBlock Text="Configure machine defaults for company profile and project server locations" Style="{StaticResource CaptionText}" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Click="Cancel_Click" Style="{StaticResource ToolbarButton}" FontSize="14" Width="28" Height="28" Padding="0"/>
+            </Grid>
+
+            <!-- Accent Line -->
+            <Border Grid.Row="1" Background="{StaticResource BrandRedBrush}" Height="3"/>
+
+            <!-- Form Content -->
+            <StackPanel Grid.Row="2" Margin="20,16,20,16">
+                <!-- Default Company -->
+                <TextBlock Text="Default Company / Organization" Style="{StaticResource SectionLabel}" FontSize="12" Margin="0,0,0,4"/>
+                <ComboBox x:Name="DefaultOrgCombo" Height="30" FontSize="12" Margin="0,0,0,4">
+                    <ComboBoxItem Tag="MJ" Content="M+J Engineers (Originator: M+J)"/>
+                    <ComboBoxItem Tag="DCF" Content="DCF (Glasgow) (Originator: DCF)"/>
+                </ComboBox>
+                <TextBlock Text="Used as the default company profile for new projects and drawing register generation."
+                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+                <!-- Default Server / Projects Folder -->
+                <TextBlock Text="Default Server / Projects Folder" Style="{StaticResource SectionLabel}" FontSize="12" Margin="0,0,0,4"/>
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="ServerFolderPathBox" Grid.Column="0" Height="30" FontSize="12" VerticalContentAlignment="Center" Padding="6,0"/>
+                    <Button Grid.Column="1" Content="Browse…" Click="BrowseServerFolder_Click"
+                            Style="{StaticResource GhostButton}" Height="30" Padding="12,0" Margin="6,0,0,0"/>
+                </Grid>
+                <TextBlock Text="Optional root directory where project folders are stored on your network or local drive (e.g. Glasgow server share or P:\Projects). When set, folder browsing starts here."
+                           Style="{StaticResource CaptionText}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            </StackPanel>
+
+            <!-- Footer -->
+            <Border Grid.Row="3" Background="{StaticResource Slate50Brush}" BorderBrush="{StaticResource Slate200Brush}" BorderThickness="0,1,0,0" Padding="16,12">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Cancel" Click="Cancel_Click" Style="{StaticResource GhostButton}" Height="30" Padding="16,0" Margin="0,0,8,0"/>
+                    <Button Content="Save Settings" Click="Save_Click" Style="{StaticResource PrimaryButton}" Height="30" Padding="16,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

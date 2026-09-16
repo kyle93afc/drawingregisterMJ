@@ -175,16 +175,30 @@
                     </Popup>
                 </Grid>
 
-                <!-- Line 3: Revision Scheme selector -->
-                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
-                    <TextBlock Text="Revision Scheme" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
-                    <ComboBox x:Name="RevisionSchemeCombo" Width="260" Height="26" FontSize="11" Margin="6,0,0,0"
-                              SelectionChanged="RevisionSchemeCombo_SelectionChanged">
-                        <ComboBoxItem Tag="Legacy" Content="Legacy (A, B, C / P01, C01, T01, I01)"/>
-                        <ComboBoxItem Tag="Numeric" Content="Numeric (1, 2, 3)"/>
-                        <ComboBoxItem Tag="SubLetterNumeric" Content="Sub-letter / Formal (1A, 1B → 1)"/>
-                    </ComboBox>
-                </StackPanel>
+                <!-- Line 3: Organization & Revision Scheme selectors -->
+                <Grid Grid.Row="3" Margin="0,6,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Company" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="OrganizationCombo" Width="175" Height="26" FontSize="11" Margin="6,0,0,0"
+                                  SelectionChanged="OrganizationCombo_SelectionChanged">
+                            <ComboBoxItem Tag="MJ" Content="M+J Engineers (M+J)"/>
+                            <ComboBoxItem Tag="DCF" Content="DCF (Glasgow)"/>
+                        </ComboBox>
+                        <Button x:Name="OrganizationSettingsBtn" Content="⚙ Defaults" Click="OrganizationSettings_Click"
+                                Style="{StaticResource GhostButton}" Height="26" Padding="8,2" FontSize="11" Margin="6,0,0,0"
+                                ToolTip="Configure default company profile and project server folders for this machine"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Text="Revision Scheme" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="RevisionSchemeCombo" Width="260" Height="26" FontSize="11" Margin="6,0,0,0"
+                                  SelectionChanged="RevisionSchemeCombo_SelectionChanged">
+                            <ComboBoxItem Tag="Legacy" Content="Legacy (A, B, C / P01, C01, T01, I01)"/>
+                            <ComboBoxItem Tag="Numeric" Content="Numeric (1, 2, 3)"/>
+                            <ComboBoxItem Tag="SubLetterNumeric" Content="Sub-letter / Formal (1A, 1B → 1)"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </Border>
 

@@ -128,6 +128,20 @@ public class ProjectManager : INotifyPropertyChanged
         }
     }
 
+    private OrganizationProfile _organization = OrganizationRegistry.Default;
+    public OrganizationProfile Organization
+    {
+        get => _organization;
+        set
+        {
+            if (_organization != value)
+            {
+                _organization = value;
+                RaisePropertyChanged(nameof(Organization));
+            }
+        }
+    }
+
     public ImportResult ImportDocuments(string folderPath, string? specificFolderToRescanFullPath = null)
     {
         using var _perf = PerfLog.Begin($"ProjectManager.ImportDocuments(specific={specificFolderToRescanFullPath != null})");
@@ -210,7 +224,21 @@ public class ProjectManager : INotifyPropertyChanged
             RegisterNumber = _projectInfo.RegisterNumber;
             ClientNumber = _projectInfo.ClientNumber;
             RevisionScheme = _projectInfo.RevisionScheme;
-            Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} (RevisionScheme={RevisionScheme}) ===");
+
+            if (!string.IsNullOrWhiteSpace(_projectInfo.OrganizationId))
+            {
+                Organization = OrganizationRegistry.GetById(_projectInfo.OrganizationId);
+            }
+            else if (!string.IsNullOrWhiteSpace(_projectInfo.RegisterNumber))
+            {
+                Organization = OrganizationRegistry.DetectFrom(null, _projectInfo.RegisterNumber);
+            }
+            else
+            {
+                Organization = OrganizationRegistry.GetById(AppSettings.Current.DefaultOrganizationId);
+            }
+
+            Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} (RevisionScheme={RevisionScheme}, Org={Organization.ShortName}) ===");
         }
 
         if (isSpecificRescan)
@@ -449,6 +477,15 @@ public class ProjectManager : INotifyPropertyChanged
             .ToList();
 
         string? detectedProjectNo = detectedProjectNumbers.FirstOrDefault()?.ProjectNumber;
+
+        if (string.IsNullOrWhiteSpace(_projectInfo?.OrganizationId) && pdfFiles.Any())
+        {
+            var detectedOrg = OrganizationRegistry.DetectFrom(pdfFiles.Select(Path.GetFileNameWithoutExtension), RegisterNumber);
+            if (detectedOrg.Id != Organization.Id)
+            {
+                Organization = detectedOrg;
+            }
+        }
 
         if (string.IsNullOrEmpty(this.ProjectNumber) && !string.IsNullOrEmpty(detectedProjectNo))
         {
@@ -902,6 +939,7 @@ public class ProjectManager : INotifyPropertyChanged
         _projectInfo.ClientNumber = ClientNumber;
         _projectInfo.UseNumericRevisions = UseNumericRevisions;
         _projectInfo.RevisionScheme = RevisionScheme;
+        _projectInfo.OrganizationId = Organization.Id;
         _projectInfo.Save(_currentBasePath);
 
         // Save dynamic data only (static fields removed from ProjectStorage)

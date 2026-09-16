@@ -89,6 +89,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Initialize DisciplineCombo based on stored Discipline value
         InitializeDisciplineCombo();
+        InitializeOrganizationCombo();
         InitializeRevisionSchemeCombo();
 
         // Subscribe to ProjectNumber changes to update RegisterNumber
@@ -293,6 +294,62 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         UpdateRegisterNumber();
     }
 
+    private bool _suppressOrganizationChange;
+
+    private void InitializeOrganizationCombo()
+    {
+        _suppressOrganizationChange = true;
+        try
+        {
+            var target = _project.Organization.Id;
+            foreach (ComboBoxItem item in OrganizationCombo.Items)
+            {
+                if (string.Equals(item.Tag?.ToString(), target, StringComparison.OrdinalIgnoreCase))
+                {
+                    OrganizationCombo.SelectedItem = item;
+                    return;
+                }
+            }
+            OrganizationCombo.SelectedIndex = 0;
+        }
+        finally
+        {
+            _suppressOrganizationChange = false;
+        }
+    }
+
+    private void OrganizationCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressOrganizationChange) return;
+        if (OrganizationCombo.SelectedItem is ComboBoxItem item)
+        {
+            _project.Organization = OrganizationRegistry.GetById(item.Tag?.ToString());
+            UpdateRegisterNumber();
+            if (!string.IsNullOrEmpty(_project._currentBasePath))
+            {
+                _project.SaveProjectData();
+            }
+        }
+    }
+
+    private void OrganizationSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OrganizationSettingsDialog
+        {
+            Owner = this
+        };
+
+        if (dialog.ShowDialog() == true && dialog.SettingsChanged)
+        {
+            if (string.IsNullOrEmpty(_project._currentBasePath) || _project.Documents.Count == 0)
+            {
+                _project.Organization = OrganizationRegistry.GetById(AppSettings.Current.DefaultOrganizationId);
+                InitializeOrganizationCombo();
+                UpdateRegisterNumber();
+            }
+        }
+    }
+
     private bool _suppressRevisionSchemeChange;
 
     private void InitializeRevisionSchemeCombo()
@@ -337,7 +394,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
             if (!string.IsNullOrEmpty(_project.ProjectNumber))
             {
-                _project.RegisterNumber = $"{_project.ProjectNumber}-M+J-00-XX-RE-{disciplineCode}-00-01";
+                _project.RegisterNumber = _project.Organization.FormatRegisterNumber(_project.ProjectNumber, disciplineCode);
             }
             else
             {
@@ -977,14 +1034,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private async void ImportDocuments_Click(object sender, RoutedEventArgs e)
     {
+        var initialPath = _project._currentBasePath;
+        if (string.IsNullOrWhiteSpace(initialPath) || !Directory.Exists(initialPath))
+        {
+            var settings = AppSettings.Current;
+            if (!string.IsNullOrWhiteSpace(settings.LastOpenedFolder) && Directory.Exists(settings.LastOpenedFolder))
+            {
+                initialPath = settings.LastOpenedFolder;
+            }
+            else if (!string.IsNullOrWhiteSpace(settings.DefaultProjectsFolder) && Directory.Exists(settings.DefaultProjectsFolder))
+            {
+                initialPath = settings.DefaultProjectsFolder;
+            }
+        }
+
         var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
             Description = "Select PDF folder to scan",
-            UseDescriptionForTitle = true
+            UseDescriptionForTitle = true,
+            SelectedPath = initialPath ?? string.Empty
         };
 
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
+            AppSettings.Current.LastOpenedFolder = dialog.SelectedPath;
+            AppSettings.Current.Save();
+
             using var _perf = PerfLog.Begin($"ImportDocuments_Click({System.IO.Path.GetFileName(dialog.SelectedPath)})");
             FolderProgressWindow? progressWindow = null;
             try
@@ -1025,6 +1100,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
                 FillProjectDetailsFromCatalog(dialog.SelectedPath);
                 InitializeDisciplineCombo();
+                InitializeOrganizationCombo();
                 InitializeRevisionSchemeCombo();
                 UpdateRegisterNumber();
                 UpdateIssueDateFilterOptions();
@@ -1885,7 +1961,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 DistributionText: distributionText,
                 PurposeOfIssue: purpose,
                 MethodOfIssue: method,
-                IssuedBy: IssuedByFilter?.Text);
+                IssuedBy: IssuedByFilter?.Text,
+                Organization: _project.Organization);
 
             var saveDialog = new SaveFileDialog
             {
