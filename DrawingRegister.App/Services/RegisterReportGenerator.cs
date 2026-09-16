@@ -130,8 +130,11 @@ public static class RegisterReportGenerator
                     else if (!string.IsNullOrEmpty(org.LogoResourceName))
                     {
                         var assembly = Assembly.GetExecutingAssembly();
-                        stream = assembly.GetManifestResourceStream(org.LogoResourceName)
-                              ?? assembly.GetManifestResourceStream("DrawingRegister.App.Resources.WHITE LOGO RED BACKGROUND.jpg");
+                        stream = assembly.GetManifestResourceStream(org.LogoResourceName);
+                        if (stream == null && org.Id.Equals("MJ", StringComparison.OrdinalIgnoreCase))
+                        {
+                            stream = assembly.GetManifestResourceStream("DrawingRegister.App.Resources.WHITE LOGO RED BACKGROUND.jpg");
+                        }
                     }
 
                     if (stream != null)

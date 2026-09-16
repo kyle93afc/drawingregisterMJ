@@ -42,12 +42,12 @@ public static class OrganizationRegistry
 
     public static readonly OrganizationProfile DCF = new(
         Id: "DCF",
-        DisplayName: "DCF (Glasgow)",
+        DisplayName: "DCF Design Consultants",
         ShortName: "DCF",
         OriginatorCode: "DCF",
-        BrandColorHex: "#1e3a8a",
-        LogoResourceName: null,
-        CopyrightNotice: "Copyright (c) 2026 DCF");
+        BrandColorHex: "#00b282",
+        LogoResourceName: "DrawingRegister.App.Resources.dcf-logo.png",
+        CopyrightNotice: "Copyright (c) 2026 DCF Design Consultants");
 
     public static readonly IReadOnlyList<OrganizationProfile> All = [MJ, DCF];
 

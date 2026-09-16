@@ -63,7 +63,8 @@
 
                     <!-- Logo + Title -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
-                        <Image Source="pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png"
+                        <Image x:Name="CompanyLogoImage"
+                               Source="pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png"
                                Height="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="Document &amp; Drawing Register" FontSize="16" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>

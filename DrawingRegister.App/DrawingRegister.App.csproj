@@ -50,11 +50,14 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources/company-logo.png" />
+    <EmbeddedResource Include="Resources/dcf-logo.png" />
     <EmbeddedResource Include="Resources/WHITE LOGO RED BACKGROUND.jpg" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\icon.ico" />
+    <Resource Include="Resources/company-logo.png" />
+    <Resource Include="Resources/dcf-logo.png" />
   </ItemGroup>
 
   <ItemGroup>

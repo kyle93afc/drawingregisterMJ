@@ -131,10 +131,39 @@ public sealed class RegisterReportGeneratorTests : IDisposable
         var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
 
         Assert.Contains("DOCUMENT AND DRAWING REGISTER", pageText);
-        Assert.Contains("DCF (GLASGOW)", pageText);
         Assert.Contains("GLASGOW WAREHOUSE", pageText);
         Assert.Contains("12345-DCF-00-XX-RE-C-00-01", pageText);
         Assert.Contains("12345-DCF-00-XX-DR-C-0001", pageText);
+        Assert.True(pdf.GetPages().First().GetImages().Any(), "Expected embedded DCF logo image on page");
+    }
+
+    [Fact]
+    public void Generate_report_with_null_logo_renders_text_badge()
+    {
+        var destination = Path.Combine(_tempDirectory, "fallback_badge.pdf");
+        var docs = new[]
+        {
+            CreateDocument("12345-DCF-00-XX-DR-C-0001", ("P01", "Information", new DateTime(2026, 9, 1)))
+        };
+
+        var noLogoOrg = OrganizationRegistry.DCF with { LogoResourceName = null, DisplayName = "DCF Glasgow" };
+
+        var request = CreateRequest(
+            RegisterReportMode.Register,
+            new DateTime(2026, 9, 16),
+            projectNumber: "12345",
+            projectName: "Glasgow Warehouse",
+            discipline: "Civil",
+            registerNumber: "12345-DCF-00-XX-RE-C-00-01",
+            documents: docs,
+            organization: noLogoOrg);
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+        Assert.True(File.Exists(destination));
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+        Assert.Contains("DCF GLASGOW", pageText);
     }
 
     [Fact]

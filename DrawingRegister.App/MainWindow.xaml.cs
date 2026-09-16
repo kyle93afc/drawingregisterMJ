@@ -287,6 +287,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             UpdateRegisterNumber();
         }
+        else if (e.PropertyName == nameof(ProjectManager.Organization))
+        {
+            InitializeOrganizationCombo();
+            UpdateCompanyLogo();
+            UpdateRegisterNumber();
+        }
     }
 
     private void DisciplineCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -315,6 +321,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         finally
         {
             _suppressOrganizationChange = false;
+            UpdateCompanyLogo();
+        }
+    }
+
+    private void UpdateCompanyLogo()
+    {
+        if (CompanyLogoImage == null) return;
+        try
+        {
+            var isDcf = _project.Organization.Id.Equals("DCF", StringComparison.OrdinalIgnoreCase);
+            var packUri = isDcf
+                ? "pack://application:,,,/DrawingRegister.App;component/Resources/dcf-logo.png"
+                : "pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png";
+            CompanyLogoImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(packUri, UriKind.Absolute));
+        }
+        catch
+        {
+            // Resource load fallback
         }
     }
 
@@ -324,6 +348,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (OrganizationCombo.SelectedItem is ComboBoxItem item)
         {
             _project.Organization = OrganizationRegistry.GetById(item.Tag?.ToString());
+            UpdateCompanyLogo();
             UpdateRegisterNumber();
             if (!string.IsNullOrEmpty(_project._currentBasePath))
             {
