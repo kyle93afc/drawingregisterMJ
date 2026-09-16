@@ -123,11 +123,7 @@ public static class RegisterReportGenerator
                 try
                 {
                     Stream? stream = null;
-                    if (!string.IsNullOrEmpty(org.CustomLogoPath) && File.Exists(org.CustomLogoPath))
-                    {
-                        stream = File.OpenRead(org.CustomLogoPath);
-                    }
-                    else if (!string.IsNullOrEmpty(org.LogoResourceName))
+                    if (!string.IsNullOrEmpty(org.LogoResourceName))
                     {
                         var assembly = Assembly.GetExecutingAssembly();
                         stream = assembly.GetManifestResourceStream(org.LogoResourceName);

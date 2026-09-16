@@ -290,7 +290,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         else if (e.PropertyName == nameof(ProjectManager.Organization))
         {
             InitializeOrganizationCombo();
-            UpdateCompanyLogo();
             UpdateRegisterNumber();
         }
     }

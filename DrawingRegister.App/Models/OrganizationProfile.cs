@@ -15,9 +15,6 @@ public record OrganizationProfile(
     string OriginatorCode,
     string BrandColorHex,
     string? LogoResourceName = null,
-    string? CustomLogoPath = null,
-    string CopyrightNotice = "",
-    string DefaultServerPath = "",
     string BrandHoverColorHex = "",
     string BrandPressedColorHex = "",
     string BrandLightColorHex = "")
@@ -43,8 +40,7 @@ public static class OrganizationRegistry
         BrandHoverColorHex: "#c91438",
         BrandPressedColorHex: "#a8102f",
         BrandLightColorHex: "#FEF2F4",
-        LogoResourceName: "DrawingRegister.App.Resources.company-logo.png",
-        CopyrightNotice: "Copyright (c) 2026 M+J Engineers");
+        LogoResourceName: "DrawingRegister.App.Resources.company-logo.png");
 
     public static readonly OrganizationProfile DCF = new(
         Id: "DCF",
@@ -55,8 +51,7 @@ public static class OrganizationRegistry
         BrandHoverColorHex: "#009e74",
         BrandPressedColorHex: "#008a65",
         BrandLightColorHex: "#E6F7F2",
-        LogoResourceName: "DrawingRegister.App.Resources.dcf-logo.png",
-        CopyrightNotice: "Copyright (c) 2026 DCF Design Consultants");
+        LogoResourceName: "DrawingRegister.App.Resources.dcf-logo.png");
 
     public static readonly IReadOnlyList<OrganizationProfile> All = [MJ, DCF];
 
@@ -77,9 +72,7 @@ public static class OrganizationRegistry
             return Default;
 
         var clean = code.Trim();
-        if (clean.Equals("DCF", StringComparison.OrdinalIgnoreCase))
-            return DCF;
-        if (clean.Equals("M+J", StringComparison.OrdinalIgnoreCase) || clean.Equals("MJ", StringComparison.OrdinalIgnoreCase))
+        if (clean.Equals("MJ", StringComparison.OrdinalIgnoreCase))
             return MJ;
 
         return All.FirstOrDefault(p => string.Equals(p.OriginatorCode, clean, StringComparison.OrdinalIgnoreCase))
