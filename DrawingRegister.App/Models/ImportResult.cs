@@ -10,6 +10,7 @@ public class ImportResult
     public bool HasSkippedFiles => SkippedFiles.Count > 0;
     public List<FileRenameInfo> SuggestedRenames { get; set; } = new();
     public bool HasSuggestedRenames => SuggestedRenames.Count > 0;
+    public string? Warning { get; set; }
 }
 
 public class SkippedFileInfo
