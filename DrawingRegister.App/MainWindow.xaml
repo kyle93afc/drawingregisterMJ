@@ -44,15 +44,7 @@
                 </EventTrigger>
             </Border.Triggers>
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="6"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <!-- Line 1: Logo + Title | Search | About -->
-                <Grid Grid.Row="0">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
@@ -66,8 +58,12 @@
                         <Image x:Name="CompanyLogoImage"
                                Source="pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png"
                                Height="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Document &amp; Drawing Register" FontSize="16" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ProjectTitleText" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Button x:Name="ProjectSettingsButton" Content="⚙" Click="ProjectSettings_Click"
+                                Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0"
+                                FontSize="14" Margin="6,0,0,0" ToolTip="Project settings"/>
                     </StackPanel>
 
                     <!-- Search Bar -->
@@ -107,99 +103,106 @@
                             Padding="0"/>
                 </Grid>
 
-                <!-- Line 2: Project Fields (compact single row) -->
-                <Grid Grid.Row="2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*" MinWidth="100"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="140"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="180"/>
-                        <ColumnDefinition Width="12"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*" MinWidth="120"/>
-                    </Grid.ColumnDefinitions>
+                <Popup x:Name="ProjectSettingsPopup" PlacementTarget="{Binding ElementName=ProjectSettingsButton}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                       Closed="ProjectSettingsPopup_Closed">
+                    <Border Background="White" BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1"
+                            CornerRadius="8" Padding="16" Margin="0,4,12,12" Width="460"
+                            Effect="{StaticResource PopupShadow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="Discipline" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                    <ComboBox x:Name="DisciplineCombo" Grid.Column="1" Height="28"
-                              SelectionChanged="DisciplineCombo_SelectionChanged" FontSize="12">
-                        <ComboBoxItem Tag="Z" Content="General/Multi-discipline"/>
-                        <ComboBoxItem Tag="C" Content="Civil"/>
-                        <ComboBoxItem Tag="S" Content="Structural"/>
-                        <ComboBoxItem Tag="A" Content="Architectural"/>
-                    </ComboBox>
+                            <TextBlock Grid.Row="0" Text="Project" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="ProjectNameBox" Height="28" FontSize="12"
+                                     ToolTip="Project name shown on the register and reports."
+                                     TextChanged="ProjectPicker_TextChanged" PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
 
-                    <TextBlock Grid.Column="3" Text="Project No" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                    <TextBox x:Name="ProjectNoBox" Grid.Column="4" Height="28" FontSize="12"
-                             TextChanged="ProjectPicker_TextChanged"
-                             PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
+                            <TextBlock Grid.Row="2" Text="Project No" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="ProjectNoBox" Height="28" FontSize="12"
+                                     ToolTip="Your organisation's project number."
+                                     TextChanged="ProjectPicker_TextChanged" PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
 
-                    <TextBlock Grid.Column="6" Text="Client No" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                    <TextBox x:Name="ClientNoBox" Grid.Column="7" Height="28" FontSize="12"/>
+                            <TextBlock Grid.Row="4" Text="Client No" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" x:Name="ClientNoBox" Height="28" FontSize="12"
+                                     ToolTip="The client's project number, when their document filenames use a different number."/>
 
-                    <TextBlock Grid.Column="9" Text="Reg No" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                    <TextBox x:Name="RegNoBox" Grid.Column="10" Height="28" IsReadOnly="True" FontSize="12"/>
+                            <TextBlock Grid.Row="6" Text="Discipline" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="6" Grid.Column="1" x:Name="DisciplineCombo" Height="28" FontSize="12"
+                                      SelectionChanged="DisciplineCombo_SelectionChanged">
+                                <ComboBoxItem Tag="Z" Content="General/Multi-discipline"/>
+                                <ComboBoxItem Tag="C" Content="Civil"/>
+                                <ComboBoxItem Tag="S" Content="Structural"/>
+                                <ComboBoxItem Tag="A" Content="Architectural"/>
+                            </ComboBox>
 
-                    <TextBlock Grid.Column="12" Text="Project" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                    <TextBox x:Name="ProjectNameBox" Grid.Column="13" Height="28" FontSize="12"
-                             TextChanged="ProjectPicker_TextChanged"
-                             PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
+                            <TextBlock Grid.Row="8" Text="Company" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <DockPanel Grid.Row="8" Grid.Column="1">
+                                <Button x:Name="OrganizationSettingsBtn" DockPanel.Dock="Right" Content="Defaults"
+                                        Click="OrganizationSettings_Click" Style="{StaticResource GhostButton}"
+                                        Height="28" Padding="8,2" FontSize="11" Margin="6,0,0,0"/>
+                                <ComboBox x:Name="OrganizationCombo" Height="28" FontSize="12"
+                                          SelectionChanged="OrganizationCombo_SelectionChanged">
+                                    <ComboBoxItem Tag="MJ" Content="M+J Engineers (M+J)"/>
+                                    <ComboBoxItem Tag="DCF" Content="DCF (Glasgow)"/>
+                                </ComboBox>
+                            </DockPanel>
 
-                    <!-- CMap project picker. PlacementTarget and Width come from
-                         code-behind so it sits under whichever box is being typed in. -->
-                    <Popup x:Name="ProjectPickerPopup" Placement="Bottom" StaysOpen="False"
-                           AllowsTransparency="True" PopupAnimation="Fade">
-                        <Border Background="White" BorderBrush="{StaticResource InputBorderBrush}"
-                                BorderThickness="1" CornerRadius="6" Margin="0,2,10,10"
-                                Effect="{StaticResource PopupShadow}">
-                            <ListBox x:Name="ProjectPickerList" MaxHeight="280" BorderThickness="0"
-                                     Background="Transparent" FontSize="12"
-                                     HorizontalContentAlignment="Stretch"
-                                     MouseLeftButtonUp="ProjectPickerList_MouseLeftButtonUp">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Code}" FontSize="12" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Title}" FontSize="12" Margin="8,0,0,0"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </Border>
-                    </Popup>
-                </Grid>
+                            <TextBlock Grid.Row="10" Text="Revisions" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="10" Grid.Column="1" x:Name="RevisionSchemeCombo" Height="28" FontSize="12"
+                                      SelectionChanged="RevisionSchemeCombo_SelectionChanged">
+                                <ComboBoxItem Tag="Legacy" Content="Legacy (A, B, C / P01, C01, T01, I01)"/>
+                                <ComboBoxItem Tag="Numeric" Content="Numeric (1, 2, 3)"/>
+                                <ComboBoxItem Tag="SubLetterNumeric" Content="Sub-letter / Formal (1A, 1B → 1)"/>
+                            </ComboBox>
 
-                <!-- Line 3: Organization & Revision Scheme selectors -->
-                <Grid Grid.Row="3" Margin="0,6,0,0">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <TextBlock Text="Company" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
-                        <ComboBox x:Name="OrganizationCombo" Width="175" Height="26" FontSize="11" Margin="6,0,0,0"
-                                  SelectionChanged="OrganizationCombo_SelectionChanged">
-                            <ComboBoxItem Tag="MJ" Content="M+J Engineers (M+J)"/>
-                            <ComboBoxItem Tag="DCF" Content="DCF (Glasgow)"/>
-                        </ComboBox>
-                        <Button x:Name="OrganizationSettingsBtn" Content="⚙ Defaults" Click="OrganizationSettings_Click"
-                                Style="{StaticResource GhostButton}" Height="26" Padding="8,2" FontSize="11" Margin="6,0,0,0"
-                                ToolTip="Configure default company profile and project server folders for this machine"/>
-                    </StackPanel>
+                            <TextBlock Grid.Row="12" Text="Reg No" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="12" Grid.Column="1" x:Name="RegNoBox" Height="28" FontSize="12" IsReadOnly="True"
+                                     ToolTip="Register number, generated from the project, company and discipline."/>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Text="Revision Scheme" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
-                        <ComboBox x:Name="RevisionSchemeCombo" Width="260" Height="26" FontSize="11" Margin="6,0,0,0"
-                                  SelectionChanged="RevisionSchemeCombo_SelectionChanged">
-                            <ComboBoxItem Tag="Legacy" Content="Legacy (A, B, C / P01, C01, T01, I01)"/>
-                            <ComboBoxItem Tag="Numeric" Content="Numeric (1, 2, 3)"/>
-                            <ComboBoxItem Tag="SubLetterNumeric" Content="Sub-letter / Formal (1A, 1B → 1)"/>
-                        </ComboBox>
-                    </StackPanel>
-                </Grid>
+                            <!-- CMap project picker. PlacementTarget and Width come from
+                                 code-behind so it sits under whichever box is being typed in. -->
+                            <Popup x:Name="ProjectPickerPopup" Placement="Bottom" StaysOpen="False"
+                                   AllowsTransparency="True" PopupAnimation="Fade">
+                                <Border Background="White" BorderBrush="{StaticResource InputBorderBrush}"
+                                        BorderThickness="1" CornerRadius="6" Margin="0,2,10,10"
+                                        Effect="{StaticResource PopupShadow}">
+                                    <ListBox x:Name="ProjectPickerList" MaxHeight="280" BorderThickness="0"
+                                             Background="Transparent" FontSize="12"
+                                             HorizontalContentAlignment="Stretch"
+                                             MouseLeftButtonUp="ProjectPickerList_MouseLeftButtonUp">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Code}" FontSize="12" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Title}" FontSize="12" Margin="8,0,0,0"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                </Popup>
             </Grid>
         </Border>
 
@@ -219,18 +222,12 @@
                 </EventTrigger>
             </Border.Triggers>
             <StackPanel>
-                <!-- Top strip: All action buttons in one toolbar -->
-                <Grid Margin="0,0,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <!-- Wrap actions so every command remains reachable in narrower windows. -->
+                <WrapPanel Margin="0,0,0,4">
                         <!-- File Group -->
                         <Button x:Name="ScanFolderButton" Content="Scan PDF Folder" Click="ImportDocuments_Click"
-                                Style="{StaticResource PrimaryButton}" Height="28" Padding="12,4" FontSize="12" Margin="0,0,4,0"/>
+                                Style="{StaticResource PrimaryButton}" Height="28" Padding="12,4" FontSize="12" Margin="0,0,4,0"
+                                ToolTip="Scan a project folder for PDF filenames and save the register in that folder."/>
                         <Button Content="Save Project" Click="SaveProject_Click"
                                 Style="{StaticResource SecondaryButton}" Height="28" Padding="12,4" FontSize="12" Margin="0,0,4,0"/>
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
@@ -241,14 +238,17 @@
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
                         <!-- Export Group -->
-                        <Button Content="PDF Report" Click="GeneratePdfReport_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Button Content="PDF Report" Click="GeneratePdfReport_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"
+                                ToolTip="Create the report selected below, such as a transmittal."/>
                         <Button Content="Export CSV" Click="ExportCsv_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Button Content="Collect Latest PDFs" Click="CollectLatestPdfs_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
                         <!-- View Group -->
-                        <Button Content="Refresh" Click="RefreshView_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
-                        <Button Content="Rescan Folder" Click="RescanFolder_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Button Content="Refresh" Click="RefreshView_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"
+                                ToolTip="Refresh the register from the current project folder."/>
+                        <Button Content="Rescan Folder" Click="RescanFolder_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"
+                                ToolTip="Choose an existing issue folder to scan again."/>
                         <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
                         <!-- Review Group -->
@@ -283,12 +283,9 @@
                                 </Style>
                             </ToggleButton.Style>
                         </ToggleButton>
-                    </StackPanel>
-
-                    <!-- Danger: Remove Entry (right-aligned) -->
-                    <Button x:Name="RemoveDocumentButton" Grid.Column="2" Content="Remove Entry" Click="RemoveDocumentButton_Click"
-                            Style="{StaticResource DangerButton}" Padding="10,4" Height="28" FontSize="12"/>
-                </Grid>
+                    <Button x:Name="RemoveDocumentButton" Content="Remove Entry" Click="RemoveDocumentButton_Click"
+                            Style="{StaticResource DangerButton}" Padding="10,4" Height="28" FontSize="12" Margin="4,0,0,0"/>
+                </WrapPanel>
 
                 <Separator Background="{StaticResource Slate200Brush}" Margin="0,2" Height="1"/>
 
@@ -338,25 +335,25 @@
 
                     <!-- Purpose Indicators -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,12,4" VerticalAlignment="Center">
-                        <Border x:Name="PurposeS" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="PurposeS" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Concept issue indicator">
                             <TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="PurposeP" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="PurposeP" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Planning issue indicator">
                             <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="PurposeT" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="PurposeT" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Warrant / tender indicator">
                             <TextBlock Text="T" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="PurposeC" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="PurposeC" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Construction issue indicator">
                             <TextBlock Text="C" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="PurposeA" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="PurposeA" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Approval indicator">
                             <TextBlock Text="A" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="PurposeI" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="PurposeI" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Information indicator">
                             <TextBlock Text="I" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="PurposeW" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="PurposeW" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Warrant indicator">
                             <TextBlock Text="W" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
@@ -374,16 +371,16 @@
 
                     <!-- Method Indicators -->
                     <StackPanel Orientation="Horizontal" Margin="0,0,12,4" VerticalAlignment="Center">
-                        <Border x:Name="MethodE" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="MethodE" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Email indicator">
                             <TextBlock Text="E" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="MethodS" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="MethodS" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="SharePoint indicator">
                             <TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="MethodP" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="MethodP" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Post indicator">
                             <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
-                        <Border x:Name="MethodH" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0">
+                        <Border x:Name="MethodH" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Hand delivery indicator">
                             <TextBlock Text="H" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
                         </Border>
                     </StackPanel>
@@ -392,6 +389,7 @@
                         <TextBlock Text="Issued By" Style="{StaticResource SectionLabel}" FontSize="11"/>
                         <TextBox x:Name="IssuedByFilter" Width="60" Height="26" MaxLength="2" CharacterCasing="Upper"
                                  TextChanged="IssuedByFilter_TextChanged" FontSize="12"
+                                 ToolTip="Initials of the person who issued the drawings."
                                  Padding="4,1" VerticalContentAlignment="Center" TextAlignment="Center"/>
                     </StackPanel>
 

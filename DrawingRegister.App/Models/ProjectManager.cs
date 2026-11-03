@@ -153,8 +153,9 @@ public class ProjectManager : INotifyPropertyChanged
         var importResult = new ImportResult();
         _askedClientProjectNumbers.Clear();
         bool isSpecificRescan = !string.IsNullOrEmpty(specificFolderToRescanFullPath);
+        var reuseLoadedProject = _currentStorage != null && _projectInfo != null && SamePath(_currentBasePath, folderPath);
 
-        if (!isSpecificRescan) // Full import/refresh
+        if (!reuseLoadedProject)
         {
             Documents.Clear();
             // IssueDates will be rebuilt at the end from all documents.
@@ -169,30 +170,33 @@ public class ProjectManager : INotifyPropertyChanged
         var storageFile = Path.Combine(folderPath, STORAGE_FILENAME);
 
         // Initialize the DistributionManager with the project path
-        DistributionManager = new DistributionManager(folderPath);
+        if (!reuseLoadedProject)
+            DistributionManager = new DistributionManager(folderPath);
 
         // Load project info (static metadata) - persists separately from dynamic data
-        _projectInfo = ProjectInfo.Load(folderPath);
+        if (!reuseLoadedProject)
+            _projectInfo = ProjectInfo.Load(folderPath);
 
         // Try to load existing project data if it exists
-        _currentStorage = ProjectStorage.Load(storageFile);
-        var processedFolders = new HashSet<string>();
+        if (!reuseLoadedProject)
+        {
+            _currentStorage = ProjectStorage.Load(storageFile);
+            RebaseStoredPaths(_currentStorage, folderPath);
+        }
 
         if (_currentStorage == null)
         {
             _currentStorage = new ProjectStorage { BaseFolderPath = folderPath, Projects = new List<DrawingProject>() };
         }
 
-        if (!isSpecificRescan)
+        if (!reuseLoadedProject)
         {
             CheckPrints.Clear();
             foreach (var checkPrint in _currentStorage.CheckPrints ?? new List<CheckPrint>())
                 CheckPrints.Add(checkPrint);
         }
 
-        // Build the paper-size cache from the ORIGINAL storage before the
-        // specific-rescan block below purges entries for the folder being
-        // rescanned. Without this, a "Rescan Folder" never hits the cache.
+        // Reuse stored paper sizes when rescanning known files.
         var knownSizes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var docInfo in _currentStorage.Documents)
         {
@@ -222,7 +226,7 @@ public class ProjectManager : INotifyPropertyChanged
         }
 
         // Apply static fields from ProjectInfo to ProjectManager properties
-        if (!isSpecificRescan)
+        if (!reuseLoadedProject)
         {
             ProjectNumber = _projectInfo.ProjectNumber;
             ProjectName = _projectInfo.ProjectName;
@@ -247,22 +251,7 @@ public class ProjectManager : INotifyPropertyChanged
             Console.WriteLine($"\n=== Loaded project info: {ProjectNumber} - {ProjectName} - {Discipline} (RevisionScheme={RevisionScheme}, Org={Organization.ShortName}) ===");
         }
 
-        if (isSpecificRescan)
-        {
-            Console.WriteLine($"\n=== Preparing to rescan: {Path.GetFileName(specificFolderToRescanFullPath)} ===");
-            var docsToRemove = Documents.Where(doc =>
-                doc.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true) ||
-                (!string.IsNullOrEmpty(doc.FilePath) && Path.GetDirectoryName(doc.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true)
-            ).ToList();
-            foreach (var doc in docsToRemove) { Documents.Remove(doc); }
-
-            _currentStorage.Documents.RemoveAll(docInfo =>
-                 docInfo.RevisionHistory.Any(rev => !string.IsNullOrEmpty(rev.Value.FilePath) && Path.GetDirectoryName(rev.Value.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true) ||
-                (!string.IsNullOrEmpty(docInfo.FilePath) && Path.GetDirectoryName(docInfo.FilePath)?.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase) == true));
-            _currentStorage.Projects.RemoveAll(p => p.FolderPath.Equals(specificFolderToRescanFullPath, StringComparison.OrdinalIgnoreCase));
-        }
-
-        // Populate Documents from _currentStorage (which might have been modified if isSpecificRescan)
+        // Rescans merge into recorded history; absence from a folder is not deletion of an issue.
         if (_currentStorage != null && _currentStorage.Documents != null)
         {
             Console.WriteLine($"\n=== Loading Documents From Storage (Count: {_currentStorage.Documents.Count}) ===");
@@ -319,9 +308,9 @@ public class ProjectManager : INotifyPropertyChanged
             }
         }
 
-        processedFolders = _currentStorage != null && _currentStorage.Projects != null
-            ? new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath))
-            : new HashSet<string>();
+        var processedFolders = _currentStorage != null && _currentStorage.Projects != null
+            ? new HashSet<string>(_currentStorage.Projects.Select(p => p.FolderPath), StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         Console.WriteLine($"Found {processedFolders.Count} previously processed folders (based on current storage state)");
 
 
@@ -349,7 +338,7 @@ public class ProjectManager : INotifyPropertyChanged
                 var dirInfo = new DirectoryInfo(dir);
                 
                 // If NOT a specific rescan, skip if folder is already processed.
-                // If it IS a specific rescan, processedFolders will not contain specificFolderToRescanFullPath due to earlier removal.
+                // A targeted rescan explicitly revisits its processed folder.
                 if (!isSpecificRescan && processedFolders.Contains(dir))
                 {
                     var folderName = Path.GetFileName(dir);
@@ -431,6 +420,7 @@ public class ProjectManager : INotifyPropertyChanged
             if (_currentStorage?.Projects?.Count > 0)
             {
                 Console.WriteLine("No new date folders found — all existing folders already processed.");
+                CompleteImport();
                 return importResult;
             }
             importResult.Warning = "No valid new date folders found. Folders should start with a date in format YYYYMMDD.";
@@ -450,11 +440,11 @@ public class ProjectManager : INotifyPropertyChanged
         if (!pdfFiles.Any())
         {
             Console.WriteLine("No PDF files found in any of the processed date folders.");
+            CompleteImport();
             return importResult;
         }
 
-        // Pre-compute paper sizes: knownSizes was populated from pre-purge storage
-        // above; anything not in it is genuinely new and needs PdfPig to open it.
+        // Pre-compute paper sizes for paths not already present in the stored cache.
         // Parallel.ForEach brings cold-scan from ~75ms/file sequential down to
         // whatever the disk + 4-8 cores can handle.
         var pathsNeedingSize = pdfFiles.Where(fp => !knownSizes.ContainsKey(fp)).ToList();
@@ -621,18 +611,10 @@ public class ProjectManager : INotifyPropertyChanged
                     FilePath = filePath
                 };
 
-                var docRegParentFolder = Path.GetDirectoryName(filePath);
-                var docRegFolderHash = docRegParentFolder?.GetHashCode() ?? 0;
-                var docRegUniqueTicks = Math.Abs(docRegFolderHash) % TimeSpan.TicksPerDay;
-                var docRegRevisionKey = issueDate.Date.AddTicks(docRegUniqueTicks);
-
                 var existingDocReg = Documents.FirstOrDefault(d => d.DocumentNumber == docRegMetadata.DocumentNumber);
                 if (existingDocReg != null)
                 {
-                    if (!existingDocReg.RevisionHistory.ContainsKey(docRegRevisionKey))
-                    {
-                        existingDocReg.RevisionHistory[docRegRevisionKey] = docRegRevInfo;
-                    }
+                    MergeScannedRevision(existingDocReg, issueDate, docRegRevInfo);
 
                     var docRegLatest = existingDocReg.RevisionHistory.OrderByDescending(kv => kv.Key).First();
                     existingDocReg.FilePath = docRegLatest.Value.FilePath;
@@ -642,7 +624,7 @@ public class ProjectManager : INotifyPropertyChanged
                 }
                 else
                 {
-                    docRegMetadata.RevisionHistory[docRegRevisionKey] = docRegRevInfo;
+                    MergeScannedRevision(docRegMetadata, issueDate, docRegRevInfo);
                     docRegMetadata.FilePath = filePath;
                     Documents.Add(docRegMetadata);
                 }
@@ -752,27 +734,10 @@ public class ProjectManager : INotifyPropertyChanged
                 FilePath = filePath
             };
 
-            // Get the full folder path to ensure unique key for same-date folders
-            var parentFolderPath = Path.GetDirectoryName(filePath);
-            var folderHash = parentFolderPath?.GetHashCode() ?? 0;
-            // Create unique tick value based on folder hash (within same day)
-            var uniqueTicks = Math.Abs(folderHash) % TimeSpan.TicksPerDay;
-            var revisionKey = issueDate.Date.AddTicks(uniqueTicks);
-
             var existingDoc = Documents.FirstOrDefault(d => d.DocumentNumber == metadata.DocumentNumber);
             if (existingDoc != null)
             {
-                // Always add new revision
-                if (!existingDoc.RevisionHistory.ContainsKey(revisionKey))
-                {
-                    existingDoc.RevisionHistory[revisionKey] = revInfo;
-                }
-                // If same date/key exists, only update if this new one has a non-'-' revision 
-                // (assuming '-' is placeholder for initial/undetermined revision)
-                else if (revision != "-" && existingDoc.RevisionHistory[revisionKey].Revision == "-")
-                {
-                     existingDoc.RevisionHistory[revisionKey] = revInfo;
-                }
+                MergeScannedRevision(existingDoc, issueDate, revInfo);
                 
                 // After potentially adding/updating a revision, always ensure the 
                 // document's main FilePath points to the one from the *latest* revision overall.
@@ -786,7 +751,7 @@ public class ProjectManager : INotifyPropertyChanged
             }
             else
             {
-                metadata.RevisionHistory[revisionKey] = revInfo;
+                MergeScannedRevision(metadata, issueDate, revInfo);
                 metadata.FilePath = filePath; // Set initial FilePath
                 Documents.Add(metadata);
             }
@@ -841,6 +806,12 @@ public class ProjectManager : INotifyPropertyChanged
             }
         }
 
+        CompleteImport();
+        return importResult;
+    }
+
+    private void CompleteImport()
+    {
         // Rebuild IssueDates from all documents currently in the collection
         IssueDates.Clear();
         var uniqueDatesFromDocs = Documents
@@ -854,8 +825,76 @@ public class ProjectManager : INotifyPropertyChanged
         PerfLog.Event("ProjectManager.Documents.Count", 0, Documents.Count);
 
         SaveProjectData();
+    }
 
-        return importResult;
+    private static bool SamePath(string? first, string? second) =>
+        !string.IsNullOrWhiteSpace(first) && !string.IsNullOrWhiteSpace(second) &&
+        string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(first)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(second)), StringComparison.OrdinalIgnoreCase);
+
+    private static void RebaseStoredPaths(ProjectStorage storage, string destination)
+    {
+        var original = storage.BaseFolderPath;
+        if (string.IsNullOrWhiteSpace(original) || SamePath(original, destination))
+            return;
+
+        string Rebase(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
+                return path;
+            var relative = Path.GetRelativePath(original, path);
+            if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar))
+                return path;
+            // Missing files still belong to the copied register; do not fall back to the original project.
+            return Path.GetFullPath(Path.Combine(destination, relative));
+        }
+
+        foreach (var document in storage.Documents)
+        {
+            document.FilePath = Rebase(document.FilePath);
+            foreach (var revision in document.RevisionHistory.Values)
+                revision.FilePath = Rebase(revision.FilePath);
+        }
+        foreach (var project in storage.Projects)
+            project.FolderPath = Rebase(project.FolderPath);
+        foreach (var checkPrint in storage.CheckPrints ?? new List<CheckPrint>())
+            checkPrint.FilePath = Rebase(checkPrint.FilePath);
+        storage.CheckingFolderPath = Rebase(storage.CheckingFolderPath);
+        storage.BaseFolderPath = destination;
+    }
+
+    private void MergeScannedRevision(DocumentMetadata document, DateTime date, RevisionInfo scanned)
+    {
+        var sameDay = document.RevisionHistory.Where(r => r.Key.Date == date.Date).ToList();
+        if (sameDay.Any(r => SamePath(r.Value.FilePath, scanned.FilePath)))
+            return;
+
+        var folder = Path.GetDirectoryName(scanned.FilePath);
+        var renamed = sameDay.Where(r =>
+            SamePath(Path.GetDirectoryName(r.Value.FilePath), folder) &&
+            string.Equals(r.Value.Revision, scanned.Revision, StringComparison.OrdinalIgnoreCase) &&
+            !File.Exists(r.Value.FilePath)).ToList();
+        if (renamed.Count == 1)
+        {
+            renamed[0].Value.FilePath = scanned.FilePath;
+            return;
+        }
+
+        // Reuse persisted issue keys across documents. New issues get a free key,
+        // never a process-dependent string hash or a key that overwrites history.
+        var existingIssues = Documents.SelectMany(d => d.RevisionHistory)
+            .Where(r => r.Key.Date == date.Date).ToList();
+        var sameFolderKey = existingIssues
+            .Where(r => SamePath(Path.GetDirectoryName(r.Value.FilePath), folder) &&
+                !document.RevisionHistory.ContainsKey(r.Key))
+            .Select(r => (DateTime?)r.Key)
+            .FirstOrDefault();
+        var key = sameFolderKey ?? date.Date.AddTicks(existingIssues
+            .Concat(document.RevisionHistory.Where(r => r.Key.Date == date.Date))
+            .Select(r => r.Key.TimeOfDay.Ticks).DefaultIfEmpty(-1).Max() + 1);
+        if (key.Date != date.Date)
+            throw new InvalidOperationException("No free revision key remains for this issue date.");
+        document.RevisionHistory.Add(key, scanned);
     }
 
     // Clients such as Network Rail make us number drawings with their project number.

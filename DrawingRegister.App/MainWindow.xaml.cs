@@ -80,9 +80,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Bind UI elements to ProjectManager properties
         ProjectNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ProjectNumber)) { Source = _project, Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-        ProjectNameBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ProjectName)) { Source = _project });
+        ProjectNameBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ProjectName)) { Source = _project, Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+        ProjectTitleText.SetBinding(TextBlock.TextProperty, new Binding(nameof(ProjectManager.ProjectName)) { Source = _project });
         RegNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.RegisterNumber)) { Source = _project });
-        ClientNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ClientNumber)) { Source = _project });
+        ClientNoBox.SetBinding(TextBox.TextProperty, new Binding(nameof(ProjectManager.ClientNumber)) { Source = _project, Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
 
         // Warm the shared CMap catalogue so the first keystroke has something to match.
         ProjectCatalog.Projects();
@@ -459,6 +460,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         // Get all unique issue dates from documents
         var issueDates = _project.Documents
             .SelectMany(d => d.RevisionHistory.Keys)
+            .Select(d => d.Date)
             .Distinct()  // Remove duplicates before sorting
             .OrderByDescending(d => d)  // Sort newest to oldest
             .Select(d => new ComboBoxItem { Content = d.ToString("dd/MM/yyyy") });
@@ -560,6 +562,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (selectedContent == "All Dates")
         {
             DocumentGrid.ItemsSource = _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
+            UpdateStatusBar();
             
             // Hide distribution summary and disable view button
             // Also hide subfolder filter
@@ -585,6 +588,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 .ToList();
 
             DocumentGrid.ItemsSource = docsForDate;
+            UpdateStatusBar();
 
             UpdateDistributionInfoDisplay(selectedDate);
 
@@ -901,6 +905,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         FilterDocuments();
     }
 
+    private void ProjectSettings_Click(object sender, RoutedEventArgs e) => ProjectSettingsPopup.IsOpen = true;
+
+    private void ProjectSettingsPopup_Closed(object? sender, EventArgs e)
+    {
+        ProjectPickerPopup.IsOpen = false;
+        if (!string.IsNullOrEmpty(_project._currentBasePath))
+            _project.SaveProjectData();
+    }
+
     private void SaveProject_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -1077,9 +1090,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         
         // Update the grid
         DocumentGrid.ItemsSource = filteredDocs.OrderBy(d => d.DocumentNumber).ToList();
+        UpdateStatusBar();
     }
 
     private async void ImportDocuments_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ScanFolderButton.IsEnabled)
+            return;
+
+        ScanFolderButton.IsEnabled = false;
+        try
+        {
+            await ImportDocumentsAsync();
+        }
+        finally
+        {
+            ScanFolderButton.IsEnabled = true;
+        }
+    }
+
+    private async Task ImportDocumentsAsync()
     {
         var initialPath = _project._currentBasePath;
         if (string.IsNullOrWhiteSpace(initialPath) || !Directory.Exists(initialPath))
@@ -1163,11 +1193,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 var folderName = System.IO.Path.GetFileName(dialog.SelectedPath);
                 if (importResult.Warning is not null)
                 {
-                    MessageBox.Show(importResult.Warning, "Nothing to scan", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(this, importResult.Warning, "Nothing to scan", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
                 else if (importResult.TotalPdfFiles == 0)
                 {
-                    MessageBox.Show($"No new PDF files were found in '{folderName}'.\n\nIf this folder has already been scanned, use 'Rescan Folder' on the toolbar to re-scan an existing date folder.",
+                    MessageBox.Show(this, $"No new PDF files were found in '{folderName}'.\n\nIf this folder has already been scanned, use 'Rescan Folder' on the toolbar to re-scan an existing date folder.",
                         "Scan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else if (importResult.HasSkippedFiles)
@@ -1178,18 +1208,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         + string.Join("\n\n", skippedList);
                     if (importResult.SkippedFiles.Count > 20)
                         message += $"\n\n... and {importResult.SkippedFiles.Count - 20} more.";
-                    MessageBox.Show(message, "Import Warning - Skipped Files", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    MessageBox.Show(this, message, "Import Warning - Skipped Files", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
                 else
                 {
-                    var message = $"Scan of '{folderName}' complete. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
-                    MessageBox.Show(message, "Scan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                    var message = $"Scan of '{folderName}' complete. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF filenames read)";
+                    MessageBox.Show(this, message, "Scan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             }
             catch (Exception ex)
             {
                 progressWindow?.Close();
-                MessageBox.Show($"Error importing documents: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(this, $"Error importing documents: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1251,7 +1281,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             // Force grid to update
             DocumentGrid.Items.Refresh();
 
-            var refreshMessage = $"Successfully refreshed {_project.Documents.Count} documents. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
+            var refreshMessage = $"Successfully refreshed {_project.Documents.Count} documents. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF filenames read)";
             if (importResult.Warning is not null)
             {
                 MessageBox.Show(importResult.Warning, "Nothing to scan", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -1321,7 +1351,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 FilterDocuments();
 
                 var folderName = System.IO.Path.GetFileName(selectedFolder);
-                var message = $"Rescan of '{folderName}' complete. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
+                var message = $"Rescan of '{folderName}' complete. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF filenames read)";
 
                 if (importResult.HasSkippedFiles)
                 {
@@ -1898,6 +1928,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 OpenDocRegFolderDialog(_project._currentBasePath);
                 return;
             }
+            if (_project.Documents.Count == 0)
+            {
+                MessageBox.Show(this, "Scan a PDF folder before creating a report.", "No documents", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             DateTime? selectedIssueDate = null;
             if (reportMode == RegisterReportMode.Transmittal &&
                 IssueDateFilter.SelectedItem is ComboBoxItem issueDateItem &&
@@ -1923,6 +1958,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             if (reportMode == RegisterReportMode.Transmittal && selectedIssueDate.HasValue)
             {
                 distributionText = GetDistributionTextForPdf(selectedIssueDate.Value, selectedSubfolderPath);
+                if ((string.IsNullOrWhiteSpace(distributionText) || distributionText.StartsWith("No recipients selected", StringComparison.OrdinalIgnoreCase)) &&
+                    MessageBox.Show(this, "No recipients are selected for this issue. Create the transmittal anyway?", "No recipients selected", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                    return;
             }
 
             string? purpose = null;
@@ -1972,7 +2010,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                         ? $"PDF saved successfully to:\n{result.ActualFilePath}"
                         : $"The selected PDF was open in another program, so the report was saved as:\n{result.ActualFilePath}";
 
-                    MessageBox.Show(saveMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(this, saveMessage, "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {

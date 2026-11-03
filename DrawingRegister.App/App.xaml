@@ -983,7 +983,9 @@
                                                 CornerRadius="6"
                                                 Margin="0,2,0,0"
                                                 Effect="{StaticResource PopupShadow}">
-                                            <ScrollViewer Margin="4" SnapsToDevicePixels="True">
+                                            <ScrollViewer Margin="4" SnapsToDevicePixels="True"
+                                                          VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
+                                                          HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}">
                                                 <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
                                             </ScrollViewer>
                                         </Border>
