@@ -38,7 +38,8 @@ public sealed record RegisterReportRequest(
     string? MethodOfIssue = null,
     string? IssuedBy = null,
     string? TransmittalNumber = null,
-    OrganizationProfile? Organization = null);
+    OrganizationProfile? Organization = null,
+    IReadOnlyList<DocRegDrawing>? DocRegDrawings = null);
 
 public sealed record RegisterReportResult(
     string ActualFilePath,
@@ -73,6 +74,11 @@ public static class RegisterReportGenerator
         QuestPDF.Settings.License = LicenseType.Community;
 
         var actualFilePath = GetWritablePath(destinationFilePath);
+        if (request.Mode == RegisterReportMode.DocReg && request.DocRegDrawings != null &&
+            DocRegFolderExport.WouldOverwriteSourcePdf(actualFilePath, request.DocRegDrawings))
+        {
+            throw new InvalidOperationException("The DocReg output would overwrite a source drawing PDF. Choose a different destination.");
+        }
         var identity = BuildIdentity(request);
 
         var document = Document.Create(container =>
@@ -360,7 +366,11 @@ public static class RegisterReportGenerator
 
                 var isAlternate = false;
 
-                if (isTransmittal)
+                if (request.Mode == RegisterReportMode.DocReg && request.DocRegDrawings != null)
+                {
+                    ComposeDocRegFolderRows(table, request);
+                }
+                else if (isTransmittal)
                 {
                     var documents = FilterTransmittalDocuments(request);
                     foreach (var doc in documents)
@@ -452,6 +462,78 @@ public static class RegisterReportGenerator
                 var text = (issuedBy ?? string.Empty).ToUpperInvariant();
                 table.Cell().Element(cell => cell.AlignLeft().Text(text));
             });
+        }
+    }
+
+    private static void ComposeDocRegFolderRows(TableDescriptor table, RegisterReportRequest request)
+    {
+        var org = request.Organization ?? OrganizationRegistry.Default;
+        var bandColor = !string.IsNullOrWhiteSpace(org.BrandLightColorHex) ? org.BrandLightColorHex : "#E2E8F0";
+        var included = request.DocRegDrawings ?? Array.Empty<DocRegDrawing>();
+
+        var inHouse = included
+            .Where(drawing => drawing.Include && drawing.Section == DocRegSection.InHouse)
+            .OrderBy(drawing => drawing.DocumentNumber, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var external = included
+            .Where(drawing => drawing.Include && drawing.Section == DocRegSection.ArchitectExternal)
+            .OrderBy(drawing => drawing.DocumentNumber, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (inHouse.Count > 0)
+        {
+            AddSectionBand(table, $"{org.ShortName} DRAWINGS", bandColor);
+            AddDocRegDrawingRows(table, inHouse);
+        }
+
+        if (external.Count > 0)
+        {
+            AddSectionBand(table, "ARCHITECT / EXTERNAL DRAWINGS", bandColor);
+            AddDocRegDrawingRows(table, external);
+        }
+    }
+
+    private static void AddSectionBand(TableDescriptor table, string title, string bandColor)
+    {
+        table.Cell().ColumnSpan(7).Element(cell =>
+        {
+            cell.Background(bandColor)
+                .Padding(5)
+                .AlignLeft()
+                .AlignMiddle()
+                .DefaultTextStyle(x => x.Bold())
+                .Text((title ?? string.Empty).ToUpperInvariant());
+        });
+    }
+
+    private static void AddDocRegDrawingRows(TableDescriptor table, IReadOnlyList<DocRegDrawing> drawings)
+    {
+        var isAlternate = false;
+        foreach (var drawing in drawings)
+        {
+            var rowColor = isAlternate ? "#f5f5f5" : "#ffffff";
+
+            void AddCell(string text)
+            {
+                table.Cell().Element(cell =>
+                {
+                    cell.Background(rowColor)
+                        .Padding(5)
+                        .AlignLeft()
+                        .AlignMiddle()
+                        .Text(text);
+                });
+            }
+
+            AddCell((drawing.DocumentNumber ?? string.Empty).ToUpperInvariant());
+            AddCell((drawing.Description ?? string.Empty).ToUpperInvariant());
+            AddCell((drawing.Package ?? string.Empty).ToUpperInvariant());
+            AddCell((drawing.DocumentType ?? string.Empty).ToUpperInvariant());
+            AddCell((drawing.Size ?? string.Empty).ToUpperInvariant());
+            AddCell((drawing.Revision ?? string.Empty).ToUpperInvariant());
+            AddCell(drawing.IssueDate?.ToString("dd/MM/yyyy") ?? string.Empty);
+
+            isAlternate = !isAlternate;
         }
     }
 

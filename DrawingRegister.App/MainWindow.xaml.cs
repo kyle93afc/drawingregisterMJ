@@ -103,6 +103,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         ReportModeCombo.SelectedIndex = 0;
         PurposeOfIssueFilter.SelectedIndex = 0;
         MethodOfIssueFilter.SelectedIndex = 0;
+        UpdateDocRegFolderButtonVisibility();
 
         // Subscribe to project's documents collection changes
         _project.Documents.CollectionChanged += Documents_CollectionChanged;
@@ -1106,6 +1107,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
+            if (GetSelectedPdfReportMode() == RegisterReportMode.DocReg)
+            {
+                OpenDocRegFolderDialog(dialog.SelectedPath);
+                return;
+            }
+
             AppSettings.Current.LastOpenedFolder = dialog.SelectedPath;
             AppSettings.Current.Save();
 
@@ -1954,6 +1961,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         {
             var reportDate = DateTime.Today;
             var reportMode = GetSelectedPdfReportMode();
+            if (reportMode == RegisterReportMode.DocReg)
+            {
+                OpenDocRegFolderDialog(_project._currentBasePath);
+                return;
+            }
             DateTime? selectedIssueDate = null;
             if (reportMode == RegisterReportMode.Transmittal &&
                 IssueDateFilter.SelectedItem is ComboBoxItem issueDateItem &&
@@ -1973,9 +1985,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 selectedSubfolderName = new DirectoryInfo(folderPathTag).Name;
             }
 
-            var documents = reportMode == RegisterReportMode.DocReg
-                ? GetCurrentGridDocuments()
-                : _project.Documents.ToList();
+            var documents = _project.Documents.ToList();
 
             string? distributionText = null;
             if (reportMode == RegisterReportMode.Transmittal && selectedIssueDate.HasValue)
@@ -2053,6 +2063,51 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void ReportModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        UpdateDocRegFolderButtonVisibility();
+    }
+
+    private void UpdateDocRegFolderButtonVisibility()
+    {
+        if (DocRegFolderButton == null)
+            return;
+
+        var isDocReg = ReportModeCombo.SelectedItem is ComboBoxItem modeItem &&
+            string.Equals(modeItem.Tag?.ToString(), "DocReg", StringComparison.OrdinalIgnoreCase);
+        DocRegFolderButton.Visibility = isDocReg ? Visibility.Visible : Visibility.Collapsed;
+        if (ScanFolderButton != null)
+            ScanFolderButton.Content = isDocReg ? "Scan DocReg Folder" : "Scan PDF Folder";
+    }
+
+    private void DocRegFolder_Click(object sender, RoutedEventArgs e)
+    {
+        OpenDocRegFolderDialog(_project._currentBasePath);
+    }
+
+    private void OpenDocRegFolderDialog(string? folderPath)
+    {
+        try
+        {
+            var dialog = new DocRegFolderDialog(
+                _project.ProjectNumber,
+                _project.ProjectName,
+                _project.Discipline,
+                _project.RegisterNumber,
+                _project.ClientNumber,
+                _project.Organization,
+                _project.Documents.ToList(),
+                initialFolderPath: folderPath);
+            dialog.Owner = this;
+            dialog.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to open DocReg folder dialog");
+            MessageBox.Show($"Could not open the DocReg folder window.\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private RegisterReportMode GetSelectedPdfReportMode()
     {
         if (ReportModeCombo.SelectedItem is ComboBoxItem modeItem &&
@@ -2070,14 +2125,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
     {
         return IssueDateFilter.SelectedItem is ComboBoxItem selectedItem &&
             selectedItem.Content.ToString() != "All Dates";
-    }
-
-    private List<Models.DocumentMetadata> GetCurrentGridDocuments()
-    {
-        return (DocumentGrid.ItemsSource as IEnumerable<Models.DocumentMetadata>)?
-            .OrderBy(d => d.DocumentNumber)
-            .ToList()
-            ?? _project.Documents.OrderBy(d => d.DocumentNumber).ToList();
     }
 
     private void IssuedByFilter_TextChanged(object sender, TextChangedEventArgs e)

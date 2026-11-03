@@ -229,7 +229,7 @@
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <!-- File Group -->
-                        <Button Content="Scan PDF Folder" Click="ImportDocuments_Click"
+                        <Button x:Name="ScanFolderButton" Content="Scan PDF Folder" Click="ImportDocuments_Click"
                                 Style="{StaticResource PrimaryButton}" Height="28" Padding="12,4" FontSize="12" Margin="0,0,4,0"/>
                         <Button Content="Save Project" Click="SaveProject_Click"
                                 Style="{StaticResource SecondaryButton}" Height="28" Padding="12,4" FontSize="12" Margin="0,0,4,0"/>
@@ -296,10 +296,17 @@
                 <WrapPanel Margin="0,4,0,0">
                     <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
                         <TextBlock Text="Report" Style="{StaticResource SectionLabel}" FontSize="11"/>
-                        <ComboBox x:Name="ReportModeCombo" Width="110" Height="26" FontSize="12">
+                        <ComboBox x:Name="ReportModeCombo" Width="110" Height="26" FontSize="12"
+                                  SelectionChanged="ReportModeCombo_SelectionChanged">
                             <ComboBoxItem Content="Transmittal" Tag="Transmittal"/>
                             <ComboBoxItem Content="DocReg" Tag="DocReg"/>
                         </ComboBox>
+                        <Button x:Name="DocRegFolderButton" Content="DocReg folder..."
+                                Click="DocRegFolder_Click"
+                                Style="{StaticResource ToolbarButton}"
+                                Height="26" Margin="6,0,0,0" Padding="10,2" FontSize="12"
+                                Visibility="Collapsed"
+                                ToolTip="One folder of M+J and architect PDFs. Filenames are parsed for review. Source files are not renamed or imported into the Register."/>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
