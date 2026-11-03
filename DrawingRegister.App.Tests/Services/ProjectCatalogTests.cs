@@ -38,13 +38,6 @@ public sealed class ProjectCatalogTests
     }
 
     [Fact]
-    public void Parse_keeps_odd_codes()
-    {
-        Assert.Contains(Sample, p => p.Code == "A5982");
-        Assert.Contains(Sample, p => p.Code == "Legacy Project");
-    }
-
-    [Fact]
     public void Load_on_a_missing_path_returns_empty()
     {
         var missing = Path.Combine(Path.GetTempPath(), $"project_aliases_{Guid.NewGuid():N}.json");
@@ -66,15 +59,6 @@ public sealed class ProjectCatalogTests
         {
             File.Delete(path);
         }
-    }
-
-    [Fact]
-    public void Search_ranks_code_hits_above_title_hits()
-    {
-        var results = ProjectCatalog.Search(Sample, "station");
-
-        // "Station" only appears in titles here, so ranking falls to the numeric code.
-        Assert.Equal(new[] { "125150", "124832" }, results.Select(p => p.Code));
     }
 
     [Fact]

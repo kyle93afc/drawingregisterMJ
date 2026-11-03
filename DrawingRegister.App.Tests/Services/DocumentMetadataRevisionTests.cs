@@ -116,20 +116,4 @@ public sealed class DocumentMetadataRevisionTests
         var result = DocumentMetadata.GenerateRevisionCode("", History(), RevisionScheme.Legacy);
         Assert.Equal("A", result);
     }
-
-    // ---- Backwards-compatible bool overload ----
-
-    [Fact]
-    public void Bool_overload_true_is_numeric_scheme()
-    {
-        var result = DocumentMetadata.GenerateRevisionCode("", History("1", "2"), useNumericRevisions: true);
-        Assert.Equal("3", result);
-    }
-
-    [Fact]
-    public void Bool_overload_false_is_legacy_scheme()
-    {
-        var result = DocumentMetadata.GenerateRevisionCode("Construction", History(), useNumericRevisions: false);
-        Assert.Equal("C01", result);
-    }
 }

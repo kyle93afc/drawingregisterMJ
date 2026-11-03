@@ -89,15 +89,16 @@ public sealed class CheckStatusReportTests : IDisposable
         File.Copy(
             Path.Combine(AppContext.BaseDirectory, "Fixtures", "CheckPrints", "no-stamp.pdf"),
             Path.Combine(checkingFolder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP01-PLAN.pdf"));
+        var nonconformingPath = Path.Combine(checkingFolder, "not-a-check-print.pdf");
+        var malformedPath = Path.Combine(checkingFolder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP02-BROKEN.pdf");
         File.Copy(
             Path.Combine(AppContext.BaseDirectory, "Fixtures", "CheckPrints", "no-stamp.pdf"),
-            Path.Combine(checkingFolder, "not-a-check-print.pdf"));
-        File.WriteAllText(
-            Path.Combine(checkingFolder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP02-BROKEN.pdf"),
-            "not a pdf");
+            nonconformingPath);
+        File.WriteAllText(malformedPath, "not a pdf");
 
         var files = Directory.GetFiles(_root, "*", SearchOption.AllDirectories);
         var before = files.ToDictionary(path => path, File.ReadAllBytes);
+        var lastWrites = files.ToDictionary(path => path, File.GetLastWriteTimeUtc);
         var direct = CheckStatusReport.Render(
             CheckPrintApplier.Apply(CheckPrintScanner.Plan(checkingFolder)),
             [document]);
@@ -110,8 +111,16 @@ public sealed class CheckStatusReportTests : IDisposable
         CheckStatusReport.WriteCsv(headless, headlessCsv);
         Assert.Equal(directCsv.ToString(), headlessCsv.ToString());
         Assert.Equal(3, headless.Count);
-        Assert.Contains(headless, row => row.CheckPrint.Issue.Contains("filename", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(headless, row => row.CheckPrint.Issue.Contains("PDF", StringComparison.OrdinalIgnoreCase));
-        Assert.All(before, entry => Assert.Equal(entry.Value, File.ReadAllBytes(entry.Key)));
+        var nonconforming = Assert.Single(headless, row => row.CheckPrint.FilePath == nonconformingPath).CheckPrint;
+        Assert.True(nonconforming.IsFlagged);
+        Assert.Contains("filename", nonconforming.Issue, StringComparison.OrdinalIgnoreCase);
+        var malformed = Assert.Single(headless, row => row.CheckPrint.FilePath == malformedPath).CheckPrint;
+        Assert.True(malformed.IsFlagged);
+        Assert.Contains("PDF", malformed.Issue, StringComparison.OrdinalIgnoreCase);
+        Assert.All(before, entry =>
+        {
+            Assert.Equal(entry.Value, File.ReadAllBytes(entry.Key));
+            Assert.Equal(lastWrites[entry.Key], File.GetLastWriteTimeUtc(entry.Key));
+        });
     }
 }

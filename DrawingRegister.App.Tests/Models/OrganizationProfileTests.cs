@@ -83,18 +83,6 @@ public sealed class OrganizationProfileTests
         Assert.Equal(expectedId, profile.Id);
     }
 
-    [Theory]
-    [InlineData("DCF", "DCF")]
-    [InlineData("dcf", "DCF")]
-    [InlineData("M+J", "MJ")]
-    [InlineData("MJ", "MJ")]
-    [InlineData(null, "MJ")]
-    public void OrganizationRegistry_GetByOriginatorCode_resolves_expected_profile(string? code, string expectedId)
-    {
-        var profile = OrganizationRegistry.GetByOriginatorCode(code);
-        Assert.Equal(expectedId, profile.Id);
-    }
-
     [Fact]
     public void OrganizationRegistry_DetectFrom_detects_dcf_from_register_number()
     {
@@ -116,34 +104,37 @@ public sealed class OrganizationProfileTests
     }
 
     [Fact]
-    public void OrganizationRegistry_DetectFrom_detects_mj_from_drawing_list()
-    {
-        var drawings = new List<string>
-        {
-            "124660-M+J-V1-XX-DR-A-01-02-1A-GROUND_FLOOR_PLAN"
-        };
-
-        var detected = OrganizationRegistry.DetectFrom(drawings);
-        Assert.Equal("MJ", detected.Id);
-    }
-
-    [Fact]
     public void AppSettings_saves_and_loads_configuration_correctly()
     {
-        var settings = new AppSettings
+        var settingsPath = AppSettings.GetSettingsPath();
+        var original = File.Exists(settingsPath) ? File.ReadAllBytes(settingsPath) : null;
+        var originalWriteTime = File.GetLastWriteTimeUtc(settingsPath);
+        try
         {
-            DefaultOrganizationId = "DCF",
-            DefaultProjectsFolder = @"\\dcf-glasgow-server\projects",
-            LastOpenedFolder = @"\\dcf-glasgow-server\projects\12345"
-        };
+            var settings = new AppSettings
+            {
+                DefaultOrganizationId = "DCF",
+                DefaultProjectsFolder = @"\\dcf-glasgow-server\projects",
+                LastOpenedFolder = @"\\dcf-glasgow-server\projects\12345"
+            };
 
-        settings.Save();
-        AppSettings.ResetCache();
+            settings.Save();
 
-        var loaded = AppSettings.Load();
-        Assert.Equal("DCF", loaded.DefaultOrganizationId);
-        Assert.Equal(@"\\dcf-glasgow-server\projects", loaded.DefaultProjectsFolder);
-        Assert.Equal(@"\\dcf-glasgow-server\projects\12345", loaded.LastOpenedFolder);
+            var loaded = AppSettings.Load();
+            Assert.Equal("DCF", loaded.DefaultOrganizationId);
+            Assert.Equal(@"\\dcf-glasgow-server\projects", loaded.DefaultProjectsFolder);
+            Assert.Equal(@"\\dcf-glasgow-server\projects\12345", loaded.LastOpenedFolder);
+        }
+        finally
+        {
+            if (original == null)
+                File.Delete(settingsPath);
+            else
+            {
+                File.WriteAllBytes(settingsPath, original);
+                File.SetLastWriteTimeUtc(settingsPath, originalWriteTime);
+            }
+        }
     }
 
     [Fact]

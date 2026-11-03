@@ -74,14 +74,6 @@ namespace DrawingRegister.App.Models
         // Revision History - Dictionary of date to revision info
         public Dictionary<DateTime, RevisionInfo> RevisionHistory { get; set; } = new();
 
-        public bool IsLatestRevision =>
-            RevisionHistory.Any() &&
-            Revision == RevisionHistory
-                .Where(r => !r.Value.IsSuperseded)
-                .Select(r => r.Value.Revision)
-                .DefaultIfEmpty(string.Empty)
-                .Max();
-
         /// <summary>
         /// The most recently issued revision that has NOT been superseded. Used by the register,
         /// the "Latest Revision" column, and Collect Latest PDFs so a withdrawn issue doesn't
@@ -93,9 +85,6 @@ namespace DrawingRegister.App.Models
                 .OrderByDescending(r => r.Key)
                 .Select(r => (KeyValuePair<DateTime, RevisionInfo>?)r)
                 .FirstOrDefault();
-
-        public static string GenerateRevisionCode(string purpose, Dictionary<DateTime, RevisionInfo> revisionHistory, bool useNumericRevisions = false)
-            => GenerateRevisionCode(purpose, revisionHistory, useNumericRevisions ? RevisionScheme.Numeric : RevisionScheme.Legacy, isFormalIssue: false);
 
         public static string GenerateRevisionCode(string purpose, Dictionary<DateTime, RevisionInfo> revisionHistory, RevisionScheme scheme, bool isFormalIssue = false)
         {
@@ -331,4 +320,4 @@ namespace DrawingRegister.App.Models
         public string Company { get; set; } = string.Empty;
         public List<DateTime> DistributionDates { get; set; } = new();
     }
-} 
+}

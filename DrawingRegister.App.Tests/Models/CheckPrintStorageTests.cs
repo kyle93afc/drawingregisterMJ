@@ -15,24 +15,6 @@ public sealed class CheckPrintStorageTests : IDisposable
     }
 
     [Fact]
-    public void ProjectStorage_round_trips_check_prints_separately_from_register_documents()
-    {
-        var path = Path.Combine(_folder, "project_data.json");
-        new ProjectStorage
-        {
-            Documents = [new DocumentStorageInfo { DocumentNumber = "REGISTER-01" }],
-            CheckingFolderPath = @"C:\Checking",
-            CheckPrints = [CheckPrint("hash-one")]
-        }.Save(path);
-
-        var loaded = ProjectStorage.Load(path);
-
-        Assert.Equal("REGISTER-01", Assert.Single(loaded.Documents).DocumentNumber);
-        Assert.Equal(@"C:\Checking", loaded.CheckingFolderPath);
-        Assert.Equal("hash-one", Assert.Single(loaded.CheckPrints).SourceHash);
-    }
-
-    [Fact]
     public void ProjectManager_loads_saved_check_print_inventory()
     {
         new ProjectStorage
@@ -68,7 +50,8 @@ public sealed class CheckPrintStorageTests : IDisposable
         manager.StoreCheckPrintInventory(@"C:\Checking", result);
 
         var stored = ProjectStorage.Load(Path.Combine(_folder, "project_data.json"));
-        Assert.Single(stored.CheckPrints);
+        Assert.Equal("same-hash", Assert.Single(stored.CheckPrints).SourceHash);
+        Assert.Equal(@"C:\Checking", stored.CheckingFolderPath);
         Assert.Single(manager.CheckPrints);
         Assert.Equal("REGISTER-UNCHANGED", Assert.Single(stored.Documents).DocumentNumber);
         Assert.Equal(registerScanDate, stored.LastScanDate);

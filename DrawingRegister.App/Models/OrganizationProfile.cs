@@ -66,19 +66,6 @@ public static class OrganizationRegistry
             ?? Default;
     }
 
-    public static OrganizationProfile GetByOriginatorCode(string? code)
-    {
-        if (string.IsNullOrWhiteSpace(code))
-            return Default;
-
-        var clean = code.Trim();
-        if (clean.Equals("MJ", StringComparison.OrdinalIgnoreCase))
-            return MJ;
-
-        return All.FirstOrDefault(p => string.Equals(p.OriginatorCode, clean, StringComparison.OrdinalIgnoreCase))
-            ?? Default;
-    }
-
     public static OrganizationProfile DetectFrom(IEnumerable<string?>? documentNumbers, string? registerNumber = null)
     {
         if (!string.IsNullOrWhiteSpace(registerNumber))

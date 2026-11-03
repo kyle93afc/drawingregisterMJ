@@ -1,4 +1,3 @@
-using System.Reflection;
 using DrawingRegister.App.Helpers;
 using DrawingRegister.App.Models;
 
@@ -23,22 +22,13 @@ public sealed class FileOperationsExportTests
         };
 
         var exportTimestamp = new DateTime(2026, 4, 14, 15, 30, 0);
-        var exportMethod = typeof(FileOperations).GetMethod("CollectLatestPdfs", BindingFlags.Public | BindingFlags.Static);
-
-        Assert.NotNull(exportMethod);
-
-        var exportResult = exportMethod!.Invoke(null, new object[] { documents, destinationDirectory.FullName, exportTimestamp });
-
-        Assert.NotNull(exportResult);
-
-        var exportFolderPath = (string?)exportResult!.GetType().GetProperty("ExportFolderPath")?.GetValue(exportResult);
-        var copiedCount = (int?)exportResult.GetType().GetProperty("CopiedCount")?.GetValue(exportResult);
-        var skippedCount = (int?)exportResult.GetType().GetProperty("SkippedCount")?.GetValue(exportResult);
+        var exportResult = FileOperations.CollectLatestPdfs(documents, destinationDirectory.FullName, exportTimestamp);
+        var exportFolderPath = exportResult.ExportFolderPath;
 
         Assert.Equal(Path.Combine(destinationDirectory.FullName, "Latest Drawings 2026-04-14 15-30"), exportFolderPath);
-        Assert.Equal(2, copiedCount);
-        Assert.Equal(0, skippedCount);
-        Assert.True(File.Exists(Path.Combine(exportFolderPath!, "A-001.pdf")));
+        Assert.Equal(2, exportResult.CopiedCount);
+        Assert.Equal(0, exportResult.SkippedCount);
+        Assert.True(File.Exists(Path.Combine(exportFolderPath, "A-001.pdf")));
         Assert.True(File.Exists(Path.Combine(exportFolderPath, "B-002.pdf")));
     }
 
@@ -58,22 +48,11 @@ public sealed class FileOperationsExportTests
             new DocumentMetadata { DocumentNumber = "DR-002", Description = "Missing", FilePath = missingSourcePath }
         };
 
-        var exportMethod = typeof(FileOperations).GetMethod("CollectLatestPdfs", BindingFlags.Public | BindingFlags.Static);
+        var exportResult = FileOperations.CollectLatestPdfs(documents, destinationDirectory.FullName, new DateTime(2026, 4, 14, 15, 30, 0));
 
-        Assert.NotNull(exportMethod);
-
-        var exportResult = exportMethod!.Invoke(null, new object[] { documents, destinationDirectory.FullName, new DateTime(2026, 4, 14, 15, 30, 0) });
-
-        Assert.NotNull(exportResult);
-
-        var copiedCount = (int?)exportResult!.GetType().GetProperty("CopiedCount")?.GetValue(exportResult);
-        var skippedCount = (int?)exportResult.GetType().GetProperty("SkippedCount")?.GetValue(exportResult);
-        var skippedFiles = exportResult.GetType().GetProperty("SkippedFiles")?.GetValue(exportResult) as System.Collections.IEnumerable;
-
-        Assert.Equal(1, copiedCount);
-        Assert.Equal(1, skippedCount);
-        Assert.NotNull(skippedFiles);
-        Assert.Single(skippedFiles!.Cast<object>());
+        Assert.Equal(1, exportResult.CopiedCount);
+        Assert.Equal(1, exportResult.SkippedCount);
+        Assert.Single(exportResult.SkippedFiles);
     }
 
     [Fact]
@@ -93,16 +72,10 @@ public sealed class FileOperationsExportTests
             new DocumentMetadata { DocumentNumber = "DR-002", Description = "Second", FilePath = secondSourcePath }
         };
 
-        var exportMethod = typeof(FileOperations).GetMethod("CollectLatestPdfs", BindingFlags.Public | BindingFlags.Static);
+        var exportResult = FileOperations.CollectLatestPdfs(documents, destinationDirectory.FullName, new DateTime(2026, 4, 14, 15, 30, 0));
+        var exportFolderPath = exportResult.ExportFolderPath;
 
-        Assert.NotNull(exportMethod);
-
-        var exportResult = exportMethod!.Invoke(null, new object[] { documents, destinationDirectory.FullName, new DateTime(2026, 4, 14, 15, 30, 0) });
-        var exportFolderPath = (string?)exportResult!.GetType().GetProperty("ExportFolderPath")?.GetValue(exportResult);
-
-        Assert.NotNull(exportFolderPath);
-
-        var exportedFiles = Directory.GetFiles(exportFolderPath!, "*.pdf").Select(Path.GetFileName).OrderBy(name => name).ToArray();
+        var exportedFiles = Directory.GetFiles(exportFolderPath, "*.pdf").Select(Path.GetFileName).OrderBy(name => name).ToArray();
 
         Assert.Equal(2, exportedFiles.Length);
         Assert.Contains("shared.pdf", exportedFiles);

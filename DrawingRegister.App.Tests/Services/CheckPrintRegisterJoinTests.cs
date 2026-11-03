@@ -21,7 +21,6 @@ public sealed class CheckPrintRegisterJoinTests
 
         var row = Assert.Single(CheckPrintRegisterJoin.BuildLiveQueue([check], [document]));
 
-        Assert.Same(check, row.CheckPrint);
         Assert.True(row.IsCurrent);
         Assert.Equal(new DateTime(2026, 4, 2), row.IssueDate);
         Assert.Equal("Construction", row.RegisterRevision!.Purpose);

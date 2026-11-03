@@ -86,6 +86,7 @@ bld/
 project_data.json
 
 # Secrets and credentials
+.env.local
 *.pfx
 *.snk
 appsettings.*.json

@@ -68,8 +68,4 @@ public class AppSettings
         }
     }
 
-    public static void ResetCache()
-    {
-        _current = null;
-    }
 }

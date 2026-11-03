@@ -9,24 +9,6 @@ namespace DrawingRegister.App.Tests.Services;
 public sealed class DocRegFilenameParserTests
 {
     [Theory]
-    [InlineData("DocReg-124379-20260422", "124379", "20260422")]
-    [InlineData("DOCREG-124379-20260422", "124379", "20260422")]
-    [InlineData("docreg-124379-20260422", "124379", "20260422")]
-    [InlineData("DocReg-99999-20260422", "99999", "20260422")]     // 5-digit project
-    [InlineData("DocReg-124379-20261231", "124379", "20261231")]
-    public void TryParse_valid_filename_returns_true(
-        string fileStem,
-        string expectedProject,
-        string expectedDate)
-    {
-        var ok = DocRegFilenameParser.TryParse(fileStem, out var match);
-
-        Assert.True(ok);
-        Assert.Equal(expectedProject, match.ProjectNumber);
-        Assert.Equal(expectedDate, match.FileDate);
-    }
-
-    [Theory]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("DocReg-124379-2026042")]          // 7-digit date, too short

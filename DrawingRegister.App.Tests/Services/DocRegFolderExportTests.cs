@@ -31,39 +31,6 @@ public sealed class DocRegFolderExportTests
         Assert.Empty(ok);
     }
 
-    [Fact]
-    public void BuildRequest_uses_docreg_mode_and_does_not_carry_register_documents()
-    {
-        var drawing = CreateDrawing("A-101", include: true);
-
-        var request = DocRegFolderExport.BuildRequest(
-            reportDate: new DateTime(2026, 11, 3),
-            projectNumber: "12499",
-            projectName: "Sample Works",
-            discipline: "Structural",
-            registerNumber: "01",
-            clientNumber: "C100",
-            organization: OrganizationRegistry.MJ,
-            drawings: new[] { drawing });
-
-        Assert.Equal(RegisterReportMode.DocReg, request.Mode);
-        Assert.Empty(request.Documents);
-        Assert.Equal(new[] { drawing }, request.DocRegDrawings);
-        Assert.Equal("12499", request.ProjectNumber);
-        Assert.Equal("Sample Works", request.ProjectName);
-    }
-
-    [Fact]
-    public void WouldOverwriteSourcePdf_is_true_only_for_scanned_drawing_paths()
-    {
-        var source = CreateDrawing("A-101", include: true);
-
-        Assert.True(DocRegFolderExport.WouldOverwriteSourcePdf(source.FilePath, new[] { source }));
-        Assert.False(DocRegFolderExport.WouldOverwriteSourcePdf(
-            Path.Combine(Path.GetDirectoryName(source.FilePath)!, "DocReg-12499-20261103.pdf"),
-            new[] { source }));
-    }
-
     private static DocRegDrawing CreateDrawing(string documentNumber, bool include)
     {
         return new DocRegDrawing

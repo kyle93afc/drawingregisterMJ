@@ -22,27 +22,6 @@ public sealed class CheckPrintAllocatorTests : IDisposable
     }
 
     [Fact]
-    public void Initial_allocation_reserves_CP_one_without_changing_project_data()
-    {
-        var projectData = File.ReadAllText(_storagePath);
-
-        var reservation = CheckPrintAllocator.ReserveNext(_folder, "DOC-01", "A");
-
-        Assert.Equal(1, reservation.Cp);
-        Assert.Equal(projectData, File.ReadAllText(_storagePath));
-    }
-
-    [Fact]
-    public void Repeated_allocation_uses_the_persisted_reservation()
-    {
-        CheckPrintAllocator.ReserveNext(_folder, "DOC-01", "A");
-
-        var reservation = CheckPrintAllocator.ReserveNext(_folder, "DOC-01", "A");
-
-        Assert.Equal(2, reservation.Cp);
-    }
-
-    [Fact]
     public void Scanned_CP_sets_the_next_number_and_the_sequence_continues_across_revisions()
     {
         new ProjectStorage
@@ -65,12 +44,14 @@ public sealed class CheckPrintAllocatorTests : IDisposable
     [Fact]
     public async Task Competing_requests_receive_distinct_CP_numbers()
     {
+        var projectData = File.ReadAllText(_storagePath);
         var requests = Enumerable.Range(0, 8)
             .Select(_ => Task.Run(() => CheckPrintAllocator.ReserveNext(_folder, "DOC-01", "A").Cp));
 
         var numbers = await Task.WhenAll(requests);
 
         Assert.Equal(Enumerable.Range(1, 8), numbers.Order());
+        Assert.Equal(projectData, File.ReadAllText(_storagePath));
     }
 
     [Fact]

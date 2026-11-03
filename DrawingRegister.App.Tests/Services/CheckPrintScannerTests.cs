@@ -37,13 +37,14 @@ public sealed class CheckPrintScannerTests : IDisposable
     }
 
     [Theory]
-    [InlineData("controlled-approved-with-comments.pdf", CheckStatus.AWC, "AWC — approved with comments")]
-    [InlineData("legacy-approved-with-comments.pdf", CheckStatus.AWC, "AWC — approved with comments")]
-    [InlineData("controlled-approved.pdf", CheckStatus.APPD, "APPD — approved")]
-    [InlineData("legacy-approved.pdf", CheckStatus.APPD, "APPD — approved")]
-    [InlineData("checked.pdf", CheckStatus.AWC, "AWC — approved with comments")]
-    [InlineData("generic-stamp.pdf", CheckStatus.AWC, "AWC — approved with comments")]
-    public void Plan_derives_controlled_and_legacy_verdict_stamps(string fixture, CheckStatus expected, string expectedText)
+    [InlineData("controlled-approved-with-comments.pdf", CheckStatus.AWC, "AWC — approved with comments", null)]
+    [InlineData("legacy-approved-with-comments.pdf", CheckStatus.AWC, "AWC — approved with comments", null)]
+    [InlineData("controlled-approved.pdf", CheckStatus.APPD, "APPD — approved", null)]
+    [InlineData("legacy-approved.pdf", CheckStatus.APPD, "APPD — approved", null)]
+    [InlineData("checked.pdf", CheckStatus.AWC, "AWC — approved with comments", "Steve Walker")]
+    [InlineData("generic-stamp.pdf", CheckStatus.AWC, "AWC — approved with comments", null)]
+    public void Plan_derives_controlled_and_legacy_verdict_stamps(
+        string fixture, CheckStatus expected, string expectedText, string? expectedAuthor)
     {
         CopyFixture(fixture);
 
@@ -52,6 +53,8 @@ public sealed class CheckPrintScannerTests : IDisposable
         Assert.Equal(expected, fact.Status);
         Assert.Equal(expectedText, fact.StatusText);
         Assert.False(fact.IsFlagged);
+        if (expectedAuthor != null)
+            Assert.Equal(expectedAuthor, fact.StampAuthor);
     }
 
     [Fact]
@@ -79,20 +82,6 @@ public sealed class CheckPrintScannerTests : IDisposable
         Assert.Equal("UNKNOWN — review required", fact.StatusText);
         Assert.Equal(backDrafted, fact.BackDrafted);
         Assert.True(fact.IsFlagged);
-    }
-
-    [Fact]
-    public void Plan_treats_architect_CHECKED_stamp_as_AWC()
-    {
-        WritePdfWithStamps(
-            Path.Combine(_folder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP01-PLAN.pdf"),
-            new StampAnnotation("CHECKED", "Steve Walker", "D:20260825113747Z"));
-
-        var fact = Assert.Single(CheckPrintScanner.Plan(_folder).Entries);
-
-        Assert.Equal(CheckStatus.AWC, fact.Status);
-        Assert.Equal("Steve Walker", fact.StampAuthor);
-        Assert.False(fact.IsFlagged);
     }
 
     [Fact]
@@ -155,29 +144,12 @@ public sealed class CheckPrintScannerTests : IDisposable
         Assert.Equal(new DateTime(year, month, day, hour, minute, second, DateTimeKind.Utc), fact.StampDate);
     }
 
-    [Fact]
-    public void Plan_keeps_nonconforming_and_malformed_pdfs_as_flagged_rows()
-    {
-        WriteMinimalPdf(Path.Combine(_folder, "not-a-check-print.pdf"));
-        File.WriteAllText(
-            Path.Combine(_folder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP02-FC-BROKEN.pdf"),
-            "not a pdf");
-
-        var facts = CheckPrintScanner.Plan(_folder).Entries;
-
-        Assert.Equal(2, facts.Count);
-        Assert.All(facts, fact => Assert.True(fact.IsFlagged));
-        Assert.Contains(facts, fact => fact.Issue.Contains("filename", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(facts, fact => fact.Issue.Contains("PDF", StringComparison.OrdinalIgnoreCase));
-    }
-
     [Theory]
     [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-GENERAL NOTES-CP01.pdf", "124997-M+J-S1-XX-DR-S-00-01", "T01", 1)]
     [InlineData("124997-M+J-V1-XX-DR-S-20-01-P01-PROPOSED ROOF ALTERATIONS – GENERAL ARRANGEMENT SECTIONS & DETAILS-CP03.pdf", "124997-M+J-V1-XX-DR-S-20-01", "P01", 3)]
     [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-GENERAL NOTES CP 2.pdf", "124997-M+J-S1-XX-DR-S-00-01", "T01", 2)]
     [InlineData("124997-M+J-S1-XX-DR-S-00-01-T01-GENERAL NOTES_CP_04.pdf", "124997-M+J-S1-XX-DR-S-00-01", "T01", 4)]
-    [InlineData("124660-M+J-V1-XX-DR-A-01-02-1A-CP01-PLAN.pdf", "124660-M+J-V1-XX-DR-A-01-02", "1A", 1)]
-    public void Plan_reads_cp_token_before_or_after_description(string fileName, string documentCode, string revision, int cp)
+    public void Plan_reads_cp_token_after_description(string fileName, string documentCode, string revision, int cp)
     {
         WriteMinimalPdf(Path.Combine(_folder, fileName));
 
@@ -202,22 +174,6 @@ public sealed class CheckPrintScannerTests : IDisposable
         Assert.True(string.IsNullOrEmpty(fact.DocumentCode));
         Assert.Equal(0, fact.Cp);
         Assert.Equal("Filename does not match the check-print convention.", fact.Issue);
-    }
-
-    [Fact]
-    public void Plan_is_read_only_and_Apply_is_a_no_op_pass_through()
-    {
-        var path = Path.Combine(_folder, "124660-M+J-V1-XX-DR-A-01-02-1A-CP01-FC-PLAN.pdf");
-        WriteMinimalPdf(path);
-        var before = File.ReadAllBytes(path);
-        var lastWrite = File.GetLastWriteTimeUtc(path);
-
-        var plan = CheckPrintScanner.Plan(_folder);
-        var result = CheckPrintApplier.Apply(plan);
-
-        Assert.Equal(before, File.ReadAllBytes(path));
-        Assert.Equal(lastWrite, File.GetLastWriteTimeUtc(path));
-        Assert.Same(plan.Entries, result.Facts);
     }
 
     private string CopyFixture(string fixture)

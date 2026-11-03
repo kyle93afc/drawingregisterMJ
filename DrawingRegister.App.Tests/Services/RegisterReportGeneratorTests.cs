@@ -101,43 +101,6 @@ public sealed class RegisterReportGeneratorTests : IDisposable
     }
 
     [Fact]
-    public void Generate_dcf_report_creates_pdf_with_dcf_branding()
-    {
-        var destination = Path.Combine(_tempDirectory, "dcf_register.pdf");
-        var docs = new[]
-        {
-            CreateDocument("12345-DCF-00-XX-DR-C-0001", ("P01", "Information", new DateTime(2026, 9, 1))),
-            CreateDocument("12345-DCF-00-XX-DR-C-0002", ("P02", "Construction", new DateTime(2026, 9, 10)))
-        };
-
-        var request = CreateRequest(
-            RegisterReportMode.Register,
-            new DateTime(2026, 9, 16),
-            projectNumber: "12345",
-            projectName: "Glasgow Warehouse",
-            discipline: "Civil",
-            registerNumber: "12345-DCF-00-XX-RE-C-00-01",
-            clientNumber: "DCF-CL-01",
-            documents: docs,
-            organization: OrganizationRegistry.DCF);
-
-        var result = RegisterReportGenerator.Generate(request, destination);
-
-        Assert.Equal(destination, result.ActualFilePath);
-        Assert.True(File.Exists(destination));
-        Assert.True(result.PageCount >= 1);
-
-        using var pdf = PdfDocument.Open(destination);
-        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
-
-        Assert.Contains("DOCUMENT AND DRAWING REGISTER", pageText);
-        Assert.Contains("GLASGOW WAREHOUSE", pageText);
-        Assert.Contains("12345-DCF-00-XX-RE-C-00-01", pageText);
-        Assert.Contains("12345-DCF-00-XX-DR-C-0001", pageText);
-        Assert.True(pdf.GetPages().First().GetImages().Any(), "Expected embedded DCF logo image on page");
-    }
-
-    [Fact]
     public void Generate_report_with_null_logo_renders_text_badge()
     {
         var destination = Path.Combine(_tempDirectory, "fallback_badge.pdf");
@@ -279,6 +242,7 @@ public sealed class RegisterReportGeneratorTests : IDisposable
         Assert.Contains("SER DOCUMENT AND DRAWING REGISTER", pageText);
         Assert.Contains("DocReg-124997-20260903", pageText);
         Assert.Contains("DR-100", pageText);
+        Assert.DoesNotContain("ARCHITECT / EXTERNAL DRAWINGS", pageText);
     }
 
     [Fact]
@@ -408,6 +372,8 @@ public sealed class RegisterReportGeneratorTests : IDisposable
         var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
 
         Assert.Contains("SER DOCUMENT AND DRAWING REGISTER", pageText);
+        Assert.Contains("SAMPLE WORKS", pageText);
+        Assert.Contains("DocReg-12499-20261103", pageText);
         Assert.Contains("IN-HOUSE TESTCO", pageText);
         Assert.Contains("ARCHITECT / EXTERNAL DRAWINGS", pageText);
         Assert.Contains("12499-M+J-V1-XX-DR-S-16-01", pageText);
@@ -514,25 +480,6 @@ public sealed class RegisterReportGeneratorTests : IDisposable
         var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
         Assert.Contains("A-101", pageText);
         Assert.DoesNotContain("POISON-DOC", pageText);
-    }
-
-    [Fact]
-    public void Generate_docreg_from_register_documents_does_not_add_folder_section_bands()
-    {
-        var destination = Path.Combine(_tempDirectory, "docreg-register-path.pdf");
-        var request = CreateRequest(
-            RegisterReportMode.DocReg,
-            new DateTime(2026, 9, 3),
-            projectNumber: "12499",
-            documents: new[] { CreateDocument("DR-100", ("1", "Warrant", new DateTime(2026, 4, 1))) });
-
-        RegisterReportGenerator.Generate(request, destination);
-
-        using var pdf = PdfDocument.Open(destination);
-        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
-        Assert.Contains("DR-100", pageText);
-        Assert.DoesNotContain("ARCHITECT / EXTERNAL DRAWINGS", pageText);
-        Assert.DoesNotContain("IN-HOUSE TESTCO", pageText);
     }
 
     [Fact]

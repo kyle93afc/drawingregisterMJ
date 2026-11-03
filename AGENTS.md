@@ -68,7 +68,10 @@ XAML edits and most C# edits are picked up by Hot Reload without a rebuild. Chan
 
 - Test project: `DrawingRegister.App.Tests/` (xUnit).
 - Run with `dotnet test` from the repo root.
-- When adding file-operation or PDF-export logic, add tests alongside `FileOperationsExportTests.cs`.
+- Never write unit tests after you write code.
+- Highly prefer E2E tests as the sole testing mechanism. Use them to verify complex features work. At the end of E2E tests, produce a verifiable and repeatable artifact.
+- If you must test a system in isolation, first write down all the ways it could fail, then write the code.
+- Before retaining an isolated test, identify a credible failure that the existing E2E or file/PDF boundary tests would miss. Delete duplicated assertions and tests that only preserve unused APIs or restate constants without an independent product contract.
 - There is no integration-test harness for the WPF UI itself — manual verification by the user covers UI behavior.
 
 ## 6. Release process (critical — read carefully)
@@ -100,7 +103,7 @@ Title="DOCUMENT AND DRAWING REGISTER vX.Y.Z" Height="800" Width="1200"
 - **Contents:** Read and write
 - **Metadata:** Read-only (automatic)
 
-**Never commit, hardcode, or log the token.** The user provides it at release time. If the token is exposed in shell history or in a file, tell the user immediately so they can rotate it at https://github.com/settings/tokens.
+**Never commit, hardcode, or log the token.** Store the user-provided token as `GITHUB_TOKEN=...` in the repo-root `.env.local`, which is Git-ignored. Load it with `. .agents/skills/ship-release/Import-ReleaseEnvironment.ps1` before uploading. Reuse this local credential for future releases after checking authentication; request a replacement privately if it has expired or lacks permissions. Never print the file or token. An intentional save to this ignored file is authorized; if the token is otherwise exposed, tell the user immediately so they can rotate it at https://github.com/settings/tokens.
 
 When using the GitHub CLI:
 
@@ -109,7 +112,7 @@ When using the GitHub CLI:
 - Treat any command output containing a token as a security incident and tell the user to rotate it immediately.
 - `gh auth status` is safe for checking whether CLI auth is valid.
 
-If you're running unattended and can't prompt the user, **stop before the upload step** and surface a clear request for the token rather than trying to proceed without it.
+If neither `.env.local` nor the process environment contains valid authentication, **stop before the upload step** and request the token through a private secret field rather than chat.
 
 ### 6.3 Release steps (PowerShell, run from repo root)
 
@@ -117,6 +120,9 @@ Replace `X.Y.Z` with the real version. Keep the version consistent across **all 
 
 ```powershell
 cd C:/Cursor_Files/drawingregisterMJ
+
+# Load the locally saved token without printing it
+. .agents/skills/ship-release/Import-ReleaseEnvironment.ps1
 
 # 1. Build self-contained, Release, win-x64
 dotnet publish DrawingRegister.App -c Release --self-contained -r win-x64 -o ./publish
@@ -131,7 +137,7 @@ vpk upload github --repoUrl "https://github.com/kyle93afc/drawingregisterMJ" --t
 gh release edit vX.Y.Z --repo kyle93afc/drawingregisterMJ --draft=false --title "vX.Y.Z" --notes "Short, user-facing description of what changed"
 ```
 
-Prefer setting the token as an env var (`$env:GITHUB_TOKEN = "ghp_..."`) so it doesn't appear on the command line or in shell history.
+The loader reads only `GITHUB_TOKEN` from `.env.local`; it never executes file contents. Do not paste a token into a shell command or chat.
 
 ### 6.4 Commit and push the version bump
 
@@ -158,7 +164,7 @@ Run through this top to bottom — do not skip steps, do not reorder.
 - [ ] Push `working-version` before `vpk upload` so the remote tag points at a commit that already exists on GitHub
 - [ ] `dotnet publish DrawingRegister.App -c Release --self-contained -r win-x64 -o ./publish`
 - [ ] `vpk pack` with matching `--packVersion X.Y.Z`
-- [ ] Obtain valid GitHub auth for both `vpk` and `gh` (PAT or `gh auth login`; do not guess, do not reuse a stale token)
+- [ ] Load `.env.local` and verify valid GitHub auth for both `vpk` and `gh`; replace expired credentials privately
 - [ ] `vpk upload github` with matching `--tag vX.Y.Z`
 - [ ] `gh release edit vX.Y.Z --draft=false --title "vX.Y.Z" --notes "..."`
 - [ ] Verify the release is visible and marked Latest at https://github.com/kyle93afc/drawingregisterMJ/releases
