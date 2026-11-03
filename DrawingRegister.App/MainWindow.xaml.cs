@@ -94,6 +94,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
         // Subscribe to ProjectNumber changes to update RegisterNumber
         _project.PropertyChanged += Project_PropertyChanged;
+        _project.ConfirmClientProjectNumber = found => Dispatcher.Invoke(() => MessageBox.Show(this,
+            $"Add drawings numbered {found} and set {found} as the Client No.?",
+            "Client No.", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes);
 
         // Bind grid to ProjectManager collections
         DocumentGrid.ItemsSource = _project.Documents;
@@ -284,7 +287,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void Project_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ProjectManager.ProjectNumber))
+        if (e.PropertyName is nameof(ProjectManager.ProjectNumber) or nameof(ProjectManager.Discipline))
         {
             UpdateRegisterNumber();
         }
@@ -297,7 +300,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
 
     private void DisciplineCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        UpdateRegisterNumber();
+        if (DisciplineCombo.SelectedItem is ComboBoxItem selected)
+            _project.Discipline = selected.Content?.ToString() ?? string.Empty;
     }
 
     private bool _suppressOrganizationChange;
@@ -434,23 +438,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         }
     }
 
+    // Derived from the project, never the combo: imports change the project while the combo still shows stale state.
     private void UpdateRegisterNumber()
     {
-        if (DisciplineCombo.SelectedItem is ComboBoxItem selected)
-        {
-            var disciplineCode = selected.Tag?.ToString() ?? "Z";
-            var disciplineDescription = selected.Content?.ToString() ?? "General/Multi-discipline";
-            _project.Discipline = disciplineDescription;
+        var disciplineCode = DisciplineCombo.Items.OfType<ComboBoxItem>()
+            .FirstOrDefault(item => item.Content?.ToString() == _project.Discipline || item.Tag?.ToString() == _project.Discipline)
+            ?.Tag?.ToString() ?? "Z";
 
-            if (!string.IsNullOrEmpty(_project.ProjectNumber))
-            {
-                _project.RegisterNumber = _project.Organization.FormatRegisterNumber(_project.ProjectNumber, disciplineCode);
-            }
-            else
-            {
-                _project.RegisterNumber = string.Empty;
-            }
-        }
+        _project.RegisterNumber = string.IsNullOrEmpty(_project.ProjectNumber)
+            ? string.Empty
+            : _project.Organization.FormatRegisterNumber(_project.ProjectNumber, disciplineCode);
     }
 
     private void UpdateIssueDateFilterOptions()
@@ -1188,8 +1185,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                     var message = $"Scan of '{folderName}' complete. ({importResult.SuccessfullyParsed} of {importResult.TotalPdfFiles} PDF files parsed)";
                     MessageBox.Show(message, "Scan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-
-                HandleSuggestedRenames(importResult);
             }
             catch (Exception ex)
             {
@@ -1275,8 +1270,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
             {
                 MessageBox.Show(refreshMessage, "Refresh Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-
-            HandleSuggestedRenames(importResult);
         }
         catch (Exception ex)
         {
@@ -1344,8 +1337,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
                 {
                     MessageBox.Show(message, "Rescan Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
-
-                HandleSuggestedRenames(importResult);
             }
         }
         catch (Exception ex)
@@ -1679,65 +1670,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
         if (!string.IsNullOrEmpty(_currentPreviewFilePath) && File.Exists(_currentPreviewFilePath))
         {
             OpenDocument(_currentPreviewFilePath);
-        }
-    }
-
-    private void HandleSuggestedRenames(ImportResult importResult)
-    {
-        if (!importResult.HasSuggestedRenames) return;
-
-        var dialog = new RenameFilesDialog(importResult.SuggestedRenames);
-        dialog.Owner = this;
-
-        if (dialog.ShowDialog() == true && dialog.ApprovedRenames.Count > 0)
-        {
-            int renamed = 0;
-            int failed = 0;
-            foreach (var rename in dialog.ApprovedRenames)
-            {
-                try
-                {
-                    var directory = Path.GetDirectoryName(rename.OriginalPath) ?? string.Empty;
-                    var newPath = Path.Combine(directory, rename.SuggestedName);
-
-                    if (File.Exists(newPath) && !string.Equals(rename.OriginalPath, newPath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        failed++;
-                        continue;
-                    }
-
-                    File.Move(rename.OriginalPath, newPath);
-                    renamed++;
-
-                    // Update stored paths in documents and revision history
-                    foreach (var doc in _project.Documents)
-                    {
-                        if (string.Equals(doc.FilePath, rename.OriginalPath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            doc.FilePath = newPath;
-                        }
-
-                        foreach (var rev in doc.RevisionHistory)
-                        {
-                            if (string.Equals(rev.Value.FilePath, rename.OriginalPath, StringComparison.OrdinalIgnoreCase))
-                            {
-                                rev.Value.FilePath = newPath;
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    failed++;
-                }
-            }
-
-            _project.SaveProjectData();
-
-            var message = $"Renamed {renamed} file(s).";
-            if (failed > 0)
-                message += $" {failed} file(s) could not be renamed.";
-            MessageBox.Show(message, "Rename Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 

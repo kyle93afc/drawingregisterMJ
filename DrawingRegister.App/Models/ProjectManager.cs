@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using DrawingRegister.App.Helpers;
 using DrawingRegister.App.Services;
+using UglyToad.PdfPig.Tokens;
 
 namespace DrawingRegister.App.Models;
 
@@ -50,6 +51,10 @@ public class ProjectManager : INotifyPropertyChanged
 
     public ProjectStorage? _currentStorage;
     public Action<string, string>? OnFolderStatusUpdated { get; set; }
+
+    // Asked (from the import thread) when drawings carry another project number and Client No. is unset.
+    public Func<string, bool>? ConfirmClientProjectNumber { get; set; }
+    private readonly HashSet<string> _askedClientProjectNumbers = new();
     
     // Add DistributionManager property
     public DistributionManager DistributionManager { get; private set; } = new DistributionManager(string.Empty);
@@ -146,6 +151,7 @@ public class ProjectManager : INotifyPropertyChanged
     {
         using var _perf = PerfLog.Begin($"ProjectManager.ImportDocuments(specific={specificFolderToRescanFullPath != null})");
         var importResult = new ImportResult();
+        _askedClientProjectNumbers.Clear();
         bool isSpecificRescan = !string.IsNullOrEmpty(specificFolderToRescanFullPath);
 
         if (!isSpecificRescan) // Full import/refresh
@@ -434,6 +440,7 @@ public class ProjectManager : INotifyPropertyChanged
         // Only get PDF files from date directories (including any subdirectories within them)
         var pdfFiles = dateDirectories
             .SelectMany(dir => Directory.GetFiles(dir, "*.pdf", SearchOption.AllDirectories))
+            .Where(path => !GeneratedReportName.IsMatch(Path.GetFileName(path)))
             .ToList();
 
         importResult.TotalPdfFiles = pdfFiles.Count;
@@ -493,10 +500,10 @@ public class ProjectManager : INotifyPropertyChanged
         }
         else if (!string.IsNullOrEmpty(ProjectNumber) && detectedProjectNumbers.Any())
         {
-            var hasMatchingProjectNumber = detectedProjectNumbers.Any(item => item.ProjectNumber == ProjectNumber);
+            var hasMatchingProjectNumber = detectedProjectNumbers.Any(item => MatchesProjectOrClientNumber(item.ProjectNumber));
             var firstDisallowedMismatch = detectedProjectNumbers.FirstOrDefault(item =>
-                item.ProjectNumber != ProjectNumber &&
-                !IsSerProjectNumberExceptionPath(item.FilePath));
+                !IsSerProjectNumberExceptionPath(item.FilePath) &&
+                !IsOwnProjectNumber(item.ProjectNumber));
 
             if (!hasMatchingProjectNumber && firstDisallowedMismatch != null)
             {
@@ -571,7 +578,7 @@ public class ProjectManager : INotifyPropertyChanged
             // format; see docs/superpowers/specs/2026-04-24-docreg-document-support-design.md.
             if (DocRegFilenameParser.TryParse(sanitizedFileName, out var docRegMatch))
             {
-                if (docRegMatch.ProjectNumber != ProjectNumber && !allowSerProjectNumberMismatch)
+                if (!allowSerProjectNumberMismatch && !IsOwnProjectNumber(docRegMatch.ProjectNumber))
                 {
                     importResult.SkippedFiles.Add(new SkippedFileInfo
                     {
@@ -657,7 +664,7 @@ public class ProjectManager : INotifyPropertyChanged
 
             // Verify project number matches
             var fileProjectNo = drawingIdentity.ProjectNumber;
-            if (fileProjectNo != ProjectNumber && !allowSerProjectNumberMismatch)
+            if (!allowSerProjectNumberMismatch && !IsOwnProjectNumber(fileProjectNo))
             {
                 importResult.SkippedFiles.Add(new SkippedFileInfo
                 {
@@ -785,32 +792,6 @@ public class ProjectManager : INotifyPropertyChanged
             }
 
             importResult.SuccessfullyParsed++;
-
-            // Check if file should be renamed to match canonical naming convention
-            // Only flag files with real structural differences, not just separator style (- vs _ vs space)
-            if (!string.IsNullOrEmpty(description))
-            {
-                var revisionPart = (revision != "-" && !string.IsNullOrEmpty(revision)) ? $"-{revision}" : "";
-                var canonicalName = $"{documentNumber}{revisionPart}_{description.Replace(" ", "_")}{Path.GetExtension(filePath)}";
-                var actualName = Path.GetFileName(filePath);
-                // Normalize separators for comparison: treat -, _, and space as equivalent
-                // Do NOT collapse multiples — double hyphens (e.g. 20--10) are a real problem to flag
-                var normalizedActual = actualName.ToLowerInvariant().Replace("-", "_").Replace(" ", "_");
-                var normalizedCanonical = canonicalName.ToLowerInvariant().Replace("-", "_").Replace(" ", "_");
-                if (normalizedActual != normalizedCanonical)
-                {
-                    // Avoid duplicates (same file processed via multiple revisions)
-                    if (!importResult.SuggestedRenames.Any(r => string.Equals(r.OriginalPath, filePath, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        importResult.SuggestedRenames.Add(new FileRenameInfo
-                        {
-                            OriginalPath = filePath,
-                            SuggestedName = canonicalName,
-                            DocumentNumber = documentNumber
-                        });
-                    }
-                }
-            }
         }
 
         // After processing, update storage with processed directories
@@ -877,7 +858,32 @@ public class ProjectManager : INotifyPropertyChanged
         return importResult;
     }
 
-    private static bool TryGetProjectNumberFromFileName(string fileName, out string projectNumber)
+    // Clients such as Network Rail make us number drawings with their project number.
+    private bool MatchesProjectOrClientNumber(string fileProjectNumber) =>
+        fileProjectNumber == ProjectNumber ||
+        (!string.IsNullOrWhiteSpace(ClientNumber) && fileProjectNumber == ClientNumber.Trim());
+
+    private bool IsOwnProjectNumber(string fileProjectNumber)
+    {
+        if (MatchesProjectOrClientNumber(fileProjectNumber))
+            return true;
+
+        // A recorded Client No. makes any other number a genuine mismatch, so only ask while it is unset.
+        var clientNumberUnset = string.IsNullOrWhiteSpace(ClientNumber) || ClientNumber.Trim() == "-";
+        if (!clientNumberUnset || ConfirmClientProjectNumber == null
+            || !_askedClientProjectNumbers.Add(fileProjectNumber)
+            || !ConfirmClientProjectNumber(fileProjectNumber))
+            return false;
+
+        ClientNumber = fileProjectNumber;
+        return true;
+    }
+
+    // Transmittals and registers this app exports into issue folders.
+    private static readonly Regex GeneratedReportName = new(
+        @"^(Transmittal|Register|DrawingRegister)[_\s]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static bool TryGetProjectNumberFromFileName(string fileName, out string projectNumber)
     {
         var sanitizedFileName = Regex.Replace(fileName, @"-{2,}", "-");
         sanitizedFileName = Regex.Replace(sanitizedFileName, @"\s*-\s*", "-");
@@ -1118,10 +1124,10 @@ public class ProjectManager : INotifyPropertyChanged
             using var document = UglyToad.PdfPig.PdfDocument.Open(filePath);
             if (document.NumberOfPages == 0) return "A";
 
-            var page = document.GetPage(1);
+            var (width, height) = FirstPageMediaBox(document) ?? FirstPageSize(document);
             // Convert points to mm (1 point = 25.4/72 mm)
-            var widthMm = page.Width * 25.4 / 72.0;
-            var heightMm = page.Height * 25.4 / 72.0;
+            var widthMm = width * 25.4 / 72.0;
+            var heightMm = height * 25.4 / 72.0;
 
             // Normalise to portrait (short edge x long edge)
             var shortEdge = Math.Min(widthMm, heightMm);
@@ -1148,6 +1154,34 @@ public class ProjectManager : INotifyPropertyChanged
         {
             return "A";
         }
+    }
+
+    // GetPage parses the whole drawing (~130 ms per A1 sheet); the MediaBox is all we need.
+    private static (double Width, double Height)? FirstPageMediaBox(UglyToad.PdfPig.PdfDocument document)
+    {
+        IToken? Resolve(IToken? token) =>
+            token is IndirectReferenceToken reference ? document.Structure.GetObject(reference.Data)?.Data : token;
+
+        var node = Resolve(document.Structure.Catalog.CatalogDictionary.Data.GetValueOrDefault(NameToken.Pages.Data)) as DictionaryToken;
+        ArrayToken? mediaBox = null;
+        while (node != null)
+        {
+            if (Resolve(node.Data.GetValueOrDefault(NameToken.MediaBox.Data)) is ArrayToken box)
+                mediaBox = box;
+            if (Resolve(node.Data.GetValueOrDefault(NameToken.Kids.Data)) is not ArrayToken { Data.Count: > 0 } kids)
+                break;
+            node = Resolve(kids.Data[0]) as DictionaryToken;
+        }
+
+        if (mediaBox?.Data.Select(Resolve).OfType<NumericToken>().Select(n => n.Double).ToArray() is not { Length: 4 } c)
+            return null;
+        return (Math.Abs(c[2] - c[0]), Math.Abs(c[3] - c[1]));
+    }
+
+    private static (double Width, double Height) FirstPageSize(UglyToad.PdfPig.PdfDocument document)
+    {
+        var page = document.GetPage(1);
+        return (page.Width, page.Height);
     }
 
     public void ScanDirectory(string directoryPath)

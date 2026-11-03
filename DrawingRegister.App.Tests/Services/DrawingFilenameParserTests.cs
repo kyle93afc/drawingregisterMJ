@@ -65,6 +65,16 @@ public sealed class DrawingFilenameParserTests
         Assert.Equal("FOUNDATION_PLAN", identity.Description);
     }
 
+    [Fact]
+    public void TryParse_keeps_two_digit_package_when_number_segment_is_missing()
+    {
+        var parsed = DrawingFilenameParser.TryParse("124930-M+J-V1-XX-DR-01-05-T01_PLAN", out var identity);
+
+        Assert.True(parsed);
+        Assert.Equal("124930-M+J-V1-XX-DR-01-05", identity.DocumentCode);
+        Assert.Equal("05", identity.Package);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("not-a-drawing")]
