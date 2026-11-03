@@ -10,11 +10,11 @@ namespace DrawingRegister.App.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && 
-                parameter is DateTime date && 
+            if (value is Dictionary<DateTime, RevisionInfo> revisionHistory &&
+                parameter is DateTime date &&
                 revisionHistory.TryGetValue(date, out var revInfo))
             {
-                return revInfo.Revision;
+                return revInfo.IsSuperseded ? $"{revInfo.Revision} (S)" : revInfo.Revision;
             }
             return string.Empty;
         }

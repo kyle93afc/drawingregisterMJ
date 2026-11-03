@@ -1,0 +1,666 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using DrawingRegister.App.Models;
+using DrawingRegister.App.Services;
+using UglyToad.PdfPig;
+using Xunit;
+
+namespace DrawingRegister.App.Tests.Services;
+
+public sealed class RegisterReportGeneratorTests : IDisposable
+{
+    private readonly string _tempDirectory;
+
+    public RegisterReportGeneratorTests()
+    {
+        _tempDirectory = Path.Combine(Path.GetTempPath(), "RegisterReportGeneratorTests_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_tempDirectory);
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            if (Directory.Exists(_tempDirectory))
+            {
+                Directory.Delete(_tempDirectory, recursive: true);
+            }
+        }
+        catch
+        {
+            // Best effort cleanup in test temp directory.
+        }
+    }
+
+    [Fact]
+    public void GetSuggestedFileName_returns_expected_naming_across_all_modes()
+    {
+        var reportDate = new DateTime(2026, 9, 3);
+
+        var regRequest = CreateRequest(
+            RegisterReportMode.Register,
+            reportDate,
+            projectNumber: "124997",
+            registerNumber: "01");
+        Assert.Equal("Register_01_20260903", RegisterReportGenerator.GetSuggestedFileName(regRequest));
+
+        var transmittalRequest = CreateRequest(
+            RegisterReportMode.Transmittal,
+            reportDate,
+            projectNumber: "124997",
+            registerNumber: "01",
+            selectedSubfolderName: "Planning Issue");
+        Assert.Equal("Transmittal_01_20260903_Planning_Issue", RegisterReportGenerator.GetSuggestedFileName(transmittalRequest));
+
+        var docRegRequest = CreateRequest(
+            RegisterReportMode.DocReg,
+            reportDate,
+            projectNumber: "124997",
+            registerNumber: "01");
+        Assert.Equal("DocReg-124997-20260903", RegisterReportGenerator.GetSuggestedFileName(docRegRequest));
+    }
+
+    [Fact]
+    public void Generate_full_register_report_creates_pdf_with_expected_layout_and_data()
+    {
+        var destination = Path.Combine(_tempDirectory, "full_register.pdf");
+        var docs = new[]
+        {
+            CreateDocument("124997-002", ("A", "Tender", new DateTime(2026, 4, 1))),
+            CreateDocument("124997-001", ("P01", "Information", new DateTime(2026, 3, 15)))
+        };
+
+        var request = CreateRequest(
+            RegisterReportMode.Register,
+            new DateTime(2026, 9, 3),
+            projectNumber: "124997",
+            projectName: "Highland Bridge",
+            discipline: "Structural",
+            registerNumber: "REG-01",
+            clientNumber: "CL-900",
+            documents: docs);
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.Equal(destination, result.ActualFilePath);
+        Assert.True(File.Exists(destination));
+        Assert.True(result.PageCount >= 1);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        Assert.Contains("DOCUMENT AND DRAWING REGISTER", pageText);
+        Assert.Contains("HIGHLAND BRIDGE", pageText);
+        Assert.Contains("124997", pageText);
+        Assert.Contains("REG-01", pageText);
+        Assert.Contains("CL-900", pageText);
+        Assert.Contains("124997-001", pageText);
+        Assert.Contains("124997-002", pageText);
+    }
+
+    [Fact]
+    public void Generate_report_with_null_logo_renders_text_badge()
+    {
+        var destination = Path.Combine(_tempDirectory, "fallback_badge.pdf");
+        var docs = new[]
+        {
+            CreateDocument("12345-DCF-00-XX-DR-C-0001", ("P01", "Information", new DateTime(2026, 9, 1)))
+        };
+
+        var noLogoOrg = OrganizationRegistry.DCF with { LogoResourceName = null, DisplayName = "DCF Glasgow" };
+
+        var request = CreateRequest(
+            RegisterReportMode.Register,
+            new DateTime(2026, 9, 16),
+            projectNumber: "12345",
+            projectName: "Glasgow Warehouse",
+            discipline: "Civil",
+            registerNumber: "12345-DCF-00-XX-RE-C-00-01",
+            documents: docs,
+            organization: noLogoOrg);
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+        Assert.True(File.Exists(destination));
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+        Assert.Contains("DCF GLASGOW", pageText);
+    }
+
+    [Fact]
+    public void Generate_transmittal_filters_by_issue_date_and_contains_transmittal_sections()
+    {
+        var destination = Path.Combine(_tempDirectory, "transmittal.pdf");
+        var issueDate = new DateTime(2026, 4, 14);
+
+        var doc1 = CreateDocument("124997-001", ("P01", "Info", new DateTime(2026, 3, 1)), ("P02", "Construction", issueDate));
+        var doc2 = CreateDocument("124997-002", ("P01", "Info", new DateTime(2026, 3, 1))); // Not on issue date
+        var doc3 = CreateDocument("124997-003", ("A01", "Tender", issueDate));
+
+        var request = CreateRequest(
+            RegisterReportMode.Transmittal,
+            new DateTime(2026, 9, 3),
+            projectNumber: "124997",
+            projectName: "Office Park",
+            discipline: "Civil",
+            registerNumber: "02",
+            documents: new[] { doc1, doc2, doc3 },
+            selectedIssueDate: issueDate,
+            distributionText: "ARCHITECT: ACME DESIGNS\nCONTRACTOR: BUILD CORP",
+            purposeOfIssue: "For Construction",
+            methodOfIssue: "Email",
+            issuedBy: "KG");
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.Equal(destination, result.ActualFilePath);
+        Assert.True(File.Exists(destination));
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        Assert.Contains("TRANSMITTAL", pageText);
+        Assert.Contains("02-T260903", pageText);
+        Assert.Contains("DATE OF ISSUE: 14/04/2026", pageText);
+        Assert.Contains("DISTRIBUTION :", pageText);
+        Assert.Contains("ARCHITECT: ACME DESIGNS", pageText);
+        Assert.Contains("CONTRACTOR: BUILD CORP", pageText);
+        Assert.Contains("FOR CONSTRUCTION", pageText);
+        Assert.Contains("EMAIL", pageText);
+        Assert.Contains("KG", pageText);
+
+        // Contains doc1 and doc3, but doc2 was not issued on 14/04/2026
+        Assert.Contains("124997-001", pageText);
+        Assert.Contains("124997-003", pageText);
+        Assert.DoesNotContain("124997-002", pageText);
+    }
+
+    [Fact]
+    public void Generate_transmittal_with_dcf_branding_includes_logo_and_dcf_metadata()
+    {
+        var destination = Path.Combine(_tempDirectory, "dcf_transmittal.pdf");
+        var issueDate = new DateTime(2026, 4, 14);
+
+        var doc1 = CreateDocument("12345-DCF-00-XX-DR-C-0001", ("P01", "Info", new DateTime(2026, 3, 1)), ("P02", "Construction", issueDate));
+        var doc2 = CreateDocument("12345-DCF-00-XX-DR-C-0002", ("P01", "Info", new DateTime(2026, 3, 1))); // Not on issue date
+
+        var request = CreateRequest(
+            RegisterReportMode.Transmittal,
+            new DateTime(2026, 9, 16),
+            projectNumber: "12345",
+            projectName: "Glasgow Warehouse",
+            discipline: "Civil",
+            registerNumber: "12345-DCF-00-XX-RE-C-00-01",
+            clientNumber: "DCF-CL-01",
+            documents: new[] { doc1, doc2 },
+            selectedIssueDate: issueDate,
+            distributionText: "CLIENT: GLASGOW LOGISTICS",
+            purposeOfIssue: "For Construction",
+            methodOfIssue: "Email",
+            issuedBy: "DCF Team",
+            organization: OrganizationRegistry.DCF);
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.Equal(destination, result.ActualFilePath);
+        Assert.True(File.Exists(destination));
+        Assert.True(result.PageCount >= 1);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        Assert.Contains("TRANSMITTAL", pageText);
+        Assert.Contains("GLASGOW WAREHOUSE", pageText);
+        Assert.Contains("12345-DCF-00-XX-RE-C-00-01", pageText);
+        Assert.Contains("DATE OF ISSUE: 14/04/2026", pageText);
+        Assert.Contains("CLIENT: GLASGOW LOGISTICS", pageText);
+        Assert.Contains("12345-DCF-00-XX-DR-C-0001", pageText);
+        Assert.DoesNotContain("12345-DCF-00-XX-DR-C-0002", pageText);
+        Assert.True(pdf.GetPages().First().GetImages().Any(), "Expected DCF logo embedded on transmittal");
+    }
+
+    [Fact]
+    public void Generate_docreg_uses_ser_header_and_naming()
+    {
+        var destination = Path.Combine(_tempDirectory, "docreg.pdf");
+        var docs = new[] { CreateDocument("DR-100", ("1", "Warrant", new DateTime(2026, 4, 1))) };
+
+        var request = CreateRequest(
+            RegisterReportMode.DocReg,
+            new DateTime(2026, 9, 3),
+            projectNumber: "124997",
+            documents: docs);
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.Equal(destination, result.ActualFilePath);
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        Assert.Contains("SER DOCUMENT AND DRAWING REGISTER", pageText);
+        Assert.Contains("DocReg-124997-20260903", pageText);
+        Assert.Contains("DR-100", pageText);
+        Assert.DoesNotContain("ARCHITECT / EXTERNAL DRAWINGS", pageText);
+    }
+
+    [Fact]
+    public void Generate_latest_non_superseded_revision_rules_match_specification()
+    {
+        var destination = Path.Combine(_tempDirectory, "superseded_rules.pdf");
+
+        // Document with superseded newest revision
+        var docWithSuperseded = CreateDocument("DR-SUPER", ("1", "Old", new DateTime(2026, 1, 1)));
+        docWithSuperseded.RevisionHistory[new DateTime(2026, 4, 1)] = new RevisionInfo
+        {
+            Revision = "2-SUPERSEDED",
+            Purpose = "Withdrawn",
+            IsSuperseded = true
+        };
+
+        // Document with reissued revision
+        var docReissued = CreateDocument("DR-REISSUE",
+            ("C01", "Info", new DateTime(2026, 2, 1)),
+            ("C01", "Construction", new DateTime(2026, 4, 14)));
+
+        // Document with placeholder revision
+        var docPlaceholder = CreateDocument("DR-PLACEHOLDER", ("-", "Preliminary", new DateTime(2026, 4, 1)));
+
+        var request = CreateRequest(
+            RegisterReportMode.Register,
+            new DateTime(2026, 9, 3),
+            documents: new[] { docWithSuperseded, docReissued, docPlaceholder });
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        // Latest non-superseded for DR-SUPER is 1, not 2-SUPERSEDED
+        Assert.Contains("DR-SUPER", pageText);
+        Assert.DoesNotContain("2-SUPERSEDED", pageText);
+
+        Assert.Contains("DR-REISSUE", pageText);
+        Assert.Contains("C01", pageText);
+        Assert.Contains("14/04/2026", pageText);
+
+        Assert.Contains("DR-PLACEHOLDER", pageText);
+    }
+
+    [Fact]
+    public void Generate_when_destination_path_is_locked_saves_to_suffixed_filename()
+    {
+        var requestedPath = Path.Combine(_tempDirectory, "locked_target.pdf");
+
+        // Create and hold an exclusive lock on requestedPath
+        using (var lockStream = new FileStream(requestedPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+        {
+            var request = CreateRequest(
+                RegisterReportMode.Register,
+                new DateTime(2026, 9, 3),
+                documents: new[] { CreateDocument("DR-001", ("P1", "Draft", DateTime.Today)) });
+
+            var result = RegisterReportGenerator.Generate(request, requestedPath);
+
+            var expectedSuffixPath = Path.Combine(_tempDirectory, "locked_target (1).pdf");
+            Assert.Equal(expectedSuffixPath, result.ActualFilePath);
+            Assert.True(File.Exists(expectedSuffixPath));
+        }
+    }
+
+    [Fact]
+    public void Generate_docreg_refuses_to_overwrite_a_source_pdf_even_via_locked_output_fallback()
+    {
+        var requestedPath = Path.Combine(_tempDirectory, "output.pdf");
+        var sourcePath = Path.Combine(_tempDirectory, "output (1).pdf");
+        var original = new byte[] { 1, 2, 3, 4 };
+        File.WriteAllBytes(sourcePath, original);
+        var drawings = new[]
+        {
+            new DocRegDrawing { DocumentNumber = "A-101", FilePath = sourcePath, Include = false },
+            new DocRegDrawing { DocumentNumber = "A-102", FilePath = Path.Combine(_tempDirectory, "A-102.pdf") }
+        };
+        var request = CreateRequest(RegisterReportMode.DocReg, new DateTime(2026, 11, 3))
+            with { DocRegDrawings = drawings };
+
+        Assert.Throws<InvalidOperationException>(() => RegisterReportGenerator.Generate(request, sourcePath));
+        using (var lockedOutput = new FileStream(requestedPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.Throws<InvalidOperationException>(() => RegisterReportGenerator.Generate(request, requestedPath));
+        }
+        Assert.Equal(original, File.ReadAllBytes(sourcePath));
+    }
+
+    [Fact]
+    public void Generate_docreg_from_folder_rows_keeps_edits_sections_and_one_page()
+    {
+        var inbox = Path.Combine(_tempDirectory, "inbox");
+        Directory.CreateDirectory(inbox);
+        File.WriteAllBytes(Path.Combine(inbox, "12499-M+J-V1-XX-DR-S-16-01-T01-FOUNDATION PLAN.pdf"), Array.Empty<byte>());
+        File.WriteAllBytes(Path.Combine(inbox, "A-101 - Ground Floor Plan - Rev B.pdf"), Array.Empty<byte>());
+        File.WriteAllBytes(Path.Combine(inbox, "24012 - Site Works - BW_01A - Foundation Plan.pdf"), Array.Empty<byte>());
+        File.WriteAllBytes(Path.Combine(inbox, "zz-unknown-stem.pdf"), Array.Empty<byte>());
+        File.WriteAllBytes(Path.Combine(inbox, "DocReg-12499-20261103.pdf"), Array.Empty<byte>());
+        File.WriteAllBytes(Path.Combine(inbox, "meeting-notes-final.pdf"), Array.Empty<byte>());
+
+        var scan = DocRegFolderScanner.Scan(inbox, OrganizationRegistry.MJ, currentProjectNumber: "12499");
+        var unknown = scan.Drawings.Single(d => d.DocumentNumber == "zz-unknown-stem");
+        unknown.Include = false;
+        var notes = scan.Drawings.Single(d => d.DocumentNumber == "meeting-notes-final");
+        notes.Include = false;
+
+        var architectSheet = scan.Drawings.Single(d => d.DocumentNumber == "A-101");
+        architectSheet.Description = "Roof Plan Edited";
+        architectSheet.Revision = "C99";
+
+        var request = DocRegFolderExport.BuildRequest(
+            reportDate: new DateTime(2026, 11, 3),
+            projectNumber: "12499",
+            projectName: "Sample Works",
+            discipline: "Structural",
+            registerNumber: "01",
+            clientNumber: "C100",
+            organization: OrganizationRegistry.MJ with { ShortName = "IN-HOUSE TESTCO" },
+            drawings: scan.Drawings);
+
+        var destination = Path.Combine(_tempDirectory, "DocReg-12499-20261103.pdf");
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.Equal(1, result.PageCount);
+        using var pdf = PdfDocument.Open(result.ActualFilePath);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+
+        Assert.Contains("SER DOCUMENT AND DRAWING REGISTER", pageText);
+        Assert.Contains("SAMPLE WORKS", pageText);
+        Assert.Contains("DocReg-12499-20261103", pageText);
+        Assert.Contains("IN-HOUSE TESTCO", pageText);
+        Assert.Contains("ARCHITECT / EXTERNAL DRAWINGS", pageText);
+        Assert.Contains("12499-M+J-V1-XX-DR-S-16-01", pageText);
+        Assert.Contains("FOUNDATION PLAN", pageText);
+        Assert.Contains("A-101", pageText);
+        Assert.Contains("ROOF PLAN EDITED", pageText);
+        Assert.Contains("C99", pageText);
+        Assert.Contains("BW_01A", pageText);
+        Assert.DoesNotContain("zz-unknown-stem", pageText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("meeting-notes-final", pageText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("GENERAL ARRANGEMENT", pageText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("03/11/2026", pageText);
+
+        var inHouseBand = pageText.IndexOf("IN-HOUSE TESTCO", StringComparison.Ordinal);
+        var inHouseRow = pageText.IndexOf("12499-M+J-V1-XX-DR-S-16-01", StringComparison.Ordinal);
+        var architectBand = pageText.IndexOf("ARCHITECT / EXTERNAL DRAWINGS", StringComparison.Ordinal);
+        var firstArchitect = pageText.IndexOf("A-101", StringComparison.Ordinal);
+        var secondArchitect = pageText.IndexOf("BW_01A", StringComparison.Ordinal);
+        Assert.True(inHouseBand >= 0 && inHouseBand < inHouseRow);
+        Assert.True(inHouseRow < architectBand);
+        Assert.True(architectBand < firstArchitect);
+        Assert.True(firstArchitect < secondArchitect);
+        Assert.DoesNotContain("NOT SPECIFIED", pageText, StringComparison.OrdinalIgnoreCase);
+
+    }
+
+    [Fact]
+    public void Generate_docreg_folder_rows_keep_duplicate_references()
+    {
+        var drawings = new[]
+        {
+            new DocRegDrawing
+            {
+                Include = true,
+                Section = DocRegSection.ArchitectExternal,
+                DocumentNumber = "A-101",
+                Description = "Ground Floor Plan",
+                Revision = "B",
+                FilePath = Path.Combine(_tempDirectory, "A-101 - Ground Floor Plan - Rev B.pdf"),
+                FileName = "A-101 - Ground Floor Plan - Rev B.pdf"
+            },
+            new DocRegDrawing
+            {
+                Include = true,
+                Section = DocRegSection.ArchitectExternal,
+                DocumentNumber = "A-101",
+                Description = "Ground Floor Plan Copy",
+                Revision = "B",
+                FilePath = Path.Combine(_tempDirectory, "A-101 - Ground Floor Plan Copy - Rev B.pdf"),
+                FileName = "A-101 - Ground Floor Plan Copy - Rev B.pdf"
+            }
+        };
+
+        var request = DocRegFolderExport.BuildRequest(
+            reportDate: new DateTime(2026, 11, 3),
+            projectNumber: "12499",
+            projectName: "Sample Works",
+            discipline: "Structural",
+            registerNumber: "01",
+            clientNumber: "C100",
+            organization: OrganizationRegistry.MJ,
+            drawings: drawings);
+
+        var destination = Path.Combine(_tempDirectory, "docreg-duplicates.pdf");
+        RegisterReportGenerator.Generate(request, destination);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+        Assert.Contains("GROUND FLOOR PLAN", pageText);
+        Assert.Contains("GROUND FLOOR PLAN COPY", pageText);
+        Assert.Equal(2, CountOccurrences(pageText, "A-101"));
+    }
+
+    [Fact]
+    public void Generate_docreg_folder_rows_ignore_register_documents()
+    {
+        var folderRow = new DocRegDrawing
+        {
+            Include = true,
+            Section = DocRegSection.ArchitectExternal,
+            DocumentNumber = "A-101",
+            Description = "Ground Floor Plan",
+            Revision = "B",
+            FilePath = Path.Combine(_tempDirectory, "A-101.pdf"),
+            FileName = "A-101.pdf"
+        };
+
+        var request = new RegisterReportRequest(
+            Mode: RegisterReportMode.DocReg,
+            ReportDate: new DateTime(2026, 11, 3),
+            ProjectNumber: "12499",
+            ProjectName: "Sample Works",
+            Discipline: "Structural",
+            RegisterNumber: "01",
+            ClientNumber: "C100",
+            Documents: new[] { CreateDocument("POISON-DOC", ("1", "Warrant", new DateTime(2026, 4, 1))) },
+            Organization: OrganizationRegistry.MJ,
+            DocRegDrawings: new[] { folderRow });
+
+        var destination = Path.Combine(_tempDirectory, "docreg-ignores-register.pdf");
+        RegisterReportGenerator.Generate(request, destination);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+        Assert.Contains("A-101", pageText);
+        Assert.DoesNotContain("POISON-DOC", pageText);
+    }
+
+    [Fact]
+    public void Generate_transmittal_ignores_docreg_folder_rows()
+    {
+        var destination = Path.Combine(_tempDirectory, "transmittal-ignores-folder.pdf");
+        var issueDate = new DateTime(2026, 4, 14);
+        var folderRow = new DocRegDrawing
+        {
+            Include = true,
+            Section = DocRegSection.ArchitectExternal,
+            DocumentNumber = "FOLDER-ROW",
+            Description = "Should Not Appear",
+            FilePath = Path.Combine(_tempDirectory, "FOLDER-ROW.pdf"),
+            FileName = "FOLDER-ROW.pdf"
+        };
+
+        var request = new RegisterReportRequest(
+            Mode: RegisterReportMode.Transmittal,
+            ReportDate: new DateTime(2026, 9, 3),
+            ProjectNumber: "124997",
+            ProjectName: "Office Park",
+            Discipline: "Civil",
+            RegisterNumber: "02",
+            ClientNumber: "C100",
+            Documents: new[] { CreateDocument("124997-003", ("A01", "Tender", issueDate)) },
+            SelectedIssueDate: issueDate,
+            Organization: OrganizationRegistry.MJ,
+            DocRegDrawings: new[] { folderRow });
+
+        RegisterReportGenerator.Generate(request, destination);
+
+        using var pdf = PdfDocument.Open(destination);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+        Assert.Contains("TRANSMITTAL", pageText);
+        Assert.Contains("124997-003", pageText);
+        Assert.DoesNotContain("FOLDER-ROW", pageText);
+        Assert.DoesNotContain("SHOULD NOT APPEAR", pageText);
+        Assert.DoesNotContain("ARCHITECT / EXTERNAL DRAWINGS", pageText);
+    }
+
+    [Fact]
+    public void Generate_docreg_folder_rows_paginate_without_losing_section_bands()
+    {
+        var drawings = new List<DocRegDrawing>();
+        for (var i = 1; i <= 30; i++)
+        {
+            drawings.Add(new DocRegDrawing
+            {
+                Include = true,
+                Section = DocRegSection.InHouse,
+                DocumentNumber = $"IH-{i:00}",
+                Description = $"In House Sheet {i:00}",
+                Revision = "1",
+                FilePath = Path.Combine(_tempDirectory, $"IH-{i:00}.pdf"),
+                FileName = $"IH-{i:00}.pdf"
+            });
+            drawings.Add(new DocRegDrawing
+            {
+                Include = true,
+                Section = DocRegSection.ArchitectExternal,
+                DocumentNumber = $"EX-{i:00}",
+                Description = $"External Sheet {i:00}",
+                Revision = "A",
+                FilePath = Path.Combine(_tempDirectory, $"EX-{i:00}.pdf"),
+                FileName = $"EX-{i:00}.pdf"
+            });
+        }
+
+        var request = DocRegFolderExport.BuildRequest(
+            reportDate: new DateTime(2026, 11, 3),
+            projectNumber: "12499",
+            projectName: "Sample Works",
+            discipline: "Structural",
+            registerNumber: "01",
+            clientNumber: "C100",
+            organization: OrganizationRegistry.MJ with { ShortName = "IN-HOUSE TESTCO" },
+            drawings: drawings);
+
+        var destination = Path.Combine(_tempDirectory, "docreg-paginated.pdf");
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.True(result.PageCount > 1);
+        using var pdf = PdfDocument.Open(result.ActualFilePath);
+        var pageText = string.Join(" ", pdf.GetPages().Select(p => p.Text));
+        Assert.Contains("IN-HOUSE TESTCO", pageText);
+        Assert.Contains("ARCHITECT / EXTERNAL DRAWINGS", pageText);
+        Assert.Contains("IH-01", pageText);
+        Assert.Contains("EX-30", pageText);
+    }
+
+    [Fact]
+    public void Generate_with_empty_documents_and_null_metadata_does_not_throw()
+    {
+        var destination = Path.Combine(_tempDirectory, "empty.pdf");
+        var request = new RegisterReportRequest(
+            Mode: RegisterReportMode.Register,
+            ReportDate: new DateTime(2026, 9, 3),
+            ProjectNumber: null,
+            ProjectName: null,
+            Discipline: null,
+            RegisterNumber: null,
+            ClientNumber: null,
+            Documents: Array.Empty<DocumentMetadata>());
+
+        var result = RegisterReportGenerator.Generate(request, destination);
+
+        Assert.True(File.Exists(result.ActualFilePath));
+        Assert.True(result.PageCount >= 1);
+    }
+
+    private static RegisterReportRequest CreateRequest(
+        RegisterReportMode mode,
+        DateTime reportDate,
+        string? projectNumber = "124997",
+        string? projectName = "Test Project",
+        string? discipline = "Structural",
+        string? registerNumber = "01",
+        string? clientNumber = "C100",
+        IReadOnlyList<DocumentMetadata>? documents = null,
+        DateTime? selectedIssueDate = null,
+        string? selectedSubfolderName = null,
+        string? distributionText = null,
+        string? purposeOfIssue = null,
+        string? methodOfIssue = null,
+        string? issuedBy = null,
+        OrganizationProfile? organization = null)
+    {
+        return new RegisterReportRequest(
+            Mode: mode,
+            ReportDate: reportDate,
+            ProjectNumber: projectNumber,
+            ProjectName: projectName,
+            Discipline: discipline,
+            RegisterNumber: registerNumber,
+            ClientNumber: clientNumber,
+            Documents: documents ?? Array.Empty<DocumentMetadata>(),
+            SelectedIssueDate: selectedIssueDate,
+            SelectedSubfolderName: selectedSubfolderName,
+            DistributionText: distributionText,
+            PurposeOfIssue: purposeOfIssue,
+            MethodOfIssue: methodOfIssue,
+            IssuedBy: issuedBy,
+            Organization: organization);
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = text.IndexOf(value, index, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            index += value.Length;
+        }
+
+        return count;
+    }
+
+    private static DocumentMetadata CreateDocument(string documentNumber, params (string Revision, string Purpose, DateTime Date)[] history)
+    {
+        var document = new DocumentMetadata
+        {
+            DocumentNumber = documentNumber,
+            Description = "Drawing Description " + documentNumber,
+            Package = "01",
+            DocumentType = "DR",
+            Size = "A1",
+            FilePath = $@"C:\Project\latest\{documentNumber}.pdf"
+        };
+
+        foreach (var entry in history)
+        {
+            document.RevisionHistory[entry.Date] = new RevisionInfo
+            {
+                Revision = entry.Revision,
+                Purpose = entry.Purpose,
+                FilePath = $@"C:\Project\{entry.Date:yyyyMMdd}\{documentNumber}.pdf"
+            };
+        }
+
+        return document;
+    }
+}

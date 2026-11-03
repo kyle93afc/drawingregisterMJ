@@ -30,7 +30,6 @@ namespace DrawingRegister.App
             PackageBox.Text = document.Package;
             DocumentTypeBox.Text = document.DocumentType;
             SizeBox.Text = document.Size;
-            FilePathBox.Text = document.FilePath;
             
             // Set up event handlers for preview updates
             DocumentNumberBox.TextChanged += (s, e) => UpdateFileNamePreview(s, e);
@@ -165,6 +164,11 @@ namespace DrawingRegister.App
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
+        }
+
+        private void Header_DragMove(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left) DragMove();
         }
     }
 } 

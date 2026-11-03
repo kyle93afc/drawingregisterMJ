@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Window x:Class="DrawingRegister.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -6,8 +6,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawingRegister.App"
         xmlns:converters="clr-namespace:DrawingRegister.App.Converters"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         mc:Ignorable="d"
-        Title="DOCUMENT AND DRAWING REGISTER" Height="800" Width="1200">
+        Icon="pack://application:,,,/DrawingRegister.App;component/Assets/icon.ico"
+        Title="DOCUMENT AND DRAWING REGISTER v1.7.1" Height="800" Width="1200"
+        Background="{StaticResource Slate50Brush}">
     <Window.Resources>
         <converters:DateToColumnConverter x:Key="DateToColumnConverter"/>
         <converters:LatestRevisionConverter x:Key="LatestRevisionConverter"/>
@@ -15,528 +18,704 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:LatestRevisionDateConverter x:Key="LatestRevisionDateConverter"/>
         <converters:RevisionAtDateConverter x:Key="RevisionAtDateConverter"/>
-        
-        <!-- Style to hide column headers -->
-        <Style x:Key="HiddenHeader" TargetType="DataGridColumnHeader">
-            <Setter Property="Visibility" Value="Collapsed"/>
-        </Style>
-
-        <!-- Style for visible headers -->
-        <Style x:Key="VisibleHeader" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#eb1845"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="BorderBrush" Value="#ddd"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        </Style>
-        
-        <!-- Global Effects -->
-        <DropShadowEffect x:Key="MaterialDropShadow" 
-                         BlurRadius="4" 
-                         Direction="270" 
-                         ShadowDepth="2" 
-                         Opacity="0.2" 
-                         Color="#000000"/>
-        
-        <!-- Button Style -->
-        <Style x:Key="BaseButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#5a6268"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="Margin" Value="0,0,12,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="MinWidth" Value="120"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Effect="{StaticResource MaterialDropShadow}">
-                            <ContentPresenter x:Name="contentPresenter" 
-                                            HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"
-                                            TextBlock.FontWeight="SemiBold"
-                                            Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <EventTrigger RoutedEvent="MouseEnter">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#4a5258" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <EventTrigger RoutedEvent="MouseLeave">
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="border"
-                                                      Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                      To="#5a6268" Duration="0:0:0.2"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#3d444a"/>
-                                <Setter TargetName="contentPresenter" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.98" ScaleY="0.98"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Background" Value="#BDBDBD"/>
-                                <Setter Property="Foreground" Value="#757575"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}"/>
-        
-        <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource BaseButtonStyle}">
-            <Setter Property="Background" Value="#6c757d"/>
-            <Style.Triggers>
-                <EventTrigger RoutedEvent="MouseEnter">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
-                                          To="#5a6268" Duration="0:0:0.2"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-                <EventTrigger RoutedEvent="MouseLeave">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <ColorAnimation Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)"
-                                          To="#6c757d" Duration="0:0:0.2"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-                <Trigger Property="IsPressed" Value="True">
-                    <Setter Property="Background" Value="#545b62"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <!-- Styles -->
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="#eb1845"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="BorderBrush" Value="#ddd"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
-
-        <Style x:Key="RotatedColumnHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="DataGridColumnHeader">
-                        <Grid>
-                            <Border Background="{TemplateBinding Background}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}">
-                                <StackPanel>
-                                    <TextBlock Text="{TemplateBinding Content}">
-                                        <TextBlock.LayoutTransform>
-                                            <RotateTransform Angle="-90"/>
-                                        </TextBlock.LayoutTransform>
-                                        <TextBlock.Margin>2,25,2,5</TextBlock.Margin>
-                                        <TextBlock.TextAlignment>Left</TextBlock.TextAlignment>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="DataGridRow">
-            <Setter Property="Background" Value="White"/>
-            <Style.Triggers>
-                <Trigger Property="AlternationIndex" Value="1">
-                    <Setter Property="Background" Value="#f2f2f2"/>
-                </Trigger>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#ddd"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Revision Cell Template -->
-        <DataTemplate x:Key="RevisionCellTemplate">
-            <Border BorderBrush="#ddd" BorderThickness="1" Width="120" Background="White">
-                <TextBlock Text="{Binding}" Padding="8" TextWrapping="Wrap"/>
-            </Border>
-        </DataTemplate>
-
-        <Style TargetType="DataGridCell">
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="FontSize" Value="14"/>
-        </Style>
-
-        <!-- Add Revision Edit Dialog -->
-        <Style x:Key="RevisionEditDialog" TargetType="Window">
-            <Setter Property="Height" Value="300"/>
-            <Setter Property="Width" Value="400"/>
-            <Setter Property="WindowStyle" Value="ToolWindow"/>
-            <Setter Property="ResizeMode" Value="NoResize"/>
-        </Style>
+        <converters:RevisionColorAtDateConverter x:Key="RevisionColorAtDateConverter"/>
     </Window.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="12,8,12,4">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Header Info -->
-            <RowDefinition Height="Auto"/>  <!-- Action Buttons -->
-            <RowDefinition Height="Auto"/>  <!-- Search Panel -->
-            <RowDefinition Height="Auto"/>  <!-- Date Filter -->
-            <RowDefinition Height="Auto"/>  <!-- Issue Information Section -->
-            <RowDefinition Height="*"/>     <!-- Documents Grid -->
-            <RowDefinition Height="Auto"/>  <!-- Revision Timeline -->
+            <RowDefinition Height="Auto"/>  <!-- Row 0: Compact Header -->
+            <RowDefinition Height="Auto"/>  <!-- Row 1: Command Bar + Filters -->
+            <RowDefinition Height="*"/>     <!-- Row 2: Content Area -->
+            <RowDefinition Height="Auto"/>  <!-- Row 3: Status Bar -->
         </Grid.RowDefinitions>
 
-        <!-- Header Info -->
-        <Grid Grid.Row="0" Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <!-- Logo -->
-            <Image Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" 
-                   Source="/Resources/company-logo.png" 
-                   Height="50" 
-                   HorizontalAlignment="Left" 
-                   Margin="0,0,0,10"/>
-
-            <!-- Row 1 -->
-            <TextBlock Text="DISCIPLINE:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
-            <TextBox x:Name="DisciplineBox" Grid.Row="1" Grid.Column="1" Margin="0,0,20,5" FontSize="14"/>
-            <TextBlock Text="REG NO:" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
-            <TextBox x:Name="RegNoBox" Grid.Row="1" Grid.Column="3" Width="300" Margin="0,0,0,5" FontSize="14"/>
-
-            <!-- Row 2 -->
-            <TextBlock Text="PROJECT NO:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
-            <TextBox x:Name="ProjectNoBox" Grid.Row="2" Grid.Column="1" Margin="0,0,20,5" FontSize="14"/>
-            <TextBlock Text="CLIENT NO:" Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
-            <TextBox x:Name="ClientNoBox" Grid.Row="2" Grid.Column="3" Margin="0,0,0,5" FontSize="14"/>
-
-            <!-- Row 3 -->
-            <TextBlock Text="PROJECT NAME:" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,5" FontSize="14"/>
-            <TextBox x:Name="ProjectNameBox" Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5" FontSize="14"/>
-        </Grid>
-
-        <!-- Action Buttons -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,2,0,5">
-            <Button Content="SCAN OUTGOING PDF FOLDER" Click="ImportDocuments_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
-            <Button Content="SAVE PROJECT" Click="SaveProject_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
-            <Button Content="REFRESH VIEW" Click="RefreshView_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
-            <Button Content="MANAGE DISTRIBUTION" Click="ManageDistribution_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
-            <Button Content="BATCH EDIT" Click="BatchEdit_Click" Style="{StaticResource BaseButtonStyle}" Height="35" Margin="0,0,5,0" FontSize="14"/>
-            <Button Content="GENERATE PDF REPORT" Click="GeneratePdfReport_Click" Style="{StaticResource BaseButtonStyle}" Height="35" FontSize="14"/>
-        </StackPanel>
-
-        <!-- Search Panel -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,5">
-            <TextBlock Text="SEARCH:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
-            <TextBox x:Name="SearchBox" Width="200" TextChanged="SearchBox_TextChanged" Height="35" Margin="0,0,10,0" FontSize="14"/>
-            <ComboBox x:Name="SearchTypeCombo" Width="120" Height="35" FontSize="14" SelectionChanged="SearchTypeCombo_SelectionChanged">
-                <ComboBox.ItemContainerStyle>
-                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
-                        <Setter Property="FontSize" Value="14"/>
-                    </Style>
-                </ComboBox.ItemContainerStyle>
-                <ComboBoxItem Content="Document No"/>
-                <ComboBoxItem Content="Description"/>
-                <ComboBoxItem Content="Package"/>
-                <ComboBoxItem Content="Type"/>
-            </ComboBox>
-        </StackPanel>
-
-        <!-- Date Filter -->
-        <StackPanel Grid.Row="3" Orientation="Vertical" Margin="0,0,0,5">
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                <TextBlock Text="FILTER BY DATE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
-                <DatePicker x:Name="StartDatePicker" Width="200" Height="35" Margin="0,0,10,0" FontSize="14"/>
-                <DatePicker x:Name="EndDatePicker" Width="200" Height="35" Margin="0,0,10,0" FontSize="14"/>
-                <Button Content="APPLY FILTER" Click="DateFilter_Click" Height="35" Margin="0,0,5,0" FontSize="14"/>
-                <Button Content="CLEAR FILTER" Click="ClearDateFilter_Click" Style="{StaticResource BaseButtonStyle}" Height="35" FontSize="14"/>
-            </StackPanel>
-            
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="FILTER BY ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="IssueDateFilter" Width="200" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="IssueDateFilter_SelectionChanged">
-                    <ComboBoxItem Content="All Issues" FontSize="14"/>
-                </ComboBox>
-                
-                <!-- New Distribution Button -->
-                <Button x:Name="ViewDistributionButton" Content="VIEW DISTRIBUTION" Click="ViewDistribution_Click" 
-                        Height="35" Margin="0,0,10,0" FontSize="14" FontWeight="Bold"
-                        Background="#eb1845" Foreground="White" Visibility="Visible"/>
-                
-                <!-- Distribution Summary -->
-                <Border x:Name="DistributionSummaryBorder" BorderBrush="#ddd" BorderThickness="1" CornerRadius="4" Padding="10,5" 
-                        Margin="0,0,20,0" Visibility="Collapsed">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="DISTRIBUTION: " FontWeight="SemiBold" FontSize="14"/>
-                        <TextBlock x:Name="DistributionSummaryText" Text="No recipients" FontSize="14"/>
-                    </StackPanel>
-                </Border>
-
-                <TextBlock Text="PURPOSE OF ISSUE:" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="PurposeOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
-                    <ComboBoxItem Content="All" FontSize="14"/>
-                    <ComboBoxItem Content="A - Approval" FontSize="14"/>
-                    <ComboBoxItem Content="C - Construction" FontSize="14"/>
-                    <ComboBoxItem Content="I - Information" FontSize="14"/>
-                    <ComboBoxItem Content="T - Tender" FontSize="14"/>
-                    <ComboBoxItem Content="W - Warrant" FontSize="14"/>
-                    <ComboBoxItem Content="P - Planning" FontSize="14"/>
-                </ComboBox>
-                
-                <!-- Purpose Indicators -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                    <Border x:Name="PurposeA" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="A" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="PurposeC" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="C" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="PurposeI" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="I" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="PurposeT" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="T" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="PurposeW" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="W" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="PurposeP" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                </StackPanel>
-
-                <TextBlock Text="METHOD OF ISSUE:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
-                <ComboBox x:Name="MethodOfIssueFilter" Width="120" Height="35" Margin="0,0,10,0" FontSize="14" SelectionChanged="MethodOfIssueFilter_SelectionChanged">
-                    <ComboBoxItem Content="All" FontSize="14"/>
-                    <ComboBoxItem Content="E - Email" FontSize="14"/>
-                    <ComboBoxItem Content="S - SharePoint" FontSize="14"/>
-                    <ComboBoxItem Content="P - Post" FontSize="14"/>
-                    <ComboBoxItem Content="H - Hand" FontSize="14"/>
-                </ComboBox>
-                
-                <!-- Method Indicators -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
-                    <Border x:Name="MethodE" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="E" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="MethodS" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="MethodP" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                    <Border x:Name="MethodH" Width="20" Height="20" Background="Transparent" BorderBrush="Gray" BorderThickness="1" Margin="2,0">
-                        <TextBlock Text="H" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Gray"/>
-                    </Border>
-                </StackPanel>
-
-                <TextBlock Text="ISSUED BY:" VerticalAlignment="Center" Margin="20,0,10,0" FontSize="14"/>
-                <TextBox x:Name="IssuedByFilter" Width="60" Height="35" Margin="0,0,10,0" MaxLength="2" CharacterCasing="Upper" FontSize="14" TextChanged="IssuedByFilter_TextChanged"/>
-
-                <Button Content="SAVE ISSUE DETAILS" Click="SaveIssueDetails_Click" Height="35" FontSize="14"
-                        Style="{StaticResource BaseButtonStyle}"/>
-            </StackPanel>
-        </StackPanel>
-
-        <!-- Issue Information Section -->
-        <Border Grid.Row="4" BorderBrush="Black" BorderThickness="1" Margin="0,0,0,10">
+        <!-- ========================================= -->
+        <!-- ROW 0: COMPACT HEADER                     -->
+        <!-- ========================================= -->
+        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,6" Padding="12,8,12,10">
+            <Border.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             From="0" To="1" Duration="0:0:0.35"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Border.Triggers>
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Distribution Information Row -->
-                <Grid Grid.Row="0">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    
-                    <TextBlock Grid.Column="0" Text="DISTRIBUTION:" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
-                    <TextBlock x:Name="DistributionInfoText" Grid.Column="1" Text="No recipients selected" 
-                               HorizontalAlignment="Left" VerticalAlignment="Center" 
-                               Margin="0,5,10,5" TextWrapping="Wrap"/>
+
+                    <!-- Logo + Title -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Image x:Name="CompanyLogoImage"
+                               Source="pack://application:,,,/DrawingRegister.App;component/Resources/company-logo.png"
+                               Height="24" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock x:Name="ProjectTitleText" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Button x:Name="ProjectSettingsButton" Content="⚙" Click="ProjectSettings_Click"
+                                Style="{StaticResource GhostButton}" Width="28" Height="28" Padding="0"
+                                FontSize="14" Margin="6,0,0,0" ToolTip="Project settings"/>
+                    </StackPanel>
+
+                    <!-- Search Bar -->
+                    <Border Grid.Column="2" BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1"
+                            CornerRadius="6" Background="White" Padding="0" Height="28" Margin="0,0,8,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Search Icon -->
+                            <Path Grid.Column="0" Data="M10.5 3a7.5 7.5 0 015.3 12.8l4.2 4.2a1 1 0 01-1.4 1.4l-4.2-4.2A7.5 7.5 0 1110.5 3zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11z"
+                                  Fill="{StaticResource Slate400Brush}" Width="14" Height="14"
+                                  Stretch="Uniform" Margin="8,0,4,0" VerticalAlignment="Center"/>
+                            <TextBox x:Name="SearchBox" Grid.Column="1" TextChanged="SearchBox_TextChanged"
+                                     BorderThickness="0" Background="Transparent" Padding="4,4" FontSize="12"
+                                     VerticalAlignment="Center"/>
+                            <ComboBox x:Name="SearchTypeCombo" Grid.Column="2" Width="110" Height="26"
+                                      SelectionChanged="SearchTypeCombo_SelectionChanged" Margin="0,0,2,0"
+                                      FontSize="11">
+                                <ComboBoxItem Content="Document No"/>
+                                <ComboBoxItem Content="Description"/>
+                                <ComboBoxItem Content="Package"/>
+                                <ComboBoxItem Content="Type"/>
+                            </ComboBox>
+                        </Grid>
+                    </Border>
+
+                    <!-- About Button -->
+                    <Button Grid.Column="4"
+                            Content="?" Width="28" Height="28"
+                            FontSize="14" FontWeight="Bold"
+                            ToolTip="About this application"
+                            Click="About_Click"
+                            Style="{StaticResource GhostButton}"
+                            Padding="0"/>
                 </Grid>
-                
-                <!-- Method Indicators Row -->
-                <Grid Grid.Row="1">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <!-- Purpose of Issue -->
-                    <TextBlock Grid.Column="0" Text="PURPOSE OF ISSUE" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
-                    <Border Grid.Column="1" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
-                        <TextBlock x:Name="CurrentPurposeIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
+
+                <Popup x:Name="ProjectSettingsPopup" PlacementTarget="{Binding ElementName=ProjectSettingsButton}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+                       Closed="ProjectSettingsPopup_Closed">
+                    <Border Background="White" BorderBrush="{StaticResource InputBorderBrush}" BorderThickness="1"
+                            CornerRadius="8" Padding="16" Margin="0,4,12,12" Width="460"
+                            Effect="{StaticResource PopupShadow}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="Project" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="ProjectNameBox" Height="28" FontSize="12"
+                                     ToolTip="Project name shown on the register and reports."
+                                     TextChanged="ProjectPicker_TextChanged" PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
+
+                            <TextBlock Grid.Row="2" Text="Project No" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" x:Name="ProjectNoBox" Height="28" FontSize="12"
+                                     ToolTip="Your organisation's project number."
+                                     TextChanged="ProjectPicker_TextChanged" PreviewKeyDown="ProjectPicker_PreviewKeyDown"/>
+
+                            <TextBlock Grid.Row="4" Text="Client No" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" x:Name="ClientNoBox" Height="28" FontSize="12"
+                                     ToolTip="The client's project number, when their document filenames use a different number."/>
+
+                            <TextBlock Grid.Row="6" Text="Discipline" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="6" Grid.Column="1" x:Name="DisciplineCombo" Height="28" FontSize="12"
+                                      SelectionChanged="DisciplineCombo_SelectionChanged">
+                                <ComboBoxItem Tag="Z" Content="General/Multi-discipline"/>
+                                <ComboBoxItem Tag="C" Content="Civil"/>
+                                <ComboBoxItem Tag="S" Content="Structural"/>
+                                <ComboBoxItem Tag="A" Content="Architectural"/>
+                            </ComboBox>
+
+                            <TextBlock Grid.Row="8" Text="Company" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <DockPanel Grid.Row="8" Grid.Column="1">
+                                <Button x:Name="OrganizationSettingsBtn" DockPanel.Dock="Right" Content="Defaults"
+                                        Click="OrganizationSettings_Click" Style="{StaticResource GhostButton}"
+                                        Height="28" Padding="8,2" FontSize="11" Margin="6,0,0,0"/>
+                                <ComboBox x:Name="OrganizationCombo" Height="28" FontSize="12"
+                                          SelectionChanged="OrganizationCombo_SelectionChanged">
+                                    <ComboBoxItem Tag="MJ" Content="M+J Engineers (M+J)"/>
+                                    <ComboBoxItem Tag="DCF" Content="DCF (Glasgow)"/>
+                                </ComboBox>
+                            </DockPanel>
+
+                            <TextBlock Grid.Row="10" Text="Revisions" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Row="10" Grid.Column="1" x:Name="RevisionSchemeCombo" Height="28" FontSize="12"
+                                      SelectionChanged="RevisionSchemeCombo_SelectionChanged">
+                                <ComboBoxItem Tag="Legacy" Content="Legacy (A, B, C / P01, C01, T01, I01)"/>
+                                <ComboBoxItem Tag="Numeric" Content="Numeric (1, 2, 3)"/>
+                                <ComboBoxItem Tag="SubLetterNumeric" Content="Sub-letter / Formal (1A, 1B → 1)"/>
+                            </ComboBox>
+
+                            <TextBlock Grid.Row="12" Text="Reg No" Style="{StaticResource SectionLabel}" FontSize="11" VerticalAlignment="Center"/>
+                            <TextBox Grid.Row="12" Grid.Column="1" x:Name="RegNoBox" Height="28" FontSize="12" IsReadOnly="True"
+                                     ToolTip="Register number, generated from the project, company and discipline."/>
+
+                            <!-- CMap project picker. PlacementTarget and Width come from
+                                 code-behind so it sits under whichever box is being typed in. -->
+                            <Popup x:Name="ProjectPickerPopup" Placement="Bottom" StaysOpen="False"
+                                   AllowsTransparency="True" PopupAnimation="Fade">
+                                <Border Background="White" BorderBrush="{StaticResource InputBorderBrush}"
+                                        BorderThickness="1" CornerRadius="6" Margin="0,2,10,10"
+                                        Effect="{StaticResource PopupShadow}">
+                                    <ListBox x:Name="ProjectPickerList" MaxHeight="280" BorderThickness="0"
+                                             Background="Transparent" FontSize="12"
+                                             HorizontalContentAlignment="Stretch"
+                                             MouseLeftButtonUp="ProjectPickerList_MouseLeftButtonUp">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Code}" FontSize="12" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding Title}" FontSize="12" Margin="8,0,0,0"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+                        </Grid>
                     </Border>
-                    
-                    <!-- Method of Issue -->
-                    <TextBlock Grid.Column="2" Text="METHOD OF ISSUE" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
-                    <Border Grid.Column="3" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
-                        <TextBlock x:Name="CurrentMethodIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
-                    </Border>
-                    
-                    <!-- Issued By -->
-                    <TextBlock Grid.Column="4" Text="ISSUED BY" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
-                    <Border Grid.Column="5" BorderBrush="Black" BorderThickness="1" Width="25" Height="25" Margin="0,5,10,5">
-                        <TextBlock x:Name="CurrentIssuedByIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold"/>
-                    </Border>
-                </Grid>
-                
-                <!-- Date Row -->
-                <Grid Grid.Row="2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    
-                    <TextBlock Grid.Column="0" Text="DATE OF ISSUE" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,5,10,5" FontWeight="Bold"/>
-                    <Border Grid.Column="1" BorderBrush="Black" BorderThickness="1" Width="100" Height="25" Margin="0,5,10,5">
-                        <TextBlock x:Name="CurrentIssueDate" Text="" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                </Grid>
+                </Popup>
             </Grid>
         </Border>
 
-        <!-- Documents Grid -->
-        <DataGrid x:Name="DocumentGrid" 
-                  Grid.Row="5" 
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  SelectionMode="Single"
-                  SelectionChanged="DocumentGrid_SelectionChanged"
-                  AlternationCount="2"
-                  VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Auto"
-                  ColumnWidth="Auto"
-                  BorderThickness="1"
-                  BorderBrush="#ddd"
-                  FontSize="14">
-            <DataGrid.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Edit Document" Click="EditDocument_Click"/>
-                    <MenuItem Header="Manage Distribution" Click="ManageDistribution_Click"/>
-                </ContextMenu>
-            </DataGrid.ContextMenu>
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="DOCUMENT NO" 
-                                  Binding="{Binding DocumentNumber}" 
-                                  Width="Auto"
-                                  FontSize="14"/>
-                <DataGridTextColumn Header="DESCRIPTION" 
-                                  Binding="{Binding Description}" 
-                                  Width="Auto"
-                                  FontSize="14"/>
-                <DataGridTextColumn Header="PACKAGE" 
-                                  Binding="{Binding Package}" 
-                                  Width="Auto"
-                                  FontSize="14"/>
-                <DataGridTextColumn Header="TYPE" 
-                                  Binding="{Binding DocumentType}" 
-                                  Width="Auto"
-                                  FontSize="14"/>
-                <DataGridTextColumn Header="SIZE" 
-                                  Binding="{Binding Size}" 
-                                  Width="Auto"
-                                  FontSize="14"/>
-                <DataGridTextColumn Header="LATEST REV" 
-                                  Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
-                                  Width="Auto"
-                                  FontSize="14"/>
-                <DataGridTextColumn Header="LAST DATE OF ISSUE" 
-                                  Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionDateConverter}}"
-                                  Width="Auto"
-                                  FontSize="14"/>
-                <!-- Revision columns will be added dynamically -->
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- ========================================= -->
+        <!-- ROW 1: UNIFIED COMMAND BAR + FILTERS      -->
+        <!-- ========================================= -->
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,0,0,6" Padding="8,6,8,6">
+            <Border.Triggers>
+                <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                             From="0" To="1" Duration="0:0:0.35"
+                                             BeginTime="0:0:0.05"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Border.Triggers>
+            <StackPanel>
+                <!-- Wrap actions so every command remains reachable in narrower windows. -->
+                <WrapPanel Margin="0,0,0,4">
+                        <!-- File Group -->
+                        <Button x:Name="ScanFolderButton" Content="Scan PDF Folder" Click="ImportDocuments_Click"
+                                Style="{StaticResource PrimaryButton}" Height="28" Padding="12,4" FontSize="12" Margin="0,0,4,0"
+                                ToolTip="Scan a project folder for PDF filenames and save the register in that folder."/>
+                        <Button Content="Save Project" Click="SaveProject_Click"
+                                Style="{StaticResource SecondaryButton}" Height="28" Padding="12,4" FontSize="12" Margin="0,0,4,0"/>
+                        <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
-        <!-- Revision Timeline -->
-        <ScrollViewer Grid.Row="6" 
-                      HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Auto"
-                      Margin="0,10,0,0">
-            <ItemsControl x:Name="RevisionTimeline" 
-                          ItemsSource="{Binding SelectedDocument.RevisionHistory}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border BorderBrush="#eb1845" BorderThickness="1" 
-                                Margin="4" Padding="0" 
-                                Background="{Binding Value.Purpose, Converter={StaticResource RevisionColorConverter}}"
-                                MouseLeftButtonDown="RevisionTimeline_MouseDoubleClick">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Key, StringFormat=dd/MM/yyyy}" 
-                                           Background="#eb1845" Foreground="White"
-                                           Padding="4" FontWeight="Bold" TextAlignment="Center"/>
-                                
-                                <StackPanel Margin="8">
-                                    <TextBlock Text="{Binding Value.Revision}" FontSize="16" 
-                                               FontWeight="Bold" HorizontalAlignment="Center"/>
-                                    
-                                    <TextBlock Text="{Binding Value.Purpose}" Margin="0,5" 
-                                               TextWrapping="Wrap" TextAlignment="Center"/>
-                                    
-                                    <TextBlock Text="{Binding Value.Method}" FontStyle="Italic"
-                                               HorizontalAlignment="Center"/>
-                                    
-                                    <TextBlock Text="{Binding Value.IssuedBy}" Margin="0,5"
-                                               Foreground="#444" HorizontalAlignment="Center"/>
+                        <!-- Edit Group -->
+                        <Button Content="Distribution" Click="ManageDistribution_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Button Content="Batch Edit" Click="BatchEdit_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
 
-                                    <Button Content="Edit" Margin="0,5,0,0" Padding="10,2"
-                                            Click="EditRevision_Click"/>
-                                </StackPanel>
+                        <!-- Export Group -->
+                        <Button Content="PDF Report" Click="GeneratePdfReport_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"
+                                ToolTip="Create the report selected below, such as a transmittal."/>
+                        <Button Content="Export CSV" Click="ExportCsv_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Button Content="Collect Latest PDFs" Click="CollectLatestPdfs_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"/>
+                        <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
+
+                        <!-- View Group -->
+                        <Button Content="Refresh" Click="RefreshView_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"
+                                ToolTip="Refresh the register from the current project folder."/>
+                        <Button Content="Rescan Folder" Click="RescanFolder_Click" Style="{StaticResource ToolbarButton}" Margin="2,0"
+                                ToolTip="Choose an existing issue folder to scan again."/>
+                        <Rectangle Width="1" Fill="{StaticResource Slate200Brush}" Margin="4,4"/>
+
+                        <!-- Review Group -->
+                        <Button Content="Check Prints" Click="OpenChecking_Click" Style="{StaticResource ToolbarButton}" Margin="2,0,4,0"/>
+
+                        <!-- Preview Toggle -->
+                        <ToggleButton x:Name="PreviewToggle" Content="Preview" Checked="PreviewToggle_Changed" Unchecked="PreviewToggle_Changed"
+                                      Height="28" Padding="10,4" FontSize="12" FontWeight="SemiBold" Cursor="Hand">
+                            <ToggleButton.Style>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="Background" Value="#5a6268"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource BrandRedBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="border" Property="Opacity" Value="0.85"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ToggleButton.Style>
+                        </ToggleButton>
+                    <Button x:Name="RemoveDocumentButton" Content="Remove Entry" Click="RemoveDocumentButton_Click"
+                            Style="{StaticResource DangerButton}" Padding="10,4" Height="28" FontSize="12" Margin="4,0,0,0"/>
+                </WrapPanel>
+
+                <Separator Background="{StaticResource Slate200Brush}" Margin="0,2" Height="1"/>
+
+                <!-- Bottom strip: All filters in a single compact row -->
+                <WrapPanel Margin="0,4,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                        <TextBlock Text="Report" Style="{StaticResource SectionLabel}" FontSize="11"/>
+                        <ComboBox x:Name="ReportModeCombo" Width="110" Height="26" FontSize="12"
+                                  SelectionChanged="ReportModeCombo_SelectionChanged">
+                            <ComboBoxItem Content="Transmittal" Tag="Transmittal"/>
+                            <ComboBoxItem Content="DocReg" Tag="DocReg"/>
+                        </ComboBox>
+                        <Button x:Name="DocRegFolderButton" Content="DocReg folder..."
+                                Click="DocRegFolder_Click"
+                                Style="{StaticResource ToolbarButton}"
+                                Height="26" Margin="6,0,0,0" Padding="10,2" FontSize="12"
+                                Visibility="Collapsed"
+                                ToolTip="One folder of M+J and architect PDFs. Filenames are parsed for review. Source files are not renamed or imported into the Register."/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                        <TextBlock Text="Issue Date" Style="{StaticResource SectionLabel}" FontSize="11"/>
+                        <ComboBox x:Name="IssueDateFilter" Width="130" Height="26" FontSize="12" SelectionChanged="IssueDateFilter_SelectionChanged">
+                            <ComboBoxItem Content="All Dates"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Subfolder filter (conditional) -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                        <TextBlock x:Name="SubfolderFilterLabel" Text="Subfolder" Style="{StaticResource SectionLabel}" FontSize="11" Visibility="Collapsed"/>
+                        <ComboBox x:Name="SubfolderFilterCombo" Width="180" Height="26" FontSize="12" SelectionChanged="SubfolderFilterCombo_SelectionChanged" Visibility="Collapsed"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,6,4">
+                        <TextBlock Text="Purpose" Style="{StaticResource SectionLabel}" FontSize="11"/>
+                        <ComboBox x:Name="PurposeOfIssueFilter" Width="150" Height="26" FontSize="12" SelectionChanged="PurposeOfIssueFilter_SelectionChanged">
+                            <ComboBoxItem Content="All"/>
+                            <ComboBoxItem Content="S - Concept Issue"/>
+                            <ComboBoxItem Content="P - Planning Issue"/>
+                            <ComboBoxItem Content="T - Warrant / Tender"/>
+                            <ComboBoxItem Content="C - Construction Issue"/>
+                            <ComboBoxItem Content="A - Approval"/>
+                            <ComboBoxItem Content="I - Information"/>
+                            <ComboBoxItem Content="W - Warrant"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Purpose Indicators -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4" VerticalAlignment="Center">
+                        <Border x:Name="PurposeS" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Concept issue indicator">
+                            <TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeP" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Planning issue indicator">
+                            <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeT" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Warrant / tender indicator">
+                            <TextBlock Text="T" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeC" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Construction issue indicator">
+                            <TextBlock Text="C" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeA" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Approval indicator">
+                            <TextBlock Text="A" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeI" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Information indicator">
+                            <TextBlock Text="I" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="PurposeW" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Warrant indicator">
+                            <TextBlock Text="W" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,6,4">
+                        <TextBlock Text="Method" Style="{StaticResource SectionLabel}" FontSize="11"/>
+                        <ComboBox x:Name="MethodOfIssueFilter" Width="120" Height="26" FontSize="12" SelectionChanged="MethodOfIssueFilter_SelectionChanged">
+                            <ComboBoxItem Content="All"/>
+                            <ComboBoxItem Content="E - Email"/>
+                            <ComboBoxItem Content="S - SharePoint"/>
+                            <ComboBoxItem Content="P - Post"/>
+                            <ComboBoxItem Content="H - Hand"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Method Indicators -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4" VerticalAlignment="Center">
+                        <Border x:Name="MethodE" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Email indicator">
+                            <TextBlock Text="E" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="MethodS" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="SharePoint indicator">
+                            <TextBlock Text="S" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="MethodP" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Post indicator">
+                            <TextBlock Text="P" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                        <Border x:Name="MethodH" Width="22" Height="22" CornerRadius="4" Background="Transparent" BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" Margin="1,0" ToolTip="Hand delivery indicator">
+                            <TextBlock Text="H" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Slate500Brush}" FontSize="10" FontWeight="SemiBold"/>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                        <TextBlock Text="Issued By" Style="{StaticResource SectionLabel}" FontSize="11"/>
+                        <TextBox x:Name="IssuedByFilter" Width="60" Height="26" MaxLength="2" CharacterCasing="Upper"
+                                 TextChanged="IssuedByFilter_TextChanged" FontSize="12"
+                                 ToolTip="Initials of the person who issued the drawings."
+                                 Padding="4,1" VerticalContentAlignment="Center" TextAlignment="Center"/>
+                    </StackPanel>
+
+                    <Button Content="Save Issue Details" Click="SaveIssueDetails_Click" Height="26" Padding="10,3" FontSize="12"
+                            Style="{StaticResource PrimaryButton}" Margin="0,0,6,4"/>
+
+                    <Button x:Name="ViewDistributionButton" Content="View Distribution" Click="ViewDistribution_Click"
+                            Height="26" Padding="10,3" FontSize="12" Style="{StaticResource GhostButton}" Margin="0,0,0,4"/>
+                </WrapPanel>
+
+                <!-- Distribution Summary (shows when relevant) -->
+                <Border x:Name="DistributionSummaryBorder" Background="{StaticResource Slate50Brush}"
+                        BorderBrush="{StaticResource Slate200Brush}" BorderThickness="1" CornerRadius="4"
+                        Padding="10,4" Margin="0,4,0,0" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Distribution:" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource Slate700Brush}" Margin="0,0,6,0"/>
+                        <TextBlock x:Name="DistributionSummaryText" Text="No recipients" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ========================================= -->
+        <!-- ROW 2: CONTENT AREA (DataGrid + Preview)  -->
+        <!-- ========================================= -->
+        <Grid Grid.Row="2" Margin="0,0,0,4">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- DataGrid + Preview Split -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="400"/>
+                    <ColumnDefinition x:Name="SplitterColumn" Width="0"/>
+                    <ColumnDefinition x:Name="PreviewColumn" Width="0"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- DataGrid -->
+                <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource Slate200Brush}"
+                        BorderThickness="1" CornerRadius="8" ClipToBounds="True">
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                     From="0" To="1" Duration="0:0:0.4"
+                                                     BeginTime="0:0:0.1"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                    <DataGrid x:Name="DocumentGrid"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              SelectionMode="Extended"
+                              SelectionChanged="DocumentGrid_SelectionChanged"
+                              PreviewMouseRightButtonDown="DocumentGrid_PreviewMouseRightButtonDown"
+                              AlternationCount="2"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto"
+                              ColumnWidth="Auto"
+                              BorderThickness="0"
+                              GridLinesVisibility="None"
+                              HeadersVisibility="Column"
+                              Background="White">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Edit Document" Click="EditDocument_Click"/>
+                                <MenuItem Header="Manage Distribution" Click="ManageDistribution_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Set Paper Size">
+                                    <MenuItem Header="A0" Click="SetPaperSize_Click" Tag="A0"/>
+                                    <MenuItem Header="A1" Click="SetPaperSize_Click" Tag="A1"/>
+                                    <MenuItem Header="A2" Click="SetPaperSize_Click" Tag="A2"/>
+                                    <MenuItem Header="A3" Click="SetPaperSize_Click" Tag="A3"/>
+                                    <MenuItem Header="A4" Click="SetPaperSize_Click" Tag="A4"/>
+                                    <MenuItem Header="A5" Click="SetPaperSize_Click" Tag="A5"/>
+                                </MenuItem>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <DataGrid.Columns>
+                            <!-- Document No: SemiBold -->
+                            <DataGridTemplateColumn Header="DOCUMENT NO" Width="Auto" SortMemberPath="DocumentNumber">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DocumentNumber}" FontWeight="SemiBold" Padding="4,4" VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="DESCRIPTION"
+                                              Binding="{Binding Description}"
+                                              Width="Auto"/>
+                            <DataGridTextColumn Header="PACKAGE"
+                                              Binding="{Binding Package}"
+                                              Width="Auto"/>
+                            <DataGridTextColumn Header="TYPE"
+                                              Binding="{Binding DocumentType}"
+                                              Width="Auto"/>
+                            <DataGridTextColumn Header="SIZE"
+                                              Binding="{Binding Size}"
+                                              Width="Auto"/>
+                            <!-- Latest Rev: Colored pill badge -->
+                            <DataGridTemplateColumn Header="LATEST REV" Width="Auto" SortMemberPath="RevisionHistory">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{Binding RevisionHistory, Converter={StaticResource RevisionColorConverter}, ConverterParameter=bg}"
+                                                CornerRadius="4" Padding="6,2" Margin="4,2" HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding RevisionHistory, Converter={StaticResource LatestRevisionConverter}}"
+                                                       FontWeight="SemiBold" FontSize="12"
+                                                       Foreground="{Binding RevisionHistory, Converter={StaticResource RevisionColorConverter}, ConverterParameter=fg}"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="LAST ISSUED"
+                                              Binding="{Binding RevisionHistory, Converter={StaticResource LatestRevisionDateConverter}}"
+                                              Width="Auto"/>
+                            <!-- Revision columns will be added dynamically -->
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+
+                <!-- GridSplitter -->
+                <GridSplitter x:Name="PreviewSplitter" Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
+                              Visibility="Collapsed" Cursor="SizeWE"/>
+
+                <!-- PDF Preview Panel -->
+                <Border x:Name="PreviewPanel" Grid.Column="2" Background="White" BorderBrush="{StaticResource Slate200Brush}"
+                        BorderThickness="1" CornerRadius="8" ClipToBounds="True" Visibility="Collapsed">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Preview Header -->
+                        <Border Grid.Row="0" Background="{DynamicResource BrandRedBrush}" CornerRadius="7,7,0,0" Padding="10,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="PreviewHeaderText" Grid.Column="0" Text="PDF PREVIEW"
+                                           Foreground="White" FontWeight="Bold" FontSize="11" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <Button x:Name="OpenExternalButton" Grid.Column="1" Content="OPEN" Click="OpenExternalPdf_Click"
+                                        Padding="8,2" FontSize="10" FontWeight="SemiBold" Cursor="Hand"
+                                        Background="White" Foreground="{DynamicResource BrandRedBrush}" BorderThickness="0">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="4"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="btnBorder" Property="Opacity" Value="0.85"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <!-- WebView2 PDF Renderer -->
+                        <wv2:WebView2 x:Name="PdfWebView" Grid.Row="1" Visibility="Collapsed"/>
+
+                        <!-- Placeholder Overlay -->
+                        <Border x:Name="PreviewPlaceholder" Grid.Row="1" Background="{StaticResource Slate50Brush}">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock x:Name="PlaceholderTitle" Text="NO DOCUMENT SELECTED" FontSize="14"
+                                           FontWeight="SemiBold" Foreground="{StaticResource Slate400Brush}"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="PlaceholderSubtitle" Text="Select a document to preview"
+                                           FontSize="12" Foreground="{StaticResource TextMutedBrush}"
+                                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
 
+                        <!-- Error Overlay -->
+                        <Border x:Name="PreviewError" Grid.Row="1" Background="{DynamicResource BrandRedLightBrush}" Visibility="Collapsed">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+                                <TextBlock Text="FILE NOT FOUND" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource BrandRedBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="ErrorFilePath" Text="" FontSize="11"
+                                           Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
+                                           TextWrapping="Wrap" Margin="0,8,0,0" TextAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Revision Timeline (nested at bottom of content area) -->
+            <ScrollViewer Grid.Row="1"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          Margin="0,4,0,0"
+                          MaxHeight="150">
+                <ItemsControl x:Name="RevisionTimeline"
+                              ItemsSource="{Binding SelectedDocument.RevisionHistory}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border CornerRadius="8"
+                                    Margin="0,4,8,4"
+                                    Background="White"
+                                    BorderBrush="{StaticResource Slate200Brush}"
+                                    BorderThickness="1"
+                                    Effect="{StaticResource CardShadow}"
+                                    Width="120"
+                                    MouseLeftButtonDown="RevisionTimeline_MouseDoubleClick"
+                                    Cursor="Hand"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.RenderTransform>
+                                    <TranslateTransform X="0" Y="0"/>
+                                </Border.RenderTransform>
+                                <Border.Triggers>
+                                    <EventTrigger RoutedEvent="Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                 From="0" To="1" Duration="0:0:0.3"/>
+                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                 From="20" To="0" Duration="0:0:0.3">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut"/>
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                </Border.Triggers>
+                                <StackPanel>
+                                    <!-- Date Header with stage color -->
+                                    <Border Background="{Binding Value.Revision, Converter={StaticResource RevisionColorConverter}, ConverterParameter=bg}"
+                                            CornerRadius="7,7,0,0" Padding="6,4">
+                                        <TextBlock Text="{Binding Key, StringFormat=dd/MM/yyyy}"
+                                                   Foreground="{Binding Value.Revision, Converter={StaticResource RevisionColorConverter}, ConverterParameter=fg}"
+                                                   FontSize="10" FontWeight="SemiBold" TextAlignment="Center"/>
+                                    </Border>
+
+                                    <!-- Revision Content -->
+                                    <StackPanel Margin="8,6,8,8">
+                                        <!-- Revision Badge -->
+                                        <Border Background="{Binding Value.Revision, Converter={StaticResource RevisionColorConverter}, ConverterParameter=bg}"
+                                                CornerRadius="4" Padding="6,2" HorizontalAlignment="Center" Margin="0,0,0,4">
+                                            <TextBlock Text="{Binding Value.Revision}" FontSize="14"
+                                                       FontWeight="Bold"
+                                                       Foreground="{Binding Value.Revision, Converter={StaticResource RevisionColorConverter}, ConverterParameter=fg}"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+
+                                        <TextBlock Text="{Binding Value.Purpose}" FontSize="10"
+                                                   TextWrapping="Wrap" TextAlignment="Center"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+
+                                        <TextBlock Text="{Binding Value.Method}" FontSize="9" FontStyle="Italic"
+                                                   HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+
+                                        <TextBlock Text="{Binding Value.IssuedBy}" FontSize="10" Margin="0,3,0,0"
+                                                   Foreground="{StaticResource Slate600Brush}" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+
+                                        <Button Content="Edit" Margin="0,4,0,0" Padding="6,2"
+                                                Style="{StaticResource GhostButton}" FontSize="10" Height="22"
+                                                Click="EditRevision_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ========================================= -->
+        <!-- ROW 3: STATUS BAR                         -->
+        <!-- ========================================= -->
+        <Border Grid.Row="3" Background="White" BorderBrush="{StaticResource Slate200Brush}"
+                BorderThickness="1" CornerRadius="6" Padding="12,4" Margin="0,0,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Document count + Distribution -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusDocumentCount" Text="Documents: 0" FontSize="11"
+                               Foreground="{StaticResource Slate600Brush}" Margin="0,0,16,0"/>
+                    <TextBlock x:Name="DistributionInfoText" Text="" FontSize="11"
+                               Foreground="{StaticResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
+                <!-- Right: Current issue info -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Purpose" FontSize="11" Foreground="{StaticResource Slate500Brush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <Border BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" CornerRadius="3" Width="24" Height="22" Margin="0,0,12,0">
+                        <TextBlock x:Name="CurrentPurposeIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
+                    </Border>
+
+                    <TextBlock Text="Method" FontSize="11" Foreground="{StaticResource Slate500Brush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <Border BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" CornerRadius="3" Width="24" Height="22" Margin="0,0,12,0">
+                        <TextBlock x:Name="CurrentMethodIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
+                    </Border>
+
+                    <TextBlock Text="By" FontSize="11" Foreground="{StaticResource Slate500Brush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <Border BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" CornerRadius="3" Width="28" Height="22" Margin="0,0,12,0">
+                        <TextBlock x:Name="CurrentIssuedByIndicator" Text="" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="11"/>
+                    </Border>
+
+                    <TextBlock Text="Date" FontSize="11" Foreground="{StaticResource Slate500Brush}" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <Border BorderBrush="{StaticResource Slate300Brush}" BorderThickness="1" CornerRadius="3" Padding="6,1" Height="22">
+                        <TextBlock x:Name="CurrentIssueDate" Text="{Binding ElementName=IssueDateFilter, Path=SelectedItem.Content}"
+                                  VerticalAlignment="Center" FontSize="11"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

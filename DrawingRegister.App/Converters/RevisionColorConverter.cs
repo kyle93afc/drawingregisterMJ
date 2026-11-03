@@ -1,7 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Windows.Data;
 using System.Windows.Media;
+using Application = System.Windows.Application;
+using DrawingRegister.App.Models;
 
 namespace DrawingRegister.App.Converters
 {
@@ -9,19 +13,62 @@ namespace DrawingRegister.App.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return (value as string)?.ToUpper() switch
+            string? revision = value as string;
+
+            // Handle Dictionary<DateTime, RevisionInfo> (from RevisionHistory binding)
+            if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && revisionHistory.Any())
             {
-                "DRAFT" => System.Windows.Media.Brushes.LightBlue,
-                "APPROVAL" => System.Windows.Media.Brushes.LightGreen,
-                "CONSTRUCTION" => System.Windows.Media.Brushes.Gold,
-                "TENDER" => System.Windows.Media.Brushes.Violet,
-                "WARRANT" => System.Windows.Media.Brushes.Orange,
-                "PLANNING" => System.Windows.Media.Brushes.LightCoral,
-                _ => System.Windows.Media.Brushes.WhiteSmoke
+                revision = revisionHistory
+                    .OrderByDescending(kvp => kvp.Key)
+                    .Select(kvp => kvp.Value.Revision)
+                    .FirstOrDefault(r => !string.IsNullOrWhiteSpace(r));
+            }
+
+            var mode = (parameter as string)?.ToLower() ?? "bg";
+
+            var prefix = !string.IsNullOrEmpty(revision)
+                ? char.ToUpper(revision[0])
+                : '\0';
+
+            return (prefix, mode) switch
+            {
+                ('S', "bg") => BrushFromHex("#DBEAFE"),
+                ('S', "fg") => BrushFromHex("#1D4ED8"),
+                ('P', "bg") => BrushFromHex("#FEE2E2"),
+                ('P', "fg") => BrushFromHex("#DC2626"),
+                ('T', "bg") => BrushFromHex("#F3E8FF"),
+                ('T', "fg") => BrushFromHex("#7C3AED"),
+                ('C', "bg") => BrushFromHex("#FEF3C7"),
+                ('C', "fg") => BrushFromHex("#D97706"),
+                (_, "bg")   => Application.Current?.TryFindResource("BrandRedLightBrush") as SolidColorBrush ?? BrushFromHex("#FEF2F4"),
+                _           => Application.Current?.TryFindResource("BrandRedBrush") as SolidColorBrush ?? BrushFromHex("#eb1845"),
             };
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => 
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
             throw new NotImplementedException();
+
+        public static SolidColorBrush BrushFromHex(string hex)
+        {
+            var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
+        }
+
+        public static SolidColorBrush GetForegroundBrush(string revision)
+        {
+            if (string.IsNullOrEmpty(revision))
+                return Application.Current?.TryFindResource("BrandRedBrush") as SolidColorBrush ?? BrushFromHex("#eb1845");
+
+            return char.ToUpper(revision[0]) switch
+            {
+                'S' => BrushFromHex("#1D4ED8"),
+                'P' => BrushFromHex("#DC2626"),
+                'T' => BrushFromHex("#7C3AED"),
+                'C' => BrushFromHex("#D97706"),
+                _   => Application.Current?.TryFindResource("BrandRedBrush") as SolidColorBrush ?? BrushFromHex("#eb1845"),
+            };
+        }
     }
-} 
+}

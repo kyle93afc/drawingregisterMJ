@@ -13,8 +13,15 @@ namespace DrawingRegister.App.Converters
         {
             if (value is Dictionary<DateTime, RevisionInfo> revisionHistory && revisionHistory.Any())
             {
-                var latestDate = revisionHistory.Keys.Max();
-                return latestDate.ToString("yyyy-MM-dd");
+                var latest = revisionHistory
+                    .Where(kvp => !kvp.Value.IsSuperseded)
+                    .OrderByDescending(kvp => kvp.Key)
+                    .FirstOrDefault();
+                if (latest.Value == null)
+                {
+                    return "-";
+                }
+                return latest.Key.ToString("yyyy-MM-dd");
             }
             return "-";
         }

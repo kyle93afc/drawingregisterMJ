@@ -12,5 +12,15 @@ namespace DrawingRegister.App
             InitializeComponent();
             DataContext = this;
         }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void Header_DragMove(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left) DragMove();
+        }
     }
 } 

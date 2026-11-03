@@ -74,5 +74,10 @@ namespace DrawingRegister.App
             DialogResult = false;
             Close();
         }
+
+        private void Header_DragMove(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left) DragMove();
+        }
     }
 } 

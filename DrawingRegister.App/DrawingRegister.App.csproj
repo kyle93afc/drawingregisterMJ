@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
@@ -8,25 +8,50 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Version and Assembly Info -->
+    <Version>1.7.1</Version>
+    <AssemblyVersion>1.7.1.0</AssemblyVersion>
+    <FileVersion>1.7.1.0</FileVersion>
+    <Product>Document and Drawing Register</Product>
+    <Company>M+J Engineers</Company>
+    <Copyright>Copyright (c) 2025 M+J Engineers</Copyright>
+
+    <!-- Application Icon -->
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+
+    <!-- Custom entry point for Velopack -->
+    <StartupObject>DrawingRegister.App.App</StartupObject>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
   </PropertyGroup>
 
+
   <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+    <PackageReference Include="PdfPig" Version="0.1.13" />
     <PackageReference Include="QuestPDF" Version="2023.12.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Serilog" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="**/*.pdf" />
-    <None Remove="Resources/company-logo.png" />
-    <None Remove="Resources/WHITE LOGO RED BACKGROUND.jpg" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Resources/WHITE LOGO RED BACKGROUND.jpg">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources/company-logo.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="Resources/company-logo.png" />
+    <EmbeddedResource Include="Resources/dcf-logo.png" />
+    <EmbeddedResource Include="Resources/WHITE LOGO RED BACKGROUND.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\icon.ico" />
   </ItemGroup>
 
   <ItemGroup>

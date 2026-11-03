@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using DrawingRegister.App.Models;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -19,35 +21,25 @@ namespace DrawingRegister.App
         private Dictionary<DateTime, Dictionary<string, List<DocumentMetadata>>> _dateAndFolderDocuments = new();
         private ObservableCollection<DistributionCompanyViewModel> _distributionCompanies = new();
         private DateTime _selectedIssueDate;
-        private readonly DateTime _mainWindowIssueDate;
-
-        public BatchEditDialog(ProjectManager project, DateTime mainWindowIssueDate)
+        public BatchEditDialog(ProjectManager project)
         {
             try
             {
                 InitializeComponent();
                 _project = project;
-                _mainWindowIssueDate = mainWindowIssueDate;
-                
+
                 // Initialize date combo
                 PopulateIssueDates();
-                
+
                 // Initialize folder combo
                 PopulateSubfolders();
-                
+
                 // Initialize date and folder combo
                 PopulateDateAndFolderCombos();
-                
+
                 // Set initial filtered documents
                 UpdateFilteredDocuments();
-                
-                // Set default values for edit fields
-                if (PurposeCombo.Items.Count > 0)
-                    PurposeCombo.SelectedIndex = 0;
-                    
-                if (MethodCombo.Items.Count > 0)
-                    MethodCombo.SelectedIndex = 0;
-                    
+
                 // Set default visibility
                 DateSelectionPanel.Visibility = Visibility.Visible;
                 FolderSelectionPanel.Visibility = Visibility.Collapsed;
@@ -630,19 +622,16 @@ namespace DrawingRegister.App
                             {
                                 System.Diagnostics.Debug.WriteLine($"Found matching revision for doc {doc.DocumentNumber}");
                                 
-                                // Make sure the document has the current values from the latest revision
-                                var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
-                                if (latestRevision.Value != null)
-                                {
-                                    doc.PurposeOfIssue = latestRevision.Value.Purpose;
-                                    doc.MethodOfIssue = latestRevision.Value.Method;
-                                    doc.IssuedBy = latestRevision.Value.IssuedBy;
-                                }
-                                
+                                // Use the values from the revision matching the selected date
+                                var matchingRevision = matchingRevisions.OrderByDescending(r => r.Key).First();
+                                doc.PurposeOfIssue = matchingRevision.Value.Purpose;
+                                doc.MethodOfIssue = matchingRevision.Value.Method;
+                                doc.IssuedBy = matchingRevision.Value.IssuedBy;
+
                                 _filteredDocuments.Add(doc);
                             }
                         }
-                        
+
                         System.Diagnostics.Debug.WriteLine($"Filtered documents count: {_filteredDocuments.Count}");
                     }
                     else
@@ -789,10 +778,10 @@ namespace DrawingRegister.App
                                                 if (string.Equals(revisionFolderPath, folderPath, StringComparison.OrdinalIgnoreCase))
                                                 {
                                                     System.Diagnostics.Debug.WriteLine($"  -> Match found: Doc {doc.DocumentNumber}, RevDate {revisionOnDate.Key}, RevPath {revisionOnDate.Value.FilePath}");
-                                                    var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).First();
-                                                    doc.PurposeOfIssue = latestRevision.Value.Purpose;
-                                                    doc.MethodOfIssue = latestRevision.Value.Method;
-                                                    doc.IssuedBy = latestRevision.Value.IssuedBy;
+                                                    // Use the values from the revision matching the selected date
+                                                    doc.PurposeOfIssue = revisionOnDate.Value.Purpose;
+                                                    doc.MethodOfIssue = revisionOnDate.Value.Method;
+                                                    doc.IssuedBy = revisionOnDate.Value.IssuedBy;
                                                     _filteredDocuments.Add(doc);
                                                 }
                                             }
@@ -900,32 +889,22 @@ namespace DrawingRegister.App
                     .GroupBy(i => i)
                     .OrderByDescending(g => g.Count())
                     .FirstOrDefault()?.Key;
-                    
+
                 // Set detected values in UI
                 if (!string.IsNullOrEmpty(commonPurpose) && PurposeCombo != null)
                 {
-                    foreach (ComboBoxItem item in PurposeCombo.Items)
-                    {
-                        if (item.Content?.ToString()?.StartsWith(commonPurpose.Substring(0, 1)) == true)
-                        {
-                            PurposeCombo.SelectedItem = item;
-                            break;
-                        }
-                    }
+                    var purposeItem = MapPurposeToComboItem(commonPurpose, PurposeCombo);
+                    if (purposeItem != null)
+                        PurposeCombo.SelectedItem = purposeItem;
                 }
-                
+
                 if (!string.IsNullOrEmpty(commonMethod) && MethodCombo != null)
                 {
-                    foreach (ComboBoxItem item in MethodCombo.Items)
-                    {
-                        if (item.Content?.ToString()?.StartsWith(commonMethod.Substring(0, 1)) == true)
-                        {
-                            MethodCombo.SelectedItem = item;
-                            break;
-                        }
-                    }
+                    var methodItem = MapToComboItem(commonMethod, MethodCombo);
+                    if (methodItem != null)
+                        MethodCombo.SelectedItem = methodItem;
                 }
-                
+
                 if (!string.IsNullOrEmpty(commonIssuedBy) && IssuedByTextBox != null)
                 {
                     IssuedByTextBox.Text = commonIssuedBy;
@@ -937,6 +916,55 @@ namespace DrawingRegister.App
             }
         }
         
+        /// <summary>
+        /// Maps a stored purpose value (full word like "Construction" or single letter like "C")
+        /// to the matching ComboBoxItem.
+        /// </summary>
+        private ComboBoxItem MapPurposeToComboItem(string purpose, System.Windows.Controls.ComboBox combo)
+        {
+            // Mapping from stored purpose values to combo item prefixes
+            // DeterminePurpose() stores full words; ApplyButton_Click() stores single letters
+            var purposeToPrefix = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "S", "S" }, { "Concept", "S" },
+                { "P", "P" }, { "Planning", "P" },
+                { "T", "T" }, { "Tender", "T" }, { "Tender Civil", "T" },
+                { "C", "C" }, { "Construction", "C" },
+                { "A", "A" }, { "Approval", "A" },
+                { "I", "I" }, { "Information", "I" },
+                { "W", "W" }, { "Warrant", "W" }, { "Warrant Civil", "W" },
+            };
+
+            string prefix = null;
+            if (purposeToPrefix.TryGetValue(purpose.Trim(), out var mapped))
+                prefix = mapped;
+
+            if (prefix == null)
+                return null; // Unknown purpose (Draft, DSC, Review, etc.) — don't select anything
+
+            foreach (ComboBoxItem item in combo.Items)
+            {
+                if (item.Content?.ToString()?.StartsWith(prefix + " ") == true)
+                    return item;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Maps a stored method value to the matching ComboBoxItem by first letter.
+        /// </summary>
+        private ComboBoxItem MapToComboItem(string value, System.Windows.Controls.ComboBox combo)
+        {
+            if (string.IsNullOrEmpty(value)) return null;
+            string firstChar = value.Substring(0, 1).ToUpper();
+            foreach (ComboBoxItem item in combo.Items)
+            {
+                if (item.Content?.ToString()?.StartsWith(firstChar + " ") == true)
+                    return item;
+            }
+            return null;
+        }
+
         private void ApplyButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -968,88 +996,83 @@ namespace DrawingRegister.App
                         method = method.Split(new[] { " - " }, StringSplitOptions.None)[0];
                 }
                 
-                if (UpdateIssuedByCheck != null && UpdateIssuedByCheck.IsChecked == true && 
+                if (UpdateIssuedByCheck != null && UpdateIssuedByCheck.IsChecked == true &&
                     IssuedByTextBox != null && !string.IsNullOrEmpty(IssuedByTextBox.Text))
                 {
                     issuedBy = IssuedByTextBox.Text.Trim().ToUpper();
                 }
-                
-                // Check if distribution update is selected
-                bool updateDistribution = UpdateDistributionCheck.IsChecked == true;
-                var selectedCompanyIds = _distributionCompanies
-                    .Where(c => c.IsSelected)
-                    .Select(c => c.Id)
-                    .ToList();
 
+                bool updateDistribution = UpdateDistributionCheck.IsChecked == true;
                 if (purpose == null && method == null && issuedBy == null && !updateDistribution)
                 {
                     System.Windows.MessageBox.Show("Please select at least one property or distribution to update.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-
-                if (updateDistribution && !selectedCompanyIds.Any())
-                {
-                    System.Windows.MessageBox.Show("Please select at least one company to distribute to, or uncheck the 'Update Distribution' box.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
                 
                 // Apply changes
                 int updatedCount = 0;
-                DateTime? filterDate = null; // Date used for filtering revisions if 'Filter By Date' is selected
-
-                // If filtering by date, get the selected date for filtering revisions
-                if (FilterByDate != null && FilterByDate.IsChecked == true &&
+                DateTime? selectedDate = null;
+                
+                // If filtering by date, get the selected date
+                if (FilterByDate != null && FilterByDate.IsChecked == true && 
                     IssueDateCombo != null && IssueDateCombo.SelectedItem is ComboBoxItem selectedDateItem)
                 {
-                    // Get the selected date from the filter combo
-                    if (selectedDateItem.Tag is DateTime tagDate)
+                    string selectedDateStr = selectedDateItem.Content?.ToString() ?? string.Empty;
+                    if (!string.IsNullOrEmpty(selectedDateStr) &&
+                        DateTime.TryParseExact(selectedDateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
                     {
-                        filterDate = tagDate.Date; // Use only the date part for filtering revisions
+                        selectedDate = parsedDate.Date;
                     }
-                    else if (selectedDateItem.Content is string selectedDateStr &&
-                             DateTime.TryParseExact(selectedDateStr, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
-                    {
-                        filterDate = parsedDate.Date; // Use only the date part for filtering revisions
-                    }
+                }
+                
+                // Get selected companies
+                var selectedCompanyIds = _distributionCompanies
+                    .Where(c => c.IsSelected)
+                    .Select(c => c.Id)
+                    .ToList();
+                if (updateDistribution && !selectedCompanyIds.Any())
+                {
+                    System.Windows.MessageBox.Show("Select at least one company to distribute to, or uncheck Update Distribution.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
                 }
                 
                 foreach (var doc in _filteredDocuments)
                 {
                     bool docUpdated = false;
-
-                    // If filtering by date, update only revisions on that filterDate
-                    if (filterDate.HasValue)
+                    
+                    // If filtering by date, update only revisions on that date
+                    if (selectedDate.HasValue)
                     {
                         var matchingRevisions = doc.RevisionHistory
-                            .Where(r => r.Key.Date == filterDate.Value)
+                            .Where(r => r.Key.Date == selectedDate.Value)
                             .ToList();
-
+                            
                         foreach (var revision in matchingRevisions)
                         {
                             var revInfo = revision.Value;
                             if (revInfo == null) continue;
-
+                            
                             bool revUpdated = false;
-
+                            
                             // Update revision properties
                             if (purpose != null)
                             {
                                 revInfo.Purpose = purpose;
                                 revUpdated = true;
                             }
-
+                            
                             if (method != null)
                             {
                                 revInfo.Method = method;
                                 revUpdated = true;
                             }
-
+                            
                             if (issuedBy != null)
                             {
                                 revInfo.IssuedBy = issuedBy;
                                 revUpdated = true;
                             }
-
+                            
                             // Update document's current values if this is the latest revision
                             if (revUpdated && doc.RevisionHistory.Max(r => r.Key) == revision.Key)
                             {
@@ -1066,8 +1089,9 @@ namespace DrawingRegister.App
                             }
                         }
                     }
-                    else // Not filtering by date, update the latest revision and document properties
+                    else
                     {
+                        // Update the latest revision and document properties
                         var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
                         if (latestRevision.Value != null)
                         {
@@ -1077,14 +1101,14 @@ namespace DrawingRegister.App
                                 doc.PurposeOfIssue = purpose;
                                 docUpdated = true;
                             }
-
+                            
                             if (method != null)
                             {
                                 latestRevision.Value.Method = method;
                                 doc.MethodOfIssue = method;
                                 docUpdated = true;
                             }
-
+                            
                             if (issuedBy != null)
                             {
                                 latestRevision.Value.IssuedBy = issuedBy;
@@ -1094,17 +1118,43 @@ namespace DrawingRegister.App
                         }
                     }
 
-                    // Update distribution if requested
+                    // Update distribution when requested
                     if (updateDistribution)
                     {
-                        // Use the date passed from the main window for distribution
-                        doc.SetCompanyDistributions(selectedCompanyIds, _mainWindowIssueDate);
-                        // If properties weren't updated but distribution was, count it as an update
-                        if (!docUpdated) updatedCount++;
-                    } else if (docUpdated) {
-                        // Increment count only if properties were updated and distribution wasn't
-                        updatedCount++;
+                        DateTime distributionTargetDate;
+
+                        if (selectedDate.HasValue)
+                        {
+                            // When filtering by a specific issue date (selectedDate.Value),
+                            // use that date for the distribution update, as it corresponds
+                            // to the specific revision(s) being modified.
+                            distributionTargetDate = selectedDate.Value;
+                        }
+                        else
+                        {
+                            // When not filtering by a specific issue date (e.g., filtering by folder or no filter),
+                            // the property updates (Purpose, Method, IssuedBy) target the latest revision.
+                            // Therefore, the distribution should also apply to the date of that latest revision.
+                            var latestRevision = doc.RevisionHistory.OrderByDescending(r => r.Key).FirstOrDefault();
+                            if (latestRevision.Key != default(DateTime)) // Check if a valid revision date exists
+                            {
+                                distributionTargetDate = latestRevision.Key;
+                            }
+                            else
+                            {
+                                // This document has no revisions. If "updating a previous issue", this is an edge case.
+                                // Fallback to _selectedIssueDate (the general batch context date from UI).
+                                // This might occur if batch editing is used to add initial issue information (including distribution)
+                                // to documents that previously had no issue records.
+                                System.Diagnostics.Debug.WriteLine($"Warning: Document {doc.DocumentNumber} has no revisions. Distribution will use batch context date: {_selectedIssueDate.ToShortDateString()}");
+                                distributionTargetDate = _selectedIssueDate;
+                            }
+                        }
+                        doc.SetCompanyDistributions(selectedCompanyIds, distributionTargetDate);
                     }
+                    
+                    if (docUpdated || updateDistribution)
+                        updatedCount++;
                 }
                 
                 // Save changes
@@ -1138,6 +1188,60 @@ namespace DrawingRegister.App
             {
                 company.IsSelected = false;
             }
+        }
+
+        private void Header_DragMove(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left) DragMove();
+        }
+
+        // Win32 resize support for borderless window
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            var source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            source?.AddHook(WndProc);
+        }
+
+        private const int WM_NCHITTEST = 0x0084;
+        private const int HTLEFT = 10;
+        private const int HTRIGHT = 11;
+        private const int HTTOP = 12;
+        private const int HTTOPLEFT = 13;
+        private const int HTTOPRIGHT = 14;
+        private const int HTBOTTOM = 15;
+        private const int HTBOTTOMLEFT = 16;
+        private const int HTBOTTOMRIGHT = 17;
+        private const int BORDER_WIDTH = 6;
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr DefWindowProc(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_NCHITTEST)
+            {
+                int x = (short)(lParam.ToInt64() & 0xFFFF);
+                int y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
+
+                var point = PointFromScreen(new System.Windows.Point(x, y));
+                int row = point.Y < BORDER_WIDTH ? 0 : (point.Y > ActualHeight - BORDER_WIDTH ? 2 : 1);
+                int col = point.X < BORDER_WIDTH ? 0 : (point.X > ActualWidth - BORDER_WIDTH ? 2 : 1);
+
+                int[,] hitTests = {
+                    { HTTOPLEFT, HTTOP, HTTOPRIGHT },
+                    { HTLEFT, 0, HTRIGHT },
+                    { HTBOTTOMLEFT, HTBOTTOM, HTBOTTOMRIGHT }
+                };
+
+                int hit = hitTests[row, col];
+                if (hit != 0)
+                {
+                    handled = true;
+                    return new IntPtr(hit);
+                }
+            }
+            return IntPtr.Zero;
         }
     }
 } 

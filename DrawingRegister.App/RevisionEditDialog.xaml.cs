@@ -8,6 +8,7 @@ namespace DrawingRegister.App
     public partial class RevisionEditDialog : Window
     {
         private readonly DocumentMetadata _document;
+        private readonly RevisionScheme _scheme;
         public string DocumentNumber { get; set; } = string.Empty;
         public DateTime IssueDate { get; set; }
         public string Purpose { get; set; } = string.Empty;
@@ -15,18 +16,31 @@ namespace DrawingRegister.App
         public string IssuedBy { get; set; } = string.Empty;
         public string Revision { get; set; } = string.Empty;
 
-        public RevisionEditDialog(DocumentMetadata document, DateTime issueDate, RevisionInfo revisionInfo)
+        public RevisionEditDialog(DocumentMetadata document, DateTime issueDate, RevisionInfo revisionInfo, bool useNumericRevisions = false)
+            : this(document, issueDate, revisionInfo, useNumericRevisions ? RevisionScheme.Numeric : RevisionScheme.Legacy)
+        {
+        }
+
+        public RevisionEditDialog(DocumentMetadata document, DateTime issueDate, RevisionInfo revisionInfo, RevisionScheme scheme)
         {
             InitializeComponent();
             DataContext = this;
 
             _document = document;
+            _scheme = scheme;
             DocumentNumber = document.DocumentNumber;
             IssueDate = issueDate;
             Purpose = revisionInfo.Purpose;
             Method = revisionInfo.Method;
             IssuedBy = revisionInfo.IssuedBy;
             Revision = revisionInfo.Revision;
+            IsSuperseded = revisionInfo.IsSuperseded;
+
+            // Show the Internal / Formal toggle only for the 124660 sub-letter scheme.
+            if (_scheme == RevisionScheme.SubLetterNumeric)
+            {
+                SubLetterIssuePanel.Visibility = Visibility.Visible;
+            }
 
             // Set initial combo box selections
             if (!string.IsNullOrEmpty(Purpose))
@@ -57,13 +71,32 @@ namespace DrawingRegister.App
             PurposeCombo.SelectionChanged += PurposeCombo_SelectionChanged;
         }
 
+        private bool IsFormalIssue => FormalIssueRadio.IsChecked == true;
+
+        public bool IsSuperseded { get; private set; }
+
         private void PurposeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (PurposeCombo.SelectedItem != null)
             {
                 string selectedPurpose = ((ComboBoxItem)PurposeCombo.SelectedItem).Content.ToString()!;
-                Revision = DocumentMetadata.GenerateRevisionCode(selectedPurpose, _document.RevisionHistory);
+                if (string.Equals(selectedPurpose, RevisionInfo.SupersededPurpose, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Marking an existing revision as superseded must not bump the revision code.
+                    return;
+                }
+                Revision = DocumentMetadata.GenerateRevisionCode(selectedPurpose, _document.RevisionHistory, _scheme, IsFormalIssue);
             }
+        }
+
+        private void IssueType_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            string purpose = PurposeCombo.SelectedItem is ComboBoxItem pi ? pi.Content?.ToString() ?? Purpose : Purpose;
+            Revision = DocumentMetadata.GenerateRevisionCode(purpose, _document.RevisionHistory, _scheme, IsFormalIssue);
+            // Nudge the binding so the displayed revision updates.
+            DataContext = null;
+            DataContext = this;
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -71,8 +104,12 @@ namespace DrawingRegister.App
             if (PurposeCombo.SelectedItem != null)
             {
                 Purpose = ((ComboBoxItem)PurposeCombo.SelectedItem).Content.ToString()!;
-                // Generate new revision code based on selected purpose
-                Revision = DocumentMetadata.GenerateRevisionCode(Purpose, _document.RevisionHistory);
+                IsSuperseded = string.Equals(Purpose, RevisionInfo.SupersededPurpose, StringComparison.OrdinalIgnoreCase);
+                if (!IsSuperseded)
+                {
+                    // Generate new revision code based on selected purpose
+                    Revision = DocumentMetadata.GenerateRevisionCode(Purpose, _document.RevisionHistory, _scheme, IsFormalIssue);
+                }
             }
 
             if (MethodCombo.SelectedItem != null)
@@ -89,5 +126,10 @@ namespace DrawingRegister.App
             DialogResult = false;
             Close();
         }
+
+        private void Header_DragMove(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left) DragMove();
+        }
     }
-} 
+}
